@@ -240,6 +240,100 @@ function calcAllocatedCost(item, orders, menuItems){
   return {total:totalCost, perItem};
 }
 
+
+/* =====================================================
+   按分原価 第2段階 新関数 [ALLOC-2]
+   ===================================================== */
+
+/**
+ * calcAllocatedCostAll(matItems, orders, menuItems)
+ * 全材料を走査して商品別の按分原価合計を返す
+ *
+ * @returns {object} {
+ *   perMenuItemId: { [menuItemId]: totalAllocCost },
+ *   totalMat:        number  全材料費合計（effectiveCost合計）
+ *   totalAllocated:  number  商品別へ配賦済みの材料費合計
+ *   totalUnallocated:number  未配賦（direct + 販売数0）の材料費合計
+ * }
+ */
+function calcAllocatedCostAll(matItems, orders, menuItems){
+  const perMenuItemId={};  /* menuItemId => 累積按分原価 */
+  let totalMat=0, totalAllocated=0, totalUnallocated=0;
+
+  (matItems||[]).forEach(item=>{
+    const result=calcAllocatedCost(item, orders, menuItems);
+    totalMat+=result.total;
+
+    const isAllocated=Object.keys(result.perItem).length>0;
+    if(isAllocated){
+      /* perItem に配賦額がある → 商品別へ加算 */
+      let allocated=0;
+      Object.entries(result.perItem).forEach(([id,cost])=>{
+        const mid=Number(id);
+        perMenuItemId[mid]=(perMenuItemId[mid]||0)+cost;
+        allocated+=cost;
+      });
+      totalAllocated+=allocated;
+      /* 端数: 配賦後の残りは未配賦扱い（通常は0） */
+      totalUnallocated+=(result.total-allocated);
+    } else {
+      /* direct or 販売数0 → 未配賦 */
+      totalUnallocated+=result.total;
+    }
+  });
+
+  return {perMenuItemId, totalMat, totalAllocated, totalUnallocated};
+}
+
+/**
+ * getMatAllocPreview(item, orders, menuItems)
+ * 材料カード用: 1品目の按分プレビュー情報を返す
+ *
+ * @returns {object} {
+ *   effectiveCost: number,
+ *   targetSold: number,       対象商品の販売数合計
+ *   perUnitCost: number,      1販売単位あたり按分原価
+ *   isAllocatable: boolean,   配賦可能か
+ *   targetLabel: string,      対象の説明文
+ * }
+ */
+function getMatAllocPreview(item, orders, menuItems){
+  const c=calcMatItem(item);
+  const costMode=item.costMode||'direct';
+
+  if(costMode==='direct'){
+    return {effectiveCost:c.effectiveCost,targetSold:0,perUnitCost:0,isAllocatable:false,targetLabel:'直接原価（配賦なし）'};
+  }
+
+  /* 対象商品を決定 */
+  let targetIds=menuItems.map(m=>m.id);
+  let targetLabel='全商品';
+  if(costMode==='allocate_category'){
+    const cats=item.targetCategories||[];
+    if(cats.length>0){targetIds=menuItems.filter(m=>cats.includes(m.cat)).map(m=>m.id);targetLabel='カテゴリ:'+cats.join('・');}
+    else{targetLabel='カテゴリ未選択（全商品）';}
+  } else if(costMode==='allocate_items'){
+    const ids=item.targetItemIds||[];
+    if(ids.length>0){targetIds=ids;targetLabel=menuItems.filter(m=>ids.includes(m.id)).map(m=>m.name).join('・');}
+    else{targetLabel='商品未選択（全商品）';}
+  }
+
+  /* 対象販売数 */
+  let targetSold=0;
+  (orders||[]).filter(o=>!o.cancelledAt).forEach(o=>{
+    o.items.forEach(oi=>{if(targetIds.includes(oi.id))targetSold+=oi.qty;});
+  });
+
+  const perUnitCost=targetSold>0?(c.effectiveCost/targetSold):0;
+  return {
+    effectiveCost:c.effectiveCost,
+    targetSold,
+    perUnitCost,
+    isAllocatable:targetSold>0,
+    targetLabel
+  };
+}
+
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Dela+Gothic+One&display=swap');
@@ -613,6 +707,42 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 .mat-mode-badge{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;
   background:var(--primary-light);color:var(--primary-dark);margin-left:6px;white-space:nowrap;}
 .mat-mode-badge.allocate{background:#E8EAF6;color:#283593;}
+
+/* ===========================================
+   按分原価 第2段階 CSS [ALLOC-2]
+   =========================================== */
+
+/* 補助カード: 配賦サマリー */
+.alloc-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px;}
+.alloc-summary-card{background:var(--surface);border:1.5px solid #B0C4F8;border-radius:var(--radius);padding:12px 10px;text-align:center;box-shadow:var(--shadow);}
+.alloc-summary-label{font-size:10px;font-weight:700;color:#1A3A8A;margin-bottom:4px;}
+.alloc-summary-val{font-size:18px;font-weight:900;font-family:'Dela Gothic One',sans-serif;color:#1A3A8A;}
+.alloc-summary-val.unalloc{color:var(--text3);}
+
+/* 注記バナー */
+.report-note{background:#FFFDE7;border:1px solid #FFE082;border-radius:var(--radius-sm);
+  padding:9px 14px;font-size:11px;color:#5D4037;line-height:1.6;margin-bottom:12px;}
+.report-note-title{font-weight:700;margin-bottom:2px;}
+
+/* 商品別テーブル: 参考利益列 */
+.report-table th.alloc{background:#283593;color:#fff;}
+.report-table td.alloc-cost{color:#283593;font-family:'Dela Gothic One',sans-serif;font-weight:700;font-size:12px;}
+.report-table td.ref-profit{font-family:'Dela Gothic One',sans-serif;font-weight:700;font-size:12px;}
+.report-table td.ref-rate{font-size:11px;color:var(--text3);}
+
+/* 材料カードの按分プレビュー */
+.mat-alloc-preview{background:#EEF2FF;border:1px solid #B0C4F8;border-radius:var(--radius-sm);
+  padding:9px 12px;margin-top:8px;font-size:12px;}
+.mat-alloc-preview-title{font-size:11px;font-weight:700;color:#283593;margin-bottom:6px;}
+.mat-alloc-preview-row{display:flex;justify-content:space-between;padding:3px 0;
+  border-bottom:1px dashed #C5CAE9;}
+.mat-alloc-preview-row:last-child{border-bottom:none;font-weight:700;}
+.mat-alloc-preview-label{color:#3949AB;}
+.mat-alloc-preview-val{font-weight:700;color:#1A3A8A;font-family:'Dela Gothic One',sans-serif;}
+.mat-alloc-badge-ok{display:inline-block;padding:2px 8px;border-radius:10px;
+  font-size:10px;font-weight:700;background:#E8F5E9;color:#2E7D32;margin-top:4px;}
+.mat-alloc-badge-ng{display:inline-block;padding:2px 8px;border-radius:10px;
+  font-size:10px;font-weight:700;background:#FFEBEE;color:#B71C1C;margin-top:4px;}
 </style>
 </head>
 <body>
@@ -742,8 +872,17 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   <div class="fl-grid" id="fl-grid"></div>
   <div class="section-title" style="margin-bottom:8px;">🕐 時間帯別売上</div>
   <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:14px;box-shadow:var(--shadow);"><div class="hour-chart" id="hour-chart"></div><div class="hour-labels" id="hour-labels"></div></div>
-  <div class="section-title" style="margin-bottom:8px;">🍗 商品別集計</div>
-  <div class="report-table-wrap" style="margin-bottom:14px;"><table class="report-table"><thead><tr><th>商品名</th><th class="num">販売数</th><th class="num">売上</th><th class="num">原価</th><th class="num">利益</th></tr></thead><tbody id="product-report-body"></tbody></table></div>
+  <!-- [ALLOC-2] 配賦サマリーカード -->
+  <div class="section-title" style="margin-bottom:8px;">📊 材料費配賦サマリー</div>
+  <div class="alloc-summary-grid" id="alloc-summary-grid"></div>
+  <!-- [ALLOC-2] 商品別集計（按分原価込み） -->
+  <div class="section-title" style="margin-bottom:8px;">🍗 商品別集計（参考利益）</div>
+  <div class="report-note">
+    <div class="report-note-title">📌 参考値について</div>
+    商品別利益は、登録された直接原価と実使用材料の按分原価から算出した参考値です。人件費・出店料・未配賦の共通費は含まれません。経営判断には全体KPIを合わせてご確認ください。
+  </div>
+  <div id="alloc-note-unalloc" style="margin-bottom:10px;"></div>
+  <div class="report-table-wrap" style="margin-bottom:14px;overflow-x:auto;"><table class="report-table"><thead><tr><th>商品名</th><th class="num">販売数</th><th class="num">売上</th><th class="num">直接原価</th><th class="num alloc">共通材料按分</th><th class="num alloc">参考利益</th><th class="num alloc">参考利益率</th></tr></thead><tbody id="product-report-body"></tbody></table></div>
   <div class="section-title" style="margin-bottom:8px;">💳 決済方法別</div>
   <div class="report-table-wrap" style="margin-bottom:14px;"><table class="report-table"><thead><tr><th>決済方法</th><th class="num">件数</th><th class="num">売上</th></tr></thead><tbody id="pay-report-body"></tbody></table></div>
   <div class="section-title" style="margin-bottom:8px;">💾 エクスポート</div>
@@ -1055,6 +1194,33 @@ function renderMaterial(){
       ?`<span class="mat-mode-badge allocate">${MODE_LABEL[costMode]||costMode}</span>`
       :'';
 
+    /* [ALLOC-2] 材料カードの按分プレビューを生成 */
+    const activeOrdersForMat=(state.orders||[]).filter(o=>o.eventId===state.currentEventId&&!o.cancelledAt);
+    const matPreview=getMatAllocPreview(item,activeOrdersForMat,state.menuItems);
+    const matPreviewHtml=costMode==='direct'?'':`
+      <div class="mat-alloc-preview">
+        <div class="mat-alloc-preview-title">📊 按分プレビュー（現在の販売データ）</div>
+        <div class="mat-alloc-preview-row">
+          <span class="mat-alloc-preview-label">対象</span>
+          <span class="mat-alloc-preview-val" style="font-size:11px;font-family:'Noto Sans JP',sans-serif;">${matPreview.targetLabel}</span>
+        </div>
+        <div class="mat-alloc-preview-row">
+          <span class="mat-alloc-preview-label">対象販売数</span>
+          <span class="mat-alloc-preview-val">${matPreview.targetSold}個</span>
+        </div>
+        <div class="mat-alloc-preview-row">
+          <span class="mat-alloc-preview-label">実使用額</span>
+          <span class="mat-alloc-preview-val">¥${matPreview.effectiveCost.toLocaleString(undefined,{maximumFractionDigits:0})}</span>
+        </div>
+        <div class="mat-alloc-preview-row">
+          <span class="mat-alloc-preview-label">1個あたり按分原価</span>
+          <span class="mat-alloc-preview-val">${matPreview.targetSold>0?'¥'+matPreview.perUnitCost.toFixed(1):'—'}</span>
+        </div>
+        <div>${matPreview.isAllocatable
+          ?'<span class="mat-alloc-badge-ok">✅ 按分可能</span>'
+          :'<span class="mat-alloc-badge-ng">⚠️ 未配賦（販売数0または商品未選択）</span>'}</div>
+      </div>`;
+
     return`<div class="mat-card" data-mat-id="${item.id}">
       <div class="mat-card-head">
         <input class="mat-name-input" type="text" placeholder="品目名（例：鶏もも肉）"
@@ -1131,6 +1297,7 @@ function renderMaterial(){
       ${catChipsHtml}
       ${itemChipsHtml}
       ${noteHtml}
+      ${matPreviewHtml}
     </div>`;
   }).join('');
 }
@@ -1171,8 +1338,70 @@ function renderReport(){
   const hd={};for(let h=9;h<=20;h++)hd[h]=0;orders.forEach(o=>{const h=new Date(o.time).getHours();hd[h]=(hd[h]||0)+o.total;});const mx=Math.max(1,...Object.values(hd));const hrs=Object.keys(hd).map(Number).sort((a,b)=>a-b);
   document.getElementById('hour-chart').innerHTML=hrs.map(h=>`<div class="hour-bar" style="height:${Math.round((hd[h]||0)/mx*55)+3}px;background:${hd[h]>0?'var(--primary)':'var(--border)'};" title="${h}時"></div>`).join('');
   document.getElementById('hour-labels').innerHTML=hrs.map(h=>`<div class="hour-label">${h}</div>`).join('');
-  const pm={};orders.forEach(o=>o.items.forEach(i=>{if(!pm[i.id])pm[i.id]={qty:0,sales:0};pm[i.id].qty+=i.qty;pm[i.id].sales+=i.price*i.qty;}));
-  document.getElementById('product-report-body').innerHTML=state.menuItems.filter(m=>pm[m.id]).map(m=>{const d=pm[m.id];const c=m.cost*d.qty;const p=d.sales-c;return`<tr><td>${m.emoji} ${m.name}</td><td class="num">${d.qty}個</td><td class="num" style="color:var(--primary)">¥${d.sales.toLocaleString()}</td><td class="num" style="color:var(--text3)">¥${c.toLocaleString()}</td><td class="num" style="color:${p>=0?'var(--success)':'var(--danger)'}">¥${p.toLocaleString()}</td></tr>`;}).join('')||'<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text3)">販売データがありません</td></tr>';
+  /* [ALLOC-2] 商品別集計（按分原価込み） */
+  const pm={};
+  /* cancelledAt がある注文は除外 */
+  const activeOrders=orders.filter(o=>!o.cancelledAt);
+  activeOrders.forEach(o=>o.items.forEach(i=>{
+    if(!pm[i.id])pm[i.id]={qty:0,sales:0};
+    pm[i.id].qty+=i.qty;
+    pm[i.id].sales+=i.price*i.qty;
+  }));
+
+  /* 全材料を按分計算 */
+  const allocResult=calcAllocatedCostAll(matItems,activeOrders,state.menuItems);
+  /* allocResult: { perMenuItemId:{id:cost}, totalAllocated:number, totalUnallocated:number, totalMat:number } */
+
+  /* 配賦サマリーカード */
+  const asg=document.getElementById('alloc-summary-grid');
+  if(asg){
+    asg.innerHTML=`
+      <div class="alloc-summary-card">
+        <div class="alloc-summary-label">材料費総額</div>
+        <div class="alloc-summary-val">¥${allocResult.totalMat.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+      </div>
+      <div class="alloc-summary-card">
+        <div class="alloc-summary-label">商品別配賦済み</div>
+        <div class="alloc-summary-val">¥${allocResult.totalAllocated.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+      </div>
+      <div class="alloc-summary-card">
+        <div class="alloc-summary-label">未配賦（直接原価等）</div>
+        <div class="alloc-summary-val unalloc">¥${allocResult.totalUnallocated.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+      </div>`;
+  }
+
+  /* 未配賦注記 */
+  const unaEl=document.getElementById('alloc-note-unalloc');
+  if(unaEl){
+    unaEl.innerHTML=allocResult.totalUnallocated>0
+      ?`<div class="report-note" style="background:#FFF3E0;border-color:#FFCC80;">
+          ⚠️ 未配賦の材料費 ¥${allocResult.totalUnallocated.toLocaleString(undefined,{maximumFractionDigits:0})} があります。
+          これらは「直接原価」に設定された材料費または配賦対象販売数ゼロの材料費で、商品別には反映されていません。
+        </div>`
+      :'';
+  }
+
+  /* 商品別テーブル（7列） */
+  document.getElementById('product-report-body').innerHTML=
+    state.menuItems.filter(m=>pm[m.id]).map(m=>{
+      const d=pm[m.id];
+      const directCost=m.cost*d.qty;                         /* 直接原価 */
+      const allocCost=allocResult.perMenuItemId[m.id]||0;    /* 共通材料按分 */
+      const refProfit=d.sales-directCost-allocCost;           /* 参考利益 */
+      const refRate=d.sales>0?(refProfit/d.sales*100):0;
+      const profitColor=refProfit>=0?'var(--success)':'var(--danger)';
+      return`<tr>
+        <td>${m.emoji} ${m.name}</td>
+        <td class="num">${d.qty}個</td>
+        <td class="num" style="color:var(--primary)">¥${d.sales.toLocaleString()}</td>
+        <td class="num" style="color:var(--text3)">¥${directCost.toLocaleString()}</td>
+        <td class="num alloc-cost">¥${Math.round(allocCost).toLocaleString()}</td>
+        <td class="num ref-profit" style="color:${profitColor}">¥${Math.round(refProfit).toLocaleString()}</td>
+        <td class="num ref-rate" style="color:${profitColor}">${refRate.toFixed(1)}%</td>
+      </tr>`;
+    }).join('')
+    ||'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--text3)">販売データがありません</td></tr>';
+
   const payM={};orders.forEach(o=>{if(!payM[o.payMethod])payM[o.payMethod]={count:0,total:0};payM[o.payMethod].count++;payM[o.payMethod].total+=o.total;});
   document.getElementById('pay-report-body').innerHTML=Object.keys(PAY_LABELS).filter(k=>payM[k]).map(k=>`<tr><td>${PAY_LABELS[k]}</td><td class="num">${payM[k].count}件</td><td class="num" style="color:var(--primary)">¥${payM[k].total.toLocaleString()}</td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--text3)">データがありません</td></tr>';
 }
