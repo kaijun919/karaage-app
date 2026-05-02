@@ -131,6 +131,115 @@ saveMenuItem=function(){
 
 /* [P2] backupData/restoreData は末尾scriptブロックで定義 */
 
+
+/* =====================================================
+   按分原価 新規関数 (第1段階) [ALLOC-1]
+   ===================================================== */
+
+/** 原価反映方式を変更してすぐに保存・再描画 */
+function onMatModeChange(id, newMode){
+  const items=getMatItems();
+  const item=items.find(i=>i.id===id);
+  if(!item)return;
+  item.costMode=newMode;
+  /* モード切替時は対象リストをリセット */
+  if(newMode!=='allocate_category')item.targetCategories=[];
+  if(newMode!=='allocate_items')item.targetItemIds=[];
+  saveMatItems(items);
+  renderMaterial(); /* カード再描画（按分UIの表示切替のため全体再描画） */
+}
+
+/** カテゴリ按分: カテゴリのトグル選択 */
+function onMatAllocCatToggle(id, cat){
+  const items=getMatItems();
+  const item=items.find(i=>i.id===id);
+  if(!item)return;
+  if(!item.targetCategories)item.targetCategories=[];
+  const idx=item.targetCategories.indexOf(cat);
+  if(idx>=0)item.targetCategories.splice(idx,1);
+  else item.targetCategories.push(cat);
+  saveMatItems(items);
+  /* チップの selected だけ切替（フォーカス問題回避のためカード全体は再描画しない） */
+  const card=document.querySelector(`[data-mat-id="${id}"]`);
+  if(card){
+    card.querySelectorAll('.mat-alloc-chip').forEach(el=>{
+      if(el.textContent.trim()===cat)el.classList.toggle('selected',item.targetCategories.includes(cat));
+    });
+  }
+}
+
+/** 商品指定按分: 商品IDのトグル選択 */
+function onMatAllocItemToggle(id, menuItemId){
+  const items=getMatItems();
+  const item=items.find(i=>i.id===id);
+  if(!item)return;
+  if(!item.targetItemIds)item.targetItemIds=[];
+  const idx=item.targetItemIds.indexOf(menuItemId);
+  if(idx>=0)item.targetItemIds.splice(idx,1);
+  else item.targetItemIds.push(menuItemId);
+  saveMatItems(items);
+  /* チップのselectedだけ切替 */
+  const card=document.querySelector(`[data-mat-id="${id}"]`);
+  if(card){
+    card.querySelectorAll('.mat-alloc-chip').forEach(el=>{
+      const isSelected=item.targetItemIds.includes(menuItemId);
+      /* data属性がないのでonclick属性で判定 */
+      if(el.getAttribute('onclick')===`onMatAllocItemToggle(${id},${menuItemId})`){
+        el.classList.toggle('selected',isSelected);
+      }
+    });
+  }
+}
+
+/**
+ * [ALLOC-1] calcAllocatedCost(item, orders, menuItems) — 次回実装の土台
+ * 配賦モードに応じて材料費を商品別に配分する
+ * 今回は計算結果を返すだけで、レポートへの反映はまだ行わない
+ *
+ * @param {object} item       - materialItem
+ * @param {array}  orders     - 対象イベントの注文一覧
+ * @param {array}  menuItems  - 全メニュー
+ * @returns {object} { total: number, perItem: {menuItemId: cost} }
+ */
+function calcAllocatedCost(item, orders, menuItems){
+  const c=calcMatItem(item);
+  const totalCost=c.effectiveCost;
+  const costMode=item.costMode||'direct';
+
+  if(costMode==='direct') return {total:totalCost, perItem:{}};
+
+  /* 対象商品を絞り込む */
+  let targetIds=menuItems.map(m=>m.id);
+  if(costMode==='allocate_category'){
+    const cats=item.targetCategories||[];
+    if(cats.length>0) targetIds=menuItems.filter(m=>cats.includes(m.cat)).map(m=>m.id);
+  } else if(costMode==='allocate_items'){
+    const ids=item.targetItemIds||[];
+    if(ids.length>0) targetIds=ids;
+  }
+
+  /* 対象商品の販売数を集計 */
+  const soldMap={};
+  targetIds.forEach(id=>{soldMap[id]=0;});
+  orders.forEach(o=>{
+    if(o.cancelledAt) return;
+    o.items.forEach(oi=>{
+      if(targetIds.includes(oi.id)) soldMap[oi.id]=(soldMap[oi.id]||0)+oi.qty;
+    });
+  });
+  const totalSold=Object.values(soldMap).reduce((s,v)=>s+v,0);
+
+  if(totalSold===0) return {total:totalCost, perItem:{}};
+
+  /* 販売数比率で按分 */
+  const perItem={};
+  targetIds.forEach(id=>{
+    perItem[id]=totalCost*(soldMap[id]/totalSold);
+  });
+
+  return {total:totalCost, perItem};
+}
+
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Dela+Gothic+One&display=swap');
@@ -469,6 +578,41 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 
 /* [P2] 設定画面に出るセットアップ再表示ボタン */
 .guide-reopen-btn{background:none;border:none;color:var(--primary);font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;}
+
+/* ===========================================
+   按分原価 UI (第1段階)
+   =========================================== */
+
+/* 原価反映方式 セレクタ行 */
+.mat-mode-row{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.mat-mode-label{font-size:11px;font-weight:700;color:var(--text2);}
+.mat-mode-select{padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--surface2);
+  color:var(--text);outline:none;width:100%;}
+.mat-mode-select:focus{border-color:var(--primary);background:var(--primary-light);}
+
+/* 按分対象エリア（カテゴリ/商品） */
+.mat-alloc-area{background:#F0F4FF;border:1.5px solid #B0C4F8;border-radius:var(--radius-sm);
+  padding:10px 12px;margin-bottom:10px;}
+.mat-alloc-area-title{font-size:11px;font-weight:700;color:#1A3A8A;margin-bottom:8px;}
+.mat-alloc-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.mat-alloc-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;
+  border-radius:20px;border:1.5px solid #B0C4F8;background:#fff;
+  font-size:12px;font-weight:700;color:#1A3A8A;cursor:pointer;user-select:none;}
+.mat-alloc-chip.selected{background:#1A3A8A;color:#fff;border-color:#0D2A6A;}
+.mat-alloc-chip:active{transform:scale(.94);}
+
+/* メモ欄 */
+.mat-note-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+.mat-note-input{padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'Noto Sans JP',sans-serif;font-size:13px;background:var(--surface2);
+  color:var(--text);outline:none;width:100%;resize:none;}
+.mat-note-input:focus{border-color:var(--primary);background:var(--primary-light);}
+
+/* 方式バッジ（カードヘッダー横） */
+.mat-mode-badge{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;
+  background:var(--primary-light);color:var(--primary-dark);margin-left:6px;white-space:nowrap;}
+.mat-mode-badge.allocate{background:#E8EAF6;color:#283593;}
 </style>
 </head>
 <body>
@@ -740,10 +884,23 @@ function migrateState(){
   if(state.menuItems){
     state.menuItems=state.menuItems.map(m=>({imageData:null,...m}));
   }
-  // orders に cancelledAt フィールド補完
   if(state.orders){
-    state.orders=state.orders.map(o=>({cancelledAt:null,...o}));
+    state.orders=state.orders.map(o=>({cancelledAt:null,cancelReason:null,...o}));
   }
+  /* [ALLOC-1] materialItems の各品目に按分フィールドを補完 */
+  if(state.materialItems){
+    Object.keys(state.materialItems).forEach(evtId=>{
+      state.materialItems[evtId]=(state.materialItems[evtId]||[]).map(item=>({
+        costMode:'direct',       // "direct"|"allocate_all"|"allocate_category"|"allocate_items"
+        targetCategories:[],     // allocate_category 時に使用
+        targetItemIds:[],        // allocate_items 時に使用
+        note:'',                 // 材料メモ
+        ...item,
+      }));
+    });
+  }
+  if(!state.auditLog)state.auditLog=[];
+  if(state.events){state.events=state.events.map(e=>({isClosedFlag:false,...e}));}
 }
 
 function seedDefaultData(){if(!state.menuItems||!state.menuItems.length){state.menuItems=[{id:1,emoji:'🍗',name:'唐揚げ 3個',cat:'唐揚げ',price:400,cost:110,isSet:false},{id:2,emoji:'🍗',name:'唐揚げ 5個',cat:'唐揚げ',price:600,cost:170,isSet:false},{id:3,emoji:'🍱',name:'唐揚げ弁当',cat:'セット',price:800,cost:260,isSet:true},{id:4,emoji:'🍺',name:'ビール',cat:'ドリンク',price:500,cost:200,isSet:false},{id:5,emoji:'🥤',name:'ソフトドリンク',cat:'ドリンク',price:200,cost:60,isSet:false},{id:6,emoji:'🍟',name:'ポテト S',cat:'サイド',price:300,cost:80,isSet:false},{id:7,emoji:'🌶️',name:'激辛唐揚げ 3個',cat:'唐揚げ',price:450,cost:120,isSet:false}];}if(!state.events||!state.events.length){state.events=[{id:1,name:'春まつり2025',date:new Date().toISOString().slice(0,10),place:'サンプル公園'}];state.currentEventId=1;}if(!Array.isArray(state.expenses))state.expenses=[];if(!state.inventory)state.inventory={};if(!state.staffMembers)state.staffMembers=[];if(!state.materialItems)state.materialItems={};saveState();}
@@ -797,13 +954,186 @@ function updateInv(itemId,field,val){if(!state.inventory[itemId])state.inventory
 function getMatItems(){const evtId=String(state.currentEventId);if(!state.materialItems[evtId])state.materialItems[evtId]=[];return state.materialItems[evtId];}
 function saveMatItems(items){state.materialItems[String(state.currentEventId)]=items;saveState();}
 function calcMatItem(item){const waste=parseFloat(item.remainder.waste)||0;const reuse=parseFloat(item.remainder.reuse)||0;const used=Math.max(0,(parseFloat(item.qty)||0)-waste-reuse);const effectiveCost=(used+waste)*(parseFloat(item.unitPrice)||0);return{used,waste,reuse,effectiveCost};}
-function addMaterialItem(){const items=getMatItems();items.push({id:Date.now(),name:'',unit:'kg',unitPrice:'',qty:'',remainder:{waste:'',reuse:''}});saveMatItems(items);renderMaterial();}
+function addMaterialItem(){
+  const items=getMatItems();
+  /* [ALLOC-1] 新フィールドを初期値付きで追加 */
+  items.push({
+    id:Date.now(),name:'',unit:'kg',unitPrice:'',qty:'',
+    remainder:{waste:'',reuse:''},
+    costMode:'direct',targetCategories:[],targetItemIds:[],note:''
+  });
+  saveMatItems(items);renderMaterial();
+}
 function deleteMatItem(id){saveMatItems(getMatItems().filter(i=>i.id!==id));renderMaterial();}
-function onMatInput(id,field,val){const items=getMatItems();const item=items.find(i=>i.id===id);if(!item)return;if(field==='rem_waste')item.remainder.waste=val;else if(field==='rem_reuse')item.remainder.reuse=val;else item[field]=val;saveMatItems(items);updateMatSummary(items);updateMatCardResult(item);}
+function onMatInput(id,field,val){
+  const items=getMatItems();const item=items.find(i=>i.id===id);if(!item)return;
+  if(field==='rem_waste')item.remainder.waste=val;
+  else if(field==='rem_reuse')item.remainder.reuse=val;
+  else item[field]=val; /* [ALLOC-1] costMode / note などもここで受ける */
+  saveMatItems(items);updateMatSummary(items);updateMatCardResult(item);
+}
 function onMatUnitChange(id,val){const items=getMatItems();const item=items.find(i=>i.id===id);if(!item)return;item.unit=val;saveMatItems(items);const card=document.querySelector(`[data-mat-id="${id}"]`);if(card)card.querySelectorAll('.mat-unit-label').forEach(el=>el.textContent=val);updateMatSummary(items);updateMatCardResult(item);}
 function updateMatCardResult(item){const c=calcMatItem(item);const card=document.querySelector(`[data-mat-id="${item.id}"]`);if(!card)return;const prepCost=(parseFloat(item.qty)||0)*(parseFloat(item.unitPrice)||0);const prepEl=card.querySelector('.mat-prep-cost');if(prepEl)prepEl.textContent='¥'+prepCost.toLocaleString(undefined,{maximumFractionDigits:0});const usedEl=card.querySelector('.mat-used-val-text');if(usedEl)usedEl.textContent=c.used.toFixed(2)+(item.unit||'');const wasteEl=card.querySelector('.mat-waste-cost');if(wasteEl)wasteEl.textContent='¥'+(c.waste*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0});const reuseEl=card.querySelector('.mat-reuse-cost');if(reuseEl)reuseEl.textContent='¥'+(c.reuse*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0});const effEl=card.querySelector('.mat-eff-cost');if(effEl)effEl.textContent='¥'+c.effectiveCost.toLocaleString(undefined,{maximumFractionDigits:0});}
 function updateMatSummary(items){let tp=0,te=0,tw=0,tr=0;items.forEach(item=>{const c=calcMatItem(item);tp+=(parseFloat(item.qty)||0)*(parseFloat(item.unitPrice)||0);te+=c.effectiveCost;tw+=c.waste*(parseFloat(item.unitPrice)||0);tr+=c.reuse*(parseFloat(item.unitPrice)||0);});document.getElementById('summary-grid').innerHTML=`<div class="summary-item"><div class="summary-label">仕込み原価合計</div><div class="summary-val orange">¥${tp.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">原価算入額</div><div class="summary-val red">¥${te.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">廃棄ロス</div><div class="summary-val red">¥${tw.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">流用額（原価外）</div><div class="summary-val" style="color:var(--info);">¥${tr.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div>`;}
-function renderMaterial(){const items=getMatItems();updateMatSummary(items);const list=document.getElementById('material-list');if(!items.length){list.innerHTML='<div class="empty-state"><div class="empty-emoji">🥩</div>「＋ 品目追加」で材料を追加してください</div>';return;}list.innerHTML=items.map(item=>{const c=calcMatItem(item);const prepCost=(parseFloat(item.qty)||0)*(parseFloat(item.unitPrice)||0);return`<div class="mat-card" data-mat-id="${item.id}"><div class="mat-card-head"><input class="mat-name-input" type="text" placeholder="品目名（例：鶏もも肉）" value="${item.name}" oninput="onMatInput(${item.id},'name',this.value)"><button class="mat-del-btn" onclick="deleteMatItem(${item.id})">✕</button></div><div class="mat-fields"><div class="mat-field"><label class="mat-label">単位</label><select class="mat-select" onchange="onMatUnitChange(${item.id},this.value)">${MATERIAL_UNITS.map(u=>`<option${u===item.unit?' selected':''}>${u}</option>`).join('')}</select></div><div class="mat-field"><label class="mat-label">@単価(円/<span class="mat-unit-label">${item.unit}</span>)</label><input class="mat-input" type="number" placeholder="0" value="${item.unitPrice}" oninput="onMatInput(${item.id},'unitPrice',this.value)"></div><div class="mat-field"><label class="mat-label">仕込み数量(<span class="mat-unit-label">${item.unit}</span>)</label><input class="mat-input" type="number" placeholder="0" step="0.1" value="${item.qty}" oninput="onMatInput(${item.id},'qty',this.value)"></div></div><div class="mat-cost-bar"><span style="font-size:11px;font-weight:700;color:var(--text2);">仕込み原価</span><span class="mat-prep-cost" style="font-size:16px;font-weight:900;font-family:'Dela Gothic One',sans-serif;color:var(--primary);">¥${prepCost.toLocaleString(undefined,{maximumFractionDigits:0})}</span></div><div class="remainder-area"><div class="remainder-title">📦 余り入力</div><div class="remainder-fields"><div class="remainder-field"><label class="mat-label" style="color:#E65100;">🗑️ 廃棄(<span class="mat-unit-label">${item.unit}</span>)</label><input class="remainder-input" style="border-color:#FFCC80;" type="number" placeholder="0" step="0.1" value="${item.remainder.waste}" oninput="onMatInput(${item.id},'rem_waste',this.value)"></div><div class="remainder-field"><label class="mat-label" style="color:var(--info);">♻️ 流用(<span class="mat-unit-label">${item.unit}</span>)</label><input class="remainder-input" style="border-color:#90CAF9;" type="number" placeholder="0" step="0.1" value="${item.remainder.reuse}" oninput="onMatInput(${item.id},'rem_reuse',this.value)"></div></div><div class="mat-used-box" style="margin-bottom:8px;"><span class="mat-used-label">✅ 実使用量</span><span class="mat-used-val-text">${c.used.toFixed(2)}${item.unit}</span></div><div class="remainder-result"><div class="remainder-result-item"><div class="remainder-result-label">廃棄ロス</div><div class="mat-waste-cost remainder-result-val" style="color:var(--danger);">¥${(c.waste*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="remainder-result-item"><div class="remainder-result-label">流用額（原価外）</div><div class="mat-reuse-cost remainder-result-val" style="color:var(--info);">¥${(c.reuse*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="remainder-result-item"><div class="remainder-result-label">原価算入額</div><div class="mat-eff-cost remainder-result-val" style="color:var(--danger);">¥${c.effectiveCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div></div></div></div>`;}).join('');}
+function renderMaterial(){
+  const items=getMatItems();
+  updateMatSummary(items);
+  const list=document.getElementById('material-list');
+  if(!items.length){
+    list.innerHTML='<div class="empty-state"><div class="empty-emoji">🥩</div>「＋ 品目追加」で材料を追加してください</div>';
+    return;
+  }
+
+  /* [ALLOC-1] 按分モードの表示ラベル */
+  const MODE_LABEL={
+    'direct':'直接原価（配賦なし）',
+    'allocate_all':'全商品按分',
+    'allocate_category':'カテゴリ按分',
+    'allocate_items':'商品指定按分'
+  };
+
+  list.innerHTML=items.map(item=>{
+    const c=calcMatItem(item);
+    const prepCost=(parseFloat(item.qty)||0)*(parseFloat(item.unitPrice)||0);
+    /* [ALLOC-1] 按分フィールドのデフォルト保証 */
+    const costMode=item.costMode||'direct';
+    const targetCategories=item.targetCategories||[];
+    const targetItemIds=item.targetItemIds||[];
+    const note=item.note||'';
+    const isAlloc=costMode!=='direct';
+
+    /* --- 原価反映方式セレクト --- */
+    const modeSelectHtml=`
+      <div class="mat-mode-row">
+        <label class="mat-mode-label">原価反映方式</label>
+        <select class="mat-mode-select" onchange="onMatModeChange(${item.id},this.value)">
+          <option value="direct"${costMode==='direct'?' selected':''}>直接原価（商品別利益には自動配賦しない）</option>
+          <option value="allocate_all"${costMode==='allocate_all'?' selected':''}>全商品按分（販売数で均等配賦）</option>
+          <option value="allocate_category"${costMode==='allocate_category'?' selected':''}>カテゴリ按分（指定カテゴリの販売数で配賦）</option>
+          <option value="allocate_items"${costMode==='allocate_items'?' selected':''}>商品指定按分（指定商品の販売数で配賦）</option>
+        </select>
+      </div>`;
+
+    /* --- カテゴリ按分: 対象カテゴリ選択 --- */
+    const catChipsHtml=costMode==='allocate_category'
+      ?`<div class="mat-alloc-area">
+          <div class="mat-alloc-area-title">📂 対象カテゴリ（複数選択可）</div>
+          <div class="mat-alloc-chips">
+            ${(state.categories||[]).map(cat=>{
+              const sel=targetCategories.includes(cat);
+              return`<span class="mat-alloc-chip${sel?' selected':''}"
+                onclick="onMatAllocCatToggle(${item.id},'${cat.replace(/'/g,"\\'")}')">${cat}</span>`;
+            }).join('')}
+          </div>
+        </div>`
+      :'';
+
+    /* --- 商品指定按分: 対象商品選択 --- */
+    const itemChipsHtml=costMode==='allocate_items'
+      ?`<div class="mat-alloc-area">
+          <div class="mat-alloc-area-title">🍗 対象商品（複数選択可）</div>
+          <div class="mat-alloc-chips">
+            ${(state.menuItems||[]).map(mi=>{
+              const sel=targetItemIds.includes(mi.id);
+              return`<span class="mat-alloc-chip${sel?' selected':''}"
+                onclick="onMatAllocItemToggle(${item.id},${mi.id})">${mi.emoji}${mi.name}</span>`;
+            }).join('')}
+          </div>
+        </div>`
+      :'';
+
+    /* --- メモ欄 --- */
+    const noteHtml=`
+      <div class="mat-note-row">
+        <label class="mat-mode-label">メモ（任意）</label>
+        <textarea class="mat-note-input" rows="1" placeholder="例：仕込み前処理分含む"
+          oninput="onMatInput(${item.id},'note',this.value)">${note}</textarea>
+      </div>`;
+
+    /* --- 按分モードバッジ（カードヘッダー） --- */
+    const modeBadge=isAlloc
+      ?`<span class="mat-mode-badge allocate">${MODE_LABEL[costMode]||costMode}</span>`
+      :'';
+
+    return`<div class="mat-card" data-mat-id="${item.id}">
+      <div class="mat-card-head">
+        <input class="mat-name-input" type="text" placeholder="品目名（例：鶏もも肉）"
+          value="${item.name}" oninput="onMatInput(${item.id},'name',this.value)">
+        ${modeBadge}
+        <button class="mat-del-btn" onclick="deleteMatItem(${item.id})">✕</button>
+      </div>
+      <div class="mat-fields">
+        <div class="mat-field">
+          <label class="mat-label">単位</label>
+          <select class="mat-select" onchange="onMatUnitChange(${item.id},this.value)">
+            ${MATERIAL_UNITS.map(u=>`<option${u===item.unit?' selected':''}>${u}</option>`).join('')}
+          </select>
+        </div>
+        <div class="mat-field">
+          <label class="mat-label">@単価(円/<span class="mat-unit-label">${item.unit}</span>)</label>
+          <input class="mat-input" type="number" placeholder="0" value="${item.unitPrice}"
+            oninput="onMatInput(${item.id},'unitPrice',this.value)">
+        </div>
+        <div class="mat-field">
+          <label class="mat-label">仕込み数量(<span class="mat-unit-label">${item.unit}</span>)</label>
+          <input class="mat-input" type="number" placeholder="0" step="0.1" value="${item.qty}"
+            oninput="onMatInput(${item.id},'qty',this.value)">
+        </div>
+      </div>
+      <div class="mat-cost-bar">
+        <span style="font-size:11px;font-weight:700;color:var(--text2);">仕込み原価</span>
+        <span class="mat-prep-cost" style="font-size:16px;font-weight:900;font-family:'Dela Gothic One',sans-serif;color:var(--primary);">
+          ¥${prepCost.toLocaleString(undefined,{maximumFractionDigits:0})}
+        </span>
+      </div>
+      <div class="remainder-area">
+        <div class="remainder-title">📦 余り入力</div>
+        <div class="remainder-fields">
+          <div class="remainder-field">
+            <label class="mat-label" style="color:#E65100;">🗑️ 廃棄(<span class="mat-unit-label">${item.unit}</span>)</label>
+            <input class="remainder-input" style="border-color:#FFCC80;" type="number"
+              placeholder="0" step="0.1" value="${item.remainder.waste}"
+              oninput="onMatInput(${item.id},'rem_waste',this.value)">
+          </div>
+          <div class="remainder-field">
+            <label class="mat-label" style="color:var(--info);">♻️ 流用(<span class="mat-unit-label">${item.unit}</span>)</label>
+            <input class="remainder-input" style="border-color:#90CAF9;" type="number"
+              placeholder="0" step="0.1" value="${item.remainder.reuse}"
+              oninput="onMatInput(${item.id},'rem_reuse',this.value)">
+          </div>
+        </div>
+        <div class="mat-used-box" style="margin-bottom:8px;">
+          <span class="mat-used-label">✅ 実使用量</span>
+          <span class="mat-used-val-text">${c.used.toFixed(2)}${item.unit}</span>
+        </div>
+        <div class="remainder-result">
+          <div class="remainder-result-item">
+            <div class="remainder-result-label">廃棄ロス</div>
+            <div class="mat-waste-cost remainder-result-val" style="color:var(--danger);">
+              ¥${(c.waste*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0})}
+            </div>
+          </div>
+          <div class="remainder-result-item">
+            <div class="remainder-result-label">流用額（原価外）</div>
+            <div class="mat-reuse-cost remainder-result-val" style="color:var(--info);">
+              ¥${(c.reuse*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0})}
+            </div>
+          </div>
+          <div class="remainder-result-item">
+            <div class="remainder-result-label">原価算入額</div>
+            <div class="mat-eff-cost remainder-result-val" style="color:var(--danger);">
+              ¥${c.effectiveCost.toLocaleString(undefined,{maximumFractionDigits:0})}
+            </div>
+          </div>
+        </div>
+      </div>
+      ${modeSelectHtml}
+      ${catChipsHtml}
+      ${itemChipsHtml}
+      ${noteHtml}
+    </div>`;
+  }).join('');
+}
 function selectRentType(type){rentType=type;['fixed','rate','both'].forEach(t=>{document.getElementById('rent-btn-'+t).classList.toggle('active',t===type);document.getElementById('rent-'+t+'-area').style.display=t===type?'block':'none';});calcRent();}
 function getEvtSales(){return(state.orders||[]).filter(o=>o.eventId===state.currentEventId).reduce((s,o)=>s+o.total,0);}
 function calcRent(){const sales=getEvtSales();let amt=0;if(rentType==='fixed'){amt=parseFloat(document.getElementById('rent-fixed-amt').value)||0;}else if(rentType==='rate'){const pct=(parseFloat(document.getElementById('rent-rate-pct').value)||0)/100;amt=Math.round(sales*pct);}else{const fixed=parseFloat(document.getElementById('rent-both-fixed').value)||0;const pct=(parseFloat(document.getElementById('rent-both-rate').value)||0)/100;amt=fixed+Math.round(sales*pct);}document.getElementById('rent-calc-amount').textContent='¥'+amt.toLocaleString();}
