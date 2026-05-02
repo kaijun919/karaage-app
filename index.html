@@ -6,7 +6,217 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="屋外販売管理">
 <title>🍗 屋外販売管理</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+/* =====================================================
+   管理PIN helper 関数群 [PIN-1]
+   ===================================================== */
+
+/**
+ * PIN保護が必要かどうか判定
+ * @returns {boolean} true=PIN入力が必要
+ */
+function isAdminPinRequired(){
+  if(!state.adminPinEnabled||!state.adminPin)return false; /* PIN未設定は保護なし */
+  if(adminSessionUnlocked)return false;                    /* セッション解除中は通過 */
+  return true;
+}
+
+/**
+ * PIN入力検証
+ * @param {string} inputPin - ユーザーが入力したPIN
+ * @returns {boolean} 一致するかどうか
+ * 注: 現在は平文比較。将来はサーバーサイドハッシュ化 or Web Crypto APIを推奨。
+ */
+function verifyAdminPin(inputPin){
+  return String(inputPin)===String(state.adminPin);
+}
+
+/**
+ * 管理PINを要求し、成功したら onSuccess を実行する
+ * PIN未設定 or セッション解除済みなら即実行
+ * @param {string} title   - モーダルタイトル
+ * @param {string} message - モーダル説明文
+ * @param {Function} onSuccess - 認証成功後に実行するコールバック
+ * @param {Function} [onCancel] - キャンセル時のコールバック（省略可）
+ */
+function requireAdminPin(title, message, onSuccess, onCancel){
+  if(!isAdminPinRequired()){
+    onSuccess();
+    return;
+  }
+  openAdminPinModal(title, message, onSuccess, onCancel);
+}
+
+/**
+ * 管理PINモーダルを開く
+ */
+function openAdminPinModal(title, message, onSuccess, onCancel){
+  _adminPinCallback={onSuccess, onCancel:onCancel||null};
+  document.getElementById('admin-pin-modal-title').textContent=title||'🔐 管理PIN確認';
+  document.getElementById('admin-pin-modal-msg').textContent=message||'この操作には管理PINが必要です。';
+  document.getElementById('admin-pin-modal-input').value='';
+  document.getElementById('admin-pin-modal-err').textContent='';
+  document.getElementById('admin-pin-modal').classList.add('open');
+  setTimeout(()=>{
+    const inp=document.getElementById('admin-pin-modal-input');
+    if(inp)inp.focus();
+  },150);
+}
+
+function adminPinModalOk(){
+  const inp=document.getElementById('admin-pin-modal-input');
+  const errEl=document.getElementById('admin-pin-modal-err');
+  const val=(inp.value||'').trim();
+  if(!val){errEl.textContent='PINを入力してください';return;}
+  if(verifyAdminPin(val)){
+    /* 認証成功 */
+    adminSessionUnlocked=true;
+    document.getElementById('admin-pin-modal').classList.remove('open');
+    inp.value='';
+    errEl.textContent='';
+    renderPinSettingsUI(); /* セッションバー更新 */
+    if(_adminPinCallback&&_adminPinCallback.onSuccess){
+      _adminPinCallback.onSuccess();
+    }
+    _adminPinCallback=null;
+  } else {
+    /* 認証失敗 */
+    errEl.textContent='PINが違います。もう一度入力してください。';
+    inp.value='';
+    inp.focus();
+  }
+}
+
+function adminPinModalCancel(){
+  document.getElementById('admin-pin-modal').classList.remove('open');
+  document.getElementById('admin-pin-modal-input').value='';
+  document.getElementById('admin-pin-modal-err').textContent='';
+  if(_adminPinCallback&&_adminPinCallback.onCancel){
+    _adminPinCallback.onCancel();
+  }
+  _adminPinCallback=null;
+}
+
+/* セッションを再ロックする */
+function relockAdminSession(){
+  adminSessionUnlocked=false;
+  renderPinSettingsUI();
+  showToast('🔒 管理ロックを再設定しました');
+}
+
+/* =====================================================
+   管理PIN設定UI [PIN-1]
+   ===================================================== */
+
+/** 設定画面のPIN UIを現在のstateに合わせて更新 */
+function renderPinSettingsUI(){
+  /* バッジ更新 */
+  const badge=document.getElementById('admin-pin-status-badge');
+  if(badge){
+    if(state.adminPinEnabled&&state.adminPin){
+      badge.textContent='設定済み';
+      badge.style.background='rgba(255,255,255,.3)';
+    } else {
+      badge.textContent='未設定';
+      badge.style.background='rgba(255,255,255,.15)';
+    }
+  }
+
+  /* チェックボックス */
+  const toggle=document.getElementById('pin-enabled-toggle');
+  if(toggle)toggle.checked=!!(state.adminPinEnabled&&state.adminPin);
+
+  /* PIN入力エリアの表示制御 */
+  const area=document.getElementById('pin-input-area');
+  if(area){
+    /* PINが既に設定済みなら入力エリアのラベルを変更 */
+    const labelEls=area.querySelectorAll('.form-label');
+    if(state.adminPinEnabled&&state.adminPin){
+      if(labelEls[0])labelEls[0].textContent='新しいPIN（変更する場合のみ入力）';
+    } else {
+      if(labelEls[0])labelEls[0].textContent='新しいPIN（4〜6桁の数字）';
+    }
+  }
+
+  /* セッションバー */
+  const bar=document.getElementById('admin-pin-session-bar');
+  if(bar){
+    if(state.adminPinEnabled&&state.adminPin&&adminSessionUnlocked){
+      bar.innerHTML=`<div class="pin-session-bar">
+        <span>🔓 管理ロック解除中</span>
+        <button class="pin-relock-btn" onclick="relockAdminSession()">再ロックする</button>
+      </div>`;
+    } else {
+      bar.innerHTML='';
+    }
+  }
+}
+
+/** トグル変更時の処理 */
+function onPinToggleChange(checked){
+  if(!checked){
+    /* 無効化: PIN設定済みなら現在のPINで認証してから無効化 */
+    if(state.adminPinEnabled&&state.adminPin){
+      requireAdminPin(
+        '管理PIN保護を無効にする',
+        '現在のPINを入力して保護を解除してください。',
+        ()=>{
+          state.adminPinEnabled=false;
+          state.adminPin='';
+          adminSessionUnlocked=false;
+          saveState();
+          renderPinSettingsUI();
+          showToast('🔓 管理PIN保護を無効にしました');
+        },
+        ()=>{
+          /* キャンセル: チェックボックスを元に戻す */
+          const tog=document.getElementById('pin-enabled-toggle');
+          if(tog)tog.checked=true;
+        }
+      );
+    } else {
+      /* 未設定状態なら何もしない */
+      const tog=document.getElementById('pin-enabled-toggle');
+      if(tog)tog.checked=false;
+    }
+  }
+  /* checkedになった場合は savePinSettings() で保存する */
+}
+
+/** PIN保存ボタン押下 */
+function savePinSettings(){
+  const newPin=(document.getElementById('pin-new-input').value||'').trim();
+  const confirmPin=(document.getElementById('pin-confirm-input').value||'').trim();
+
+  /* バリデーション */
+  if(!newPin){showToast('⚠️ PINを入力してください');return;}
+  if(!/^\d{4,6}$/.test(newPin)){showToast('⚠️ PINは4〜6桁の数字で入力してください');return;}
+  if(newPin!==confirmPin){showToast('⚠️ PINが一致しません。確認入力を確認してください');return;}
+
+  /* 既存PINがある場合は変更前にPIN認証 */
+  if(state.adminPinEnabled&&state.adminPin){
+    requireAdminPin(
+      '管理PIN変更の確認',
+      '現在のPINを入力してから新しいPINを保存します。',
+      ()=>_doSavePin(newPin)
+    );
+  } else {
+    _doSavePin(newPin);
+  }
+}
+
+function _doSavePin(newPin){
+  state.adminPin=newPin;
+  state.adminPinEnabled=true;
+  adminSessionUnlocked=true; /* 設定直後はセッション解除状態にする */
+  saveState();
+  document.getElementById('pin-new-input').value='';
+  document.getElementById('pin-confirm-input').value='';
+  renderPinSettingsUI();
+  showToast('✅ 管理PINを保存しました');
+}
+
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Dela+Gothic+One&display=swap');
 :root{
@@ -460,6 +670,48 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 
 /* エクスポートボタン追加行 */
 .export-row + .export-row{margin-top:6px;}
+
+/* =====================================================
+   管理PIN UI [PIN-1]
+   ===================================================== */
+.pin-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+  z-index:3100;align-items:center;justify-content:center;padding:20px;}
+.pin-modal-overlay.open{display:flex;}
+.pin-modal-box{background:#fff;border-radius:16px;padding:24px 20px;width:100%;
+  max-width:360px;box-shadow:0 16px 48px rgba(0,0,0,.25);}
+.pin-modal-title{font-family:'Dela Gothic One',sans-serif;font-size:17px;
+  color:var(--brown);margin-bottom:6px;text-align:center;}
+.pin-modal-msg{font-size:12px;color:var(--text2);text-align:center;
+  line-height:1.55;margin-bottom:16px;}
+.pin-input-field{width:100%;padding:12px 14px;border:2px solid var(--border);
+  border-radius:10px;font-size:20px;text-align:center;letter-spacing:.3em;
+  font-family:'Dela Gothic One',sans-serif;background:var(--surface2);
+  color:var(--text);outline:none;margin-bottom:8px;}
+.pin-input-field:focus{border-color:var(--primary);background:var(--primary-light);}
+.pin-modal-err{font-size:12px;color:var(--danger);font-weight:700;
+  min-height:18px;text-align:center;margin-bottom:10px;}
+.pin-modal-footer{display:flex;gap:8px;}
+.pin-session-bar{background:#E8F5E9;border:1.5px solid #A5D6A7;border-radius:var(--radius-sm);
+  padding:9px 14px;display:flex;align-items:center;justify-content:space-between;
+  margin:0 14px 12px;font-size:12px;font-weight:700;color:#2E7D32;}
+.pin-relock-btn{padding:5px 12px;background:none;border:1.5px solid #A5D6A7;
+  border-radius:6px;font-family:'Noto Sans JP',sans-serif;font-size:11px;
+  font-weight:700;cursor:pointer;color:#2E7D32;}
+.pin-relock-btn:active{background:#E8F5E9;}
+/* 設定セクション内 */
+.pin-settings-body{padding:14px;}
+.pin-toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.pin-toggle-label{font-size:13px;font-weight:700;flex:1;}
+.pin-toggle-switch{width:44px;height:26px;appearance:none;-webkit-appearance:none;
+  background:#ccc;border-radius:13px;cursor:pointer;position:relative;
+  transition:background .2s;flex-shrink:0;}
+.pin-toggle-switch:checked{background:var(--primary);}
+.pin-toggle-switch::after{content:'';position:absolute;width:20px;height:20px;
+  border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s;
+  box-shadow:0 1px 4px rgba(0,0,0,.25);}
+.pin-toggle-switch:checked::after{transform:translateX(18px);}
+.pin-desc{font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:14px;
+  padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);}
 </style>
 </head>
 <body>
@@ -631,6 +883,33 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
     </div>
   </div>
 
+  <!-- [PIN-1] 管理PIN設定セクション -->
+  <div class="settings-section" id="admin-pin-section">
+    <div class="settings-section-header">
+      <span>🔐 管理PIN</span>
+      <span id="admin-pin-status-badge" style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.25);">未設定</span>
+    </div>
+    <div id="admin-pin-session-bar"></div>
+    <div class="pin-settings-body">
+      <div class="pin-desc">設定変更・編集・削除・バックアップ復元などの管理操作をPINで保護します。<br>PINは4〜6桁の数字で設定してください。</div>
+      <div class="pin-toggle-row">
+        <label class="pin-toggle-label" for="pin-enabled-toggle">管理PIN保護を使う</label>
+        <input type="checkbox" class="pin-toggle-switch" id="pin-enabled-toggle" onchange="onPinToggleChange(this.checked)">
+      </div>
+      <div id="pin-input-area">
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label">新しいPIN（4〜6桁の数字）</label>
+          <input class="form-input" type="password" id="pin-new-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="例：1234" autocomplete="new-password">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label">PIN確認（もう一度入力）</label>
+          <input class="form-input" type="password" id="pin-confirm-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="例：1234" autocomplete="new-password">
+        </div>
+        <button class="add-btn" style="background:#1565C0;box-shadow:none;" onclick="savePinSettings()">🔐 PINを保存する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- [P2] バックアップ・復元セクション（強化） -->
   <div class="settings-section">
     <div class="settings-section-header">
@@ -716,6 +995,23 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   </div>
 </div>
 
+<!-- [PIN-1] 管理PIN認証モーダル -->
+<div class="pin-modal-overlay" id="admin-pin-modal">
+  <div class="pin-modal-box">
+    <div class="pin-modal-title" id="admin-pin-modal-title">🔐 管理PIN確認</div>
+    <div class="pin-modal-msg" id="admin-pin-modal-msg">この操作を続けるには管理PINを入力してください。</div>
+    <input class="pin-input-field" type="password" id="admin-pin-modal-input"
+      inputmode="numeric" pattern="[0-9]*" maxlength="6"
+      placeholder="••••" autocomplete="off"
+      onkeydown="if(event.key==='Enter')adminPinModalOk()">
+    <div class="pin-modal-err" id="admin-pin-modal-err"></div>
+    <div class="pin-modal-footer">
+      <button class="modal-btn cancel" style="flex:1;" onclick="adminPinModalCancel()">キャンセル</button>
+      <button class="modal-btn primary" style="flex:1;" onclick="adminPinModalOk()">確認</button>
+    </div>
+  </div>
+</div>
+
 <!-- [P1] 汎用確認ダイアログ -->
 <div class="modal-overlay" id="confirm-modal">
   <div class="modal" style="max-width:380px;margin:auto;border-radius:var(--radius);">
@@ -739,7 +1035,18 @@ const PAY_LABELS={cash:'現金',paypay:'PayPay',aupay:'auPay',dpay:'d払い',rak
 const DEFAULT_CATS=['唐揚げ','セット','ドリンク','サイド','その他'];
 const DEFAULT_ACCOUNTS=['交通費','出店料','消耗品','外注費','広告費','その他'];
 const MATERIAL_UNITS=['kg','g','個','本','袋','缶','セット','その他'];
-let state={events:[],currentEventId:null,menuItems:[],orders:[],inventory:{},expenses:[],categories:[...DEFAULT_CATS],accountItems:[...DEFAULT_ACCOUNTS],staffMembers:[],materialItems:{}};
+let state={
+  events:[],currentEventId:null,
+  menuItems:[],orders:[],inventory:{},expenses:[],
+  categories:[...DEFAULT_CATS],accountItems:[...DEFAULT_ACCOUNTS],
+  staffMembers:[],materialItems:{},
+  /* [PIN-1] 管理PIN設定 */
+  adminPinEnabled:false, /* PIN保護機能の有効/無効 */
+  adminPin:''            /* 保存されるPIN（平文。将来はハッシュ化を推奨） */
+};
+/* [PIN-1] セッション変数: 永続保存しない・ページ再読み込みでリセット */
+let adminSessionUnlocked=false;
+let _adminPinCallback=null; /* PIN認証成功後のコールバック退避 */
 function loadState(){try{const s=localStorage.getItem(DB_KEY);if(s){const p=JSON.parse(s);state={...state,...p};if(!state.categories||!state.categories.length)state.categories=[...DEFAULT_CATS];if(!state.accountItems||!state.accountItems.length)state.accountItems=[...DEFAULT_ACCOUNTS];if(!state.staffMembers)state.staffMembers=[];if(!state.materialItems)state.materialItems={};}}catch(e){}}
 function saveState(){try{localStorage.setItem(DB_KEY,JSON.stringify(state));}catch(e){}}
 let cart=[],payMethod='cash',receivedStr='',tenkeyOpen=false,rentType='fixed';
@@ -765,6 +1072,9 @@ function migrateState(){
   }
   if(!state.auditLog)state.auditLog=[];
   if(state.events){state.events=state.events.map(e=>({isClosedFlag:false,...e}));}
+  /* [PIN-1] 管理PIN フィールド補完 */
+  if(state.adminPinEnabled===undefined)state.adminPinEnabled=false;
+  if(state.adminPin===undefined)state.adminPin='';
 }
 
 function seedDefaultData(){if(!state.menuItems||!state.menuItems.length){state.menuItems=[{id:1,emoji:'🍗',name:'唐揚げ 3個',cat:'唐揚げ',price:400,cost:110,isSet:false},{id:2,emoji:'🍗',name:'唐揚げ 5個',cat:'唐揚げ',price:600,cost:170,isSet:false},{id:3,emoji:'🍱',name:'唐揚げ弁当',cat:'セット',price:800,cost:260,isSet:true},{id:4,emoji:'🍺',name:'ビール',cat:'ドリンク',price:500,cost:200,isSet:false},{id:5,emoji:'🥤',name:'ソフトドリンク',cat:'ドリンク',price:200,cost:60,isSet:false},{id:6,emoji:'🍟',name:'ポテト S',cat:'サイド',price:300,cost:80,isSet:false},{id:7,emoji:'🌶️',name:'激辛唐揚げ 3個',cat:'唐揚げ',price:450,cost:120,isSet:false}];}if(!state.events||!state.events.length){state.events=[{id:1,name:'春まつり2025',date:new Date().toISOString().slice(0,10),place:'サンプル公園'}];state.currentEventId=1;}if(!Array.isArray(state.expenses))state.expenses=[];if(!state.inventory)state.inventory={};if(!state.staffMembers)state.staffMembers=[];if(!state.materialItems)state.materialItems={};saveState();}
@@ -1292,7 +1602,7 @@ function deleteStaff(id){
   });
 }
 let dragSrcIdx=null;
-function renderSettings(){renderCatTags();renderAccountTags();renderStaffList();renderMenuCatSelect();updateChecklist();updateBackupLastInfo();/* [P2] */document.getElementById('menu-settings-list').innerHTML=state.menuItems.map((item,idx)=>`<div class="menu-sort-item" draggable="true" data-idx="${idx}" ondragstart="onDragStart(event,${idx})" ondragover="onDragOver(event,${idx})" ondrop="onDrop(event,${idx})" ondragend="onDragEnd()"><span class="drag-handle">⠿⠿</span><span style="font-size:20px;flex-shrink:0;">${item.emoji}</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">SET</span>':''}</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">${item.cat}</div></div><span style="font-size:14px;font-weight:900;color:var(--primary);min-width:55px;text-align:right;flex-shrink:0;">¥${item.price.toLocaleString()}</span><button class="icon-btn" onclick="openEditMenuModal(${item.id})">編集</button><button class="icon-btn" style="border-color:#F0A0A0;color:var(--danger);" onclick="deleteMenuItem(${item.id})">削除</button></div>`).join('');const evt=state.events.find(e=>e.id===state.currentEventId);if(evt){document.getElementById('evt-name').value=evt.name||'';document.getElementById('evt-date').value=evt.date||'';document.getElementById('evt-place').value=evt.place||'';}}
+function renderSettings(){renderCatTags();renderAccountTags();renderStaffList();renderMenuCatSelect();updateChecklist();updateBackupLastInfo();renderPinSettingsUI();/* [PIN-1] */document.getElementById('menu-settings-list').innerHTML=state.menuItems.map((item,idx)=>`<div class="menu-sort-item" draggable="true" data-idx="${idx}" ondragstart="onDragStart(event,${idx})" ondragover="onDragOver(event,${idx})" ondrop="onDrop(event,${idx})" ondragend="onDragEnd()"><span class="drag-handle">⠿⠿</span><span style="font-size:20px;flex-shrink:0;">${item.emoji}</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">SET</span>':''}</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">${item.cat}</div></div><span style="font-size:14px;font-weight:900;color:var(--primary);min-width:55px;text-align:right;flex-shrink:0;">¥${item.price.toLocaleString()}</span><button class="icon-btn" onclick="openEditMenuModal(${item.id})">編集</button><button class="icon-btn" style="border-color:#F0A0A0;color:var(--danger);" onclick="deleteMenuItem(${item.id})">削除</button></div>`).join('');const evt=state.events.find(e=>e.id===state.currentEventId);if(evt){document.getElementById('evt-name').value=evt.name||'';document.getElementById('evt-date').value=evt.date||'';document.getElementById('evt-place').value=evt.place||'';}}
 function onDragStart(e,idx){dragSrcIdx=idx;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(idx));setTimeout(()=>e.currentTarget.classList.add('dragging'),0);}
 function onDragOver(e,idx){e.preventDefault();e.dataTransfer.dropEffect='move';document.querySelectorAll('.menu-sort-item').forEach(el=>el.classList.remove('drag-over'));if(idx!==dragSrcIdx)e.currentTarget.classList.add('drag-over');}
 function onDrop(e,idx){e.preventDefault();if(dragSrcIdx===null||dragSrcIdx===idx){onDragEnd();return;}const items=[...state.menuItems];const[moved]=items.splice(dragSrcIdx,1);items.splice(idx,0,moved);state.menuItems=items;dragSrcIdx=null;saveState();renderSettings();showToast('↕️ 並び順を変更しました');}
@@ -1334,7 +1644,7 @@ function updateEventName(){const evt=state.events&&state.events.find(e=>e.id===s
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
 function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2800);}
-loadState();migrateState();seedDefaultData();updateEventName();renderRegister();checkFirstLaunch();/* [P2] */
+loadState();migrateState();seedDefaultData();updateEventName();renderRegister();checkFirstLaunch();adminSessionUnlocked=false;/* [PIN-1] セッションは常にリセット */
 
 /* =====================================================
    PHASE 1 NEW FUNCTIONS
@@ -1491,10 +1801,11 @@ function updateBackupLastInfo(){
   }
 }
 
-/* [P2] 復元（確認あり・migrateState適用） */
+/* [PIN-1] 復元: 管理PIN保護 */
 function restoreData(input){
   const file=input.files[0];
   if(!file)return;
+  requireAdminPin('バックアップ復元','復元操作を実行するには管理PINが必要です。',()=>{
   showConfirm(
     'データを復元しますか？',
     '現在のデータはすべて上書きされます。\nこの操作は元に戻せません。\n（バックアップファイル: '+file.name+'）',
@@ -1524,6 +1835,7 @@ function restoreData(input){
       input.value='';
     }
   );
+  });/* requireAdminPin end */
 }
 
 /* [P2] セットアップガイドモーダル制御 */
