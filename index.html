@@ -743,6 +743,38 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   font-size:10px;font-weight:700;background:#E8F5E9;color:#2E7D32;margin-top:4px;}
 .mat-alloc-badge-ng{display:inline-block;padding:2px 8px;border-radius:10px;
   font-size:10px;font-weight:700;background:#FFEBEE;color:#B71C1C;margin-top:4px;}
+
+/* ===========================================
+   出力整備 UI仕上げ [ALLOC-3]
+   =========================================== */
+
+/* 参考値明示ラベル */
+.ref-label{display:inline-block;padding:2px 8px;border-radius:10px;
+  font-size:10px;font-weight:700;background:#E8EAF6;color:#283593;
+  margin-left:6px;vertical-align:middle;}
+
+/* section-title の按分注記付き */
+.section-title-sub{font-size:11px;font-weight:400;color:var(--text3);margin-left:8px;}
+
+/* レポート注記バナー（視認性改善） */
+.report-note{font-size:12px;line-height:1.7;}
+.report-note .report-note-title{font-size:13px;}
+
+/* 未配賦バナー強調 */
+.unalloc-banner{background:#FFF3E0;border:1.5px solid #FFAB40;border-radius:var(--radius-sm);
+  padding:10px 14px;font-size:12px;color:#BF360C;line-height:1.6;margin-bottom:10px;
+  display:flex;align-items:flex-start;gap:8px;}
+.unalloc-banner-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+
+/* 商品別利益テーブル: 列幅をモバイルで見やすく */
+@media(max-width:640px){
+  .report-table td,.report-table th{padding:6px 8px;font-size:11px;}
+  .report-table th.alloc,.report-table td.alloc-cost,
+  .report-table td.ref-profit,.report-table td.ref-rate{font-size:10px;}
+}
+
+/* エクスポートボタン追加行 */
+.export-row + .export-row{margin-top:6px;}
 </style>
 </head>
 <body>
@@ -876,17 +908,25 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   <div class="section-title" style="margin-bottom:8px;">📊 材料費配賦サマリー</div>
   <div class="alloc-summary-grid" id="alloc-summary-grid"></div>
   <!-- [ALLOC-2] 商品別集計（按分原価込み） -->
-  <div class="section-title" style="margin-bottom:8px;">🍗 商品別集計（参考利益）</div>
+  <div class="section-title" style="margin-bottom:8px;">🍗 商品別集計<span class="ref-label">参考値</span></div>
   <div class="report-note">
-    <div class="report-note-title">📌 参考値について</div>
-    商品別利益は、登録された直接原価と実使用材料の按分原価から算出した参考値です。人件費・出店料・未配賦の共通費は含まれません。経営判断には全体KPIを合わせてご確認ください。
+    <div class="report-note-title">📌 商品別利益は参考値です</div>
+    直接原価（各商品に設定した原価）＋ 共通材料の按分原価 から算出しています。<br>
+    <strong>含まれないもの：</strong>人件費・出店料・「直接原価」設定の材料費・按分対象販売数がゼロの材料費。<br>
+    正確な事業収支は全体KPI（上部）と経費合計をあわせてご確認ください。
   </div>
   <div id="alloc-note-unalloc" style="margin-bottom:10px;"></div>
   <div class="report-table-wrap" style="margin-bottom:14px;overflow-x:auto;"><table class="report-table"><thead><tr><th>商品名</th><th class="num">販売数</th><th class="num">売上</th><th class="num">直接原価</th><th class="num alloc">共通材料按分</th><th class="num alloc">参考利益</th><th class="num alloc">参考利益率</th></tr></thead><tbody id="product-report-body"></tbody></table></div>
   <div class="section-title" style="margin-bottom:8px;">💳 決済方法別</div>
   <div class="report-table-wrap" style="margin-bottom:14px;"><table class="report-table"><thead><tr><th>決済方法</th><th class="num">件数</th><th class="num">売上</th></tr></thead><tbody id="pay-report-body"></tbody></table></div>
   <div class="section-title" style="margin-bottom:8px;">💾 エクスポート</div>
-  <div class="export-row"><button class="export-btn" onclick="exportCSV()">📄 CSV</button><button class="export-btn" onclick="exportXLSX()">📊 Excel (.xlsx)</button></div>
+  <div class="export-row">
+    <button class="export-btn" onclick="exportCSV()">📄 CSV（全シート）</button>
+    <button class="export-btn" onclick="exportXLSX()">📊 Excel（5シート）</button>
+  </div>
+  <div class="export-row" style="margin-top:8px;">
+    <button class="export-btn" style="border-color:#283593;color:#283593;" onclick="exportProductCSV()">📋 商品別利益CSV（参考値）</button>
+  </div>
 </div>
 <div class="page" id="page-settings">
   <div class="settings-section"><div class="settings-section-header"><span>🍗 メニュー管理</span><button class="icon-btn" style="background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4);color:#fff;" onclick="openAddMenuModal()">＋ 追加</button></div><div id="menu-settings-list"></div></div>
@@ -1316,17 +1356,19 @@ function onStaffTypeChange(){const type=document.getElementById('staff-pay-type'
 function calcStaffWage(){const type=document.getElementById('staff-pay-type').value;if(type==='daily')return;const sel=document.getElementById('staff-select');const staff=state.staffMembers.find(s=>s.id===parseInt(sel.value));if(!staff)return;const start=document.getElementById('staff-start').value;const end=document.getElementById('staff-end').value;if(!start||!end){document.getElementById('staff-hours-disp').value='';document.getElementById('staff-wage-disp').textContent='¥0';return;}const[sh,sm]=start.split(':').map(Number);const[eh,em]=end.split(':').map(Number);let mins=(eh*60+em)-(sh*60+sm);if(mins<0)mins+=1440;const hours=mins/60;document.getElementById('staff-hours-disp').value=`${Math.floor(hours)}h${mins%60>0?`${mins%60}m`:''}`;document.getElementById('staff-wage-disp').textContent='¥'+(Math.round(staff.rate*hours)).toLocaleString();}
 function addStaffExpense(){const sel=document.getElementById('staff-select');const staff=state.staffMembers.find(s=>s.id===parseInt(sel.value));if(!staff){showToast('⚠️ スタッフを選択してください');return;}const type=document.getElementById('staff-pay-type').value;let amount=0,memo='';if(type==='daily'){amount=staff.rate;memo=`${staff.name}（日給）`;}else{const start=document.getElementById('staff-start').value;const end=document.getElementById('staff-end').value;if(!start||!end){showToast('⚠️ 勤務時間を入力してください');return;}const[sh,sm]=start.split(':').map(Number);const[eh,em]=end.split(':').map(Number);let mins=(eh*60+em)-(sh*60+sm);if(mins<0)mins+=1440;amount=Math.round(staff.rate*(mins/60));memo=`${staff.name}（時給 ${start}〜${end}）`;}if(!amount){showToast('⚠️ 金額が0円です');return;}state.expenses.push({id:Date.now(),eventId:state.currentEventId,cat:'人件費',amount,memo,time:new Date().toISOString()});saveState();document.getElementById('staff-start').value='';document.getElementById('staff-end').value='';document.getElementById('staff-hours-disp').value='';document.getElementById('staff-wage-disp').textContent='¥0';renderExpenses();showToast(`👤 ${memo} ¥${amount.toLocaleString()} を追加しました`);}
 function renderReport(){
-  const orders=(state.orders||[]).filter(o=>o.eventId===state.currentEventId);
+  /* [ALLOC-3] eventId + cancelledAt 除外を最初に確定 */
+  const allEvtOrders=(state.orders||[]).filter(o=>o.eventId===state.currentEventId);
+  const activeOrders=allEvtOrders.filter(o=>!o.cancelledAt); /* 取消済除外 */
   const expenses=getEvtExpenses();const matItems=getMatItems();
-  const totalSales=orders.reduce((s,o)=>s+o.total,0);
+  const totalSales=activeOrders.reduce((s,o)=>s+o.total,0);
   const totalExpenses=expenses.reduce((s,e)=>s+e.amount,0);
-  let totalCOGS=0;orders.forEach(o=>o.items.forEach(i=>{const m=state.menuItems.find(m=>m.id===i.id);if(m)totalCOGS+=m.cost*i.qty;}));
+  let totalCOGS=0;activeOrders.forEach(o=>o.items.forEach(i=>{const m=state.menuItems.find(m=>m.id===i.id);if(m)totalCOGS+=m.cost*i.qty;}));
   const matCost=matItems.reduce((s,item)=>{const c=calcMatItem(item);return s+c.effectiveCost;},0);
   const totalWasted=matItems.reduce((s,item)=>s+(parseFloat(item.remainder.waste)||0)*(parseFloat(item.unitPrice)||0),0);
   const laborCost=expenses.filter(e=>e.cat==='人件費'||e.cat==='外注費').reduce((s,e)=>s+e.amount,0);
   const rentCost=expenses.filter(e=>e.cat==='出店料').reduce((s,e)=>s+e.amount,0);
   const gp=totalSales-totalCOGS;const np=gp-totalExpenses-matCost;const mg=totalSales>0?Math.round(np/totalSales*100):0;
-  document.getElementById('kpi-grid').innerHTML=`<div class="kpi-card"><div class="kpi-label">売上合計</div><div class="kpi-value orange">¥${totalSales.toLocaleString()}</div></div><div class="kpi-card"><div class="kpi-label">販売件数</div><div class="kpi-value blue">${orders.length}件</div></div><div class="kpi-card"><div class="kpi-label">粗利益</div><div class="kpi-value green">¥${gp.toLocaleString()}</div></div><div class="kpi-card"><div class="kpi-label">経費合計</div><div class="kpi-value red">¥${totalExpenses.toLocaleString()}</div></div><div class="kpi-card"><div class="kpi-label">材料費(原価算入)</div><div class="kpi-value red">¥${matCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="kpi-card"><div class="kpi-label">廃棄ロス</div><div class="kpi-value red">¥${totalWasted.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="kpi-card"><div class="kpi-label">純利益</div><div class="kpi-value ${np>=0?'green':'red'}">¥${np.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="kpi-card"><div class="kpi-label">利益率</div><div class="kpi-value gold">${mg}%</div></div>`;
+  document.getElementById('kpi-grid').innerHTML=`<div class="kpi-card"><div class="kpi-label">売上合計</div><div class="kpi-value orange">¥${totalSales.toLocaleString()}</div></div><div class="kpi-card"><div class="kpi-label">販売件数</div><div class="kpi-value blue">${activeOrders.length}件</div></div><div class="kpi-card"><div class="kpi-label">粗利益</div><div class="kpi-value green">¥${gp.toLocaleString()}</div></div><div class="kpi-card"><div class="kpi-label">経費合計</div><div class="kpi-value red">¥${totalExpenses.toLocaleString()}</div></div><div class="kpi-card"><div class="kpi-label">材料費(原価算入)</div><div class="kpi-value red">¥${matCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="kpi-card"><div class="kpi-label">廃棄ロス</div><div class="kpi-value red">¥${totalWasted.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="kpi-card"><div class="kpi-label">純利益</div><div class="kpi-value ${np>=0?'green':'red'}">¥${np.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="kpi-card"><div class="kpi-label">利益率</div><div class="kpi-value gold">${mg}%</div></div>`;
   const foodCost=matCost;const flValue=foodCost+laborCost;
   const costRate=totalSales>0?((totalCOGS+matCost)/totalSales*100):0;
   const flRate=totalSales>0?(flValue/totalSales*100):0;
@@ -1335,13 +1377,11 @@ function renderReport(){
   const flClass=flRate<=55?'ok':flRate<=60?'warn':'ng';
   const flrClass=flrRate<=60?'ok':flrRate<=70?'warn':'ng';
   document.getElementById('fl-grid').innerHTML=`<div class="fl-card ${costClass}"><div class="fl-card-label">原価率（F Rate）</div><div class="fl-card-val">${costRate.toFixed(1)}%</div><div class="fl-card-sub">目安：30%以下◎ 40%以下○</div></div><div class="fl-card ${flClass}"><div class="fl-card-label">FL率（F＋L）</div><div class="fl-card-val">${flRate.toFixed(1)}%</div><div class="fl-card-sub">目安：55%以下◎ 60%以下○</div></div><div class="fl-card purple"><div class="fl-card-label">FL値（絶対額）</div><div class="fl-card-val">¥${flValue.toLocaleString()}</div><div class="fl-card-sub">F:¥${foodCost.toLocaleString(undefined,{maximumFractionDigits:0})} L:¥${laborCost.toLocaleString()}</div></div><div class="fl-card ${flrClass}"><div class="fl-card-label">FLR率（出店料控除後）</div><div class="fl-card-val">${flrRate.toFixed(1)}%</div><div class="fl-card-sub">目安：60%以下◎ 70%以下○</div></div>`;
-  const hd={};for(let h=9;h<=20;h++)hd[h]=0;orders.forEach(o=>{const h=new Date(o.time).getHours();hd[h]=(hd[h]||0)+o.total;});const mx=Math.max(1,...Object.values(hd));const hrs=Object.keys(hd).map(Number).sort((a,b)=>a-b);
+  /* [ALLOC-3] 時間帯はactiveOrders */ const hd={};for(let h=9;h<=20;h++)hd[h]=0;activeOrders.forEach(o=>{const h=new Date(o.time).getHours();hd[h]=(hd[h]||0)+o.total;});const mx=Math.max(1,...Object.values(hd));const hrs=Object.keys(hd).map(Number).sort((a,b)=>a-b);
   document.getElementById('hour-chart').innerHTML=hrs.map(h=>`<div class="hour-bar" style="height:${Math.round((hd[h]||0)/mx*55)+3}px;background:${hd[h]>0?'var(--primary)':'var(--border)'};" title="${h}時"></div>`).join('');
   document.getElementById('hour-labels').innerHTML=hrs.map(h=>`<div class="hour-label">${h}</div>`).join('');
-  /* [ALLOC-2] 商品別集計（按分原価込み） */
+  /* [ALLOC-2] 商品別集計（按分原価込み）activeOrdersは上部で定義済み */
   const pm={};
-  /* cancelledAt がある注文は除外 */
-  const activeOrders=orders.filter(o=>!o.cancelledAt);
   activeOrders.forEach(o=>o.items.forEach(i=>{
     if(!pm[i.id])pm[i.id]={qty:0,sales:0};
     pm[i.id].qty+=i.qty;
@@ -1374,9 +1414,13 @@ function renderReport(){
   const unaEl=document.getElementById('alloc-note-unalloc');
   if(unaEl){
     unaEl.innerHTML=allocResult.totalUnallocated>0
-      ?`<div class="report-note" style="background:#FFF3E0;border-color:#FFCC80;">
-          ⚠️ 未配賦の材料費 ¥${allocResult.totalUnallocated.toLocaleString(undefined,{maximumFractionDigits:0})} があります。
-          これらは「直接原価」に設定された材料費または配賦対象販売数ゼロの材料費で、商品別には反映されていません。
+      ?`<div class="unalloc-banner">
+          <span class="unalloc-banner-icon">⚠️</span>
+          <div>
+            <strong>未配賦の材料費 ¥${allocResult.totalUnallocated.toLocaleString(undefined,{maximumFractionDigits:0})} があります</strong><br>
+            「直接原価」に設定された材料費、または按分対象の販売数がゼロだった材料費です。
+            商品別参考利益には含まれていません。材料画面で原価反映方式を見直してください。
+          </div>
         </div>`
       :'';
   }
@@ -1402,12 +1446,139 @@ function renderReport(){
     }).join('')
     ||'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--text3)">販売データがありません</td></tr>';
 
-  const payM={};orders.forEach(o=>{if(!payM[o.payMethod])payM[o.payMethod]={count:0,total:0};payM[o.payMethod].count++;payM[o.payMethod].total+=o.total;});
+  /* [ALLOC-3] 決済別もactiveOrders */ const payM={};activeOrders.forEach(o=>{if(!payM[o.payMethod])payM[o.payMethod]={count:0,total:0};payM[o.payMethod].count++;payM[o.payMethod].total+=o.total;});
   document.getElementById('pay-report-body').innerHTML=Object.keys(PAY_LABELS).filter(k=>payM[k]).map(k=>`<tr><td>${PAY_LABELS[k]}</td><td class="num">${payM[k].count}件</td><td class="num" style="color:var(--primary)">¥${payM[k].total.toLocaleString()}</td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--text3)">データがありません</td></tr>';
 }
-function buildExportData(){const orders=(state.orders||[]).filter(o=>o.eventId===state.currentEventId);const expenses=getEvtExpenses();const evt=state.events.find(e=>e.id===state.currentEventId);const matItems=getMatItems();const salesRows=[];orders.forEach(o=>o.items.forEach(i=>{const m=state.menuItems.find(m=>m.id===i.id);salesRows.push({'日時':new Date(o.time).toLocaleString('ja-JP'),'イベント':evt?evt.name:'','商品名':i.name,'数量':i.qty,'単価':i.price,'小計':i.price*i.qty,'原価単価':m?m.cost:0,'原価小計':m?m.cost*i.qty:0,'決済方法':PAY_LABELS[o.payMethod]||o.payMethod,'預かり金額':o.receivedAmount||''});}));const expenseRows=expenses.map(e=>({'日時':new Date(e.time).toLocaleString('ja-JP'),'勘定科目':e.cat,'メモ':e.memo,'金額':e.amount}));const matRows=matItems.map(item=>{const c=calcMatItem(item);return{'品目':item.name,'単位':item.unit,'単価':parseFloat(item.unitPrice)||0,'仕込み数量':parseFloat(item.qty)||0,'仕込み原価':(parseFloat(item.qty)||0)*(parseFloat(item.unitPrice)||0),'廃棄数量':c.waste,'廃棄ロス':c.waste*(parseFloat(item.unitPrice)||0),'流用数量':c.reuse,'流用額':c.reuse*(parseFloat(item.unitPrice)||0),'実使用数量':c.used,'原価算入額':c.effectiveCost};});const invRows=state.menuItems.map(m=>{const inv=getInventory(m.id);return{'商品名':m.name,'安全在庫数':inv.stocked,'販売数':inv.sold,'廃棄数':inv.wasted,'残数':Math.max(0,inv.stocked-inv.sold-inv.wasted)};});return{salesRows,expenseRows,matRows,invRows};}
-function exportCSV(){const{salesRows,expenseRows,matRows}=buildExportData();const toCSV=rows=>{if(!rows.length)return'';const h=Object.keys(rows[0]);return[h.join(','),...rows.map(r=>h.map(k=>`"${r[k]}"`).join(','))].join('\n');};const blob=new Blob(['\uFEFF=== 売上明細 ===\n'+toCSV(salesRows)+'\n\n=== 経費 ===\n'+toCSV(expenseRows)+'\n\n=== 材料費 ===\n'+toCSV(matRows)],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`sales_${new Date().toISOString().slice(0,10)}.csv`;a.click();showToast('📄 CSVをダウンロードしました');}
-function exportXLSX(){if(typeof XLSX==='undefined'){showToast('⚠️ XLSX読み込み中...');return;}const{salesRows,expenseRows,matRows,invRows}=buildExportData();const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(salesRows.length?salesRows:[{'※':'データなし'}]),'売上明細');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(expenseRows.length?expenseRows:[{'※':'データなし'}]),'経費');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(matRows.length?matRows:[{'※':'データなし'}]),'材料費');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(invRows),'在庫');XLSX.writeFile(wb,`sales_${new Date().toISOString().slice(0,10)}.xlsx`);showToast('📊 Excelをダウンロードしました');}
+function buildExportData(){
+  /* [ALLOC-3] eventId 絞り込み + cancelledAt 除外 */
+  const allOrders=(state.orders||[]).filter(o=>o.eventId===state.currentEventId);
+  const orders=allOrders.filter(o=>!o.cancelledAt); /* 取消済を売上から除外 */
+  const expenses=getEvtExpenses();
+  const evt=state.events.find(e=>e.id===state.currentEventId);
+  const matItems=getMatItems();
+  const salesRows=[];
+  orders.forEach(o=>o.items.forEach(i=>{const m=state.menuItems.find(m=>m.id===i.id);salesRows.push({'日時':new Date(o.time).toLocaleString('ja-JP'),'イベント':evt?evt.name:'','商品名':i.name,'数量':i.qty,'単価':i.price,'小計':i.price*i.qty,'原価単価':m?m.cost:0,'原価小計':m?m.cost*i.qty:0,'決済方法':PAY_LABELS[o.payMethod]||o.payMethod,'預かり金額':o.receivedAmount||''});}));const expenseRows=expenses.map(e=>({'日時':new Date(e.time).toLocaleString('ja-JP'),'勘定科目':e.cat,'メモ':e.memo,'金額':e.amount}));/* [ALLOC-3] 材料CSV: 按分情報列を追加 */
+  const matRows=matItems.map(item=>{
+    const c=calcMatItem(item);
+    const MODE_LABEL={'direct':'直接原価','allocate_all':'全商品按分','allocate_category':'カテゴリ按分','allocate_items':'商品指定按分'};
+    const preview=getMatAllocPreview(item,orders,state.menuItems);
+    const allocResult1=calcAllocatedCost(item,orders,state.menuItems);
+    const allocatedAmt=Object.values(allocResult1.perItem).reduce((s,v)=>s+v,0);
+    return{
+      '品目':item.name,
+      '単位':item.unit,
+      '単価':parseFloat(item.unitPrice)||0,
+      '仕込み数量':parseFloat(item.qty)||0,
+      '仕込み原価':(parseFloat(item.qty)||0)*(parseFloat(item.unitPrice)||0),
+      '廃棄数量':c.waste,
+      '廃棄ロス':+(c.waste*(parseFloat(item.unitPrice)||0)).toFixed(2),
+      '流用数量':c.reuse,
+      '流用額':+(c.reuse*(parseFloat(item.unitPrice)||0)).toFixed(2),
+      '実使用数量':+c.used.toFixed(4),
+      '実使用額':+c.effectiveCost.toFixed(2),
+      '原価算入額':+c.effectiveCost.toFixed(2),
+      '原価反映方式':MODE_LABEL[item.costMode||'direct']||item.costMode,
+      '対象カテゴリ':(item.targetCategories||[]).join('・')||'—',
+      '対象商品IDs':(item.targetItemIds||[]).map(id=>{const m=state.menuItems.find(m=>m.id===id);return m?m.name:id;}).join('・')||'—',
+      '対象販売数':preview.targetSold,
+      '1単位按分原価':preview.targetSold>0?+preview.perUnitCost.toFixed(4):0,
+      '配賦済金額':+allocatedAmt.toFixed(2),
+      '未配賦金額':+(c.effectiveCost-allocatedAmt).toFixed(2),
+      'メモ':item.note||''
+    };
+  });
+
+  /* [ALLOC-3] 在庫シート */
+  const invRows=state.menuItems.map(m=>{const inv=getInventory(m.id);return{'商品名':m.name,'安全在庫数':inv.stocked,'販売数':inv.sold,'廃棄数':inv.wasted,'残数':Math.max(0,inv.stocked-inv.sold-inv.wasted)};});
+
+  /* [ALLOC-3] 商品別利益シート（参考値） */
+  const allocAll=calcAllocatedCostAll(matItems,orders,state.menuItems);
+  const pmExp={};
+  orders.forEach(o=>o.items.forEach(i=>{
+    if(!pmExp[i.id])pmExp[i.id]={qty:0,sales:0};
+    pmExp[i.id].qty+=i.qty;pmExp[i.id].sales+=i.price*i.qty;
+  }));
+  const productRows=state.menuItems.filter(m=>pmExp[m.id]).map(m=>{
+    const d=pmExp[m.id];
+    const directCost=m.cost*d.qty;
+    const allocCost=allocAll.perMenuItemId[m.id]||0;
+    const refProfit=d.sales-directCost-allocCost;
+    const refRate=d.sales>0?(refProfit/d.sales*100):0;
+    return{
+      '商品名':m.name,
+      'カテゴリ':m.cat,
+      '販売数':d.qty,
+      '売上':d.sales,
+      '直接原価':directCost,
+      '共通材料按分原価':+allocCost.toFixed(2),
+      '参考利益':+refProfit.toFixed(2),
+      '参考利益率(%)':+refRate.toFixed(2),
+      '※注記':'人件費・出店料・未配賦材料費は含まない参考値'
+    };
+  });
+
+  /* [ALLOC-3] 未配賦サマリー行を materialRows に追記 */
+  const unallocNote=[{
+    '品目':'【未配賦合計】','単位':'','単価':'','仕込み数量':'','仕込み原価':'',
+    '廃棄数量':'','廃棄ロス':'','流用数量':'','流用額':'',
+    '実使用数量':'','実使用額':+allocAll.totalUnallocated.toFixed(2),'原価算入額':+allocAll.totalUnallocated.toFixed(2),
+    '原価反映方式':'—','対象カテゴリ':'—','対象商品IDs':'—',
+    '対象販売数':0,'1単位按分原価':0,'配賦済金額':0,'未配賦金額':+allocAll.totalUnallocated.toFixed(2),'メモ':'直接原価または販売数0の材料費合計'
+  }];
+
+  return{salesRows,expenseRows,matRows:[...matRows,...unallocNote],invRows,productRows};
+}
+/* [ALLOC-3] CSV: 全シート合冊 */
+function exportCSV(){
+  const{salesRows,expenseRows,matRows,productRows}=buildExportData();
+  const toCSV=rows=>{
+    if(!rows.length)return'（データなし）';
+    const h=Object.keys(rows[0]);
+    return[h.join(','),...rows.map(r=>h.map(k=>`"${String(r[k]).replace(/"/g,'""')}"`).join(','))].join('\n');
+  };
+  const content=[
+    '=== 売上明細（取消済除外） ===',toCSV(salesRows),
+    '','=== 経費 ===',toCSV(expenseRows),
+    '','=== 材料費（按分情報含む） ===',toCSV(matRows),
+    '','=== 商品別利益（参考値） ===',toCSV(productRows),
+  ].join('\n');
+  const blob=new Blob(['\uFEFF'+content],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`sales_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('📄 CSVをダウンロードしました（4シート）');
+}
+
+/* [ALLOC-3] 商品別利益CSVを個別ダウンロード */
+function exportProductCSV(){
+  const{productRows}=buildExportData();
+  if(!productRows.length){showToast('⚠️ 販売データがありません');return;}
+  const toCSV=rows=>{
+    const h=Object.keys(rows[0]);
+    return[h.join(','),...rows.map(r=>h.map(k=>`"${String(r[k]).replace(/"/g,'""')}"`).join(','))].join('\n');
+  };
+  const blob=new Blob(['\uFEFF'+toCSV(productRows)],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`product_profit_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('📄 商品別利益CSVをダウンロードしました');
+}
+/* [ALLOC-3] XLSX: 商品別利益シート追加 */
+function exportXLSX(){
+  if(typeof XLSX==='undefined'){showToast('⚠️ XLSX読み込み中...');return;}
+  const{salesRows,expenseRows,matRows,invRows,productRows}=buildExportData();
+  const wb=XLSX.utils.book_new();
+  const noData=[{'※':'データなし'}];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(salesRows.length?salesRows:noData),'売上明細');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(expenseRows.length?expenseRows:noData),'経費');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(matRows.length?matRows:noData),'材料費');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(invRows.length?invRows:noData),'在庫');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(productRows.length?productRows:noData),'商品別利益(参考)');
+  XLSX.writeFile(wb,`sales_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('📊 Excelをダウンロードしました（5シート）');
+}
 function renderCatTags(){document.getElementById('cat-tag-list').innerHTML=state.categories.map((c,i)=>`<span class="cat-tag">${c}<button class="cat-tag-del" onclick="deleteCat(${i})">✕</button></span>`).join('');}
 function addCategory(){const input=document.getElementById('new-cat-input');const val=input.value.trim();if(!val){showToast('⚠️ カテゴリ名を入力してください');return;}if(state.categories.includes(val)){showToast('⚠️ 既に存在します');return;}state.categories.push(val);saveState();input.value='';renderCatTags();renderCatFilter();showToast(`🏷️「${val}」を追加しました`);}
 /* [P1] カテゴリ削除確認 */
@@ -1455,7 +1626,24 @@ function deleteMenuItem(id){
   });
 }
 function openEventModal(){const el=document.getElementById('event-list-modal');el.innerHTML=(!state.events||!state.events.length)?'<div class="empty-state">イベントがありません</div>':state.events.map(e=>`<div class="menu-sort-item" style="cursor:pointer;" onclick="selectEvent(${e.id})"><span style="font-size:20px;">📅</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;">${e.name}</div><div style="font-size:11px;color:var(--text3);">${e.date||'日付未設定'}${e.place?' / '+e.place:''}</div></div>${e.id===state.currentEventId?'<span style="color:var(--primary);font-size:18px;">✓</span>':''}</div>`).join('');document.getElementById('event-modal').classList.add('open');}
-function selectEvent(id){state.currentEventId=id;saveState();updateEventName();closeModal('event-modal');showToast('📅 イベントを切り替えました');}
+/* [ALLOC-3] イベント切替: 現在ページを再描画して残表示を防ぐ */
+function selectEvent(id){
+  state.currentEventId=id;
+  saveState();
+  updateEventName();
+  closeModal('event-modal');
+  showToast('📅 イベントを切り替えました');
+  /* 現在表示中のページを再描画 */
+  const activePage=document.querySelector('.page.active');
+  if(activePage){
+    const pageId=activePage.id;
+    if(pageId==='page-report')renderReport();
+    else if(pageId==='page-material')renderMaterial();
+    else if(pageId==='page-inventory')renderInventory();
+    else if(pageId==='page-expense')renderExpenses();
+    else if(pageId==='page-register')renderRegister();
+  }
+}
 function saveEvent(){const name=document.getElementById('evt-name').value.trim();if(!name){showToast('⚠️ イベント名を入力してください');return;}const idx=state.events.findIndex(e=>e.id===state.currentEventId);const evtData={name,date:document.getElementById('evt-date').value,place:document.getElementById('evt-place').value};if(idx>=0){state.events[idx]={...state.events[idx],...evtData};}else{const newEvt={id:Date.now(),...evtData};state.events.push(newEvt);state.currentEventId=newEvt.id;}saveState();updateEventName();showToast('✅ イベントを保存しました');}
 function updateEventName(){const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);document.getElementById('current-event-name').textContent=evt?`📅 ${evt.name}`:'イベント未選択';}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
