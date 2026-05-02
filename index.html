@@ -108,46 +108,53 @@ function relockAdminSession(){
    管理PIN設定UI [PIN-1]
    ===================================================== */
 
-/** 設定画面のPIN UIを現在のstateに合わせて更新 */
+/** 設定画面のPIN UIを現在のstateに合わせて更新 [PIN-2] 状態詳細表示対応 */
 function renderPinSettingsUI(){
+  const pinSet=!!(state.adminPinEnabled&&state.adminPin);
+  const sessionOk=adminSessionUnlocked;
+
   /* バッジ更新 */
   const badge=document.getElementById('admin-pin-status-badge');
   if(badge){
-    if(state.adminPinEnabled&&state.adminPin){
-      badge.textContent='設定済み';
-      badge.style.background='rgba(255,255,255,.3)';
-    } else {
-      badge.textContent='未設定';
-      badge.style.background='rgba(255,255,255,.15)';
-    }
+    badge.textContent=pinSet?'設定済み':'未設定';
+    badge.style.background=pinSet?'rgba(255,255,255,.3)':'rgba(255,255,255,.15)';
   }
 
   /* チェックボックス */
   const toggle=document.getElementById('pin-enabled-toggle');
-  if(toggle)toggle.checked=!!(state.adminPinEnabled&&state.adminPin);
+  if(toggle)toggle.checked=pinSet;
 
-  /* PIN入力エリアの表示制御 */
+  /* PIN入力エリアのラベル切替 */
   const area=document.getElementById('pin-input-area');
   if(area){
-    /* PINが既に設定済みなら入力エリアのラベルを変更 */
     const labelEls=area.querySelectorAll('.form-label');
-    if(state.adminPinEnabled&&state.adminPin){
-      if(labelEls[0])labelEls[0].textContent='新しいPIN（変更する場合のみ入力）';
-    } else {
-      if(labelEls[0])labelEls[0].textContent='新しいPIN（4〜6桁の数字）';
-    }
+    if(labelEls[0])labelEls[0].textContent=pinSet?'新しいPIN（変更する場合のみ入力）':'新しいPIN（4〜6桁の数字）';
   }
 
-  /* セッションバー */
+  /* セッションバー: 詳細ステータス表示 */
   const bar=document.getElementById('admin-pin-session-bar');
   if(bar){
-    if(state.adminPinEnabled&&state.adminPin&&adminSessionUnlocked){
-      bar.innerHTML=`<div class="pin-session-bar">
-        <span>🔓 管理ロック解除中</span>
-        <button class="pin-relock-btn" onclick="relockAdminSession()">再ロックする</button>
-      </div>`;
+    if(pinSet){
+      if(sessionOk){
+        bar.innerHTML=`<div class="pin-session-bar">
+          <div>
+            <div style="font-size:12px;font-weight:700;">管理PIN：有効 ／ 管理ロック：<span style="color:#1B5E20;">🔓 解除中</span></div>
+            <div style="font-size:10px;font-weight:400;margin-top:2px;color:#388E3C;">設定変更・編集・削除が可能な状態です</div>
+          </div>
+          <button class="pin-relock-btn" onclick="relockAdminSession()">再ロック</button>
+        </div>`;
+      } else {
+        bar.innerHTML=`<div class="pin-session-bar" style="background:#FFF3E0;border-color:#FFCC80;">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#BF360C;">管理PIN：有効 ／ 管理ロック：🔒 ロック中</div>
+            <div style="font-size:10px;font-weight:400;margin-top:2px;color:#E65100;">管理操作にはPINの入力が必要です</div>
+          </div>
+          <button class="pin-relock-btn" style="border-color:#FFCC80;color:#E65100;"
+            onclick="requireAdminPin('管理ロックを解除','管理PINを入力してください。',()=>renderPinSettingsUI())">解除する</button>
+        </div>`;
+      }
     } else {
-      bar.innerHTML='';
+      bar.innerHTML=`<div style="padding:8px 14px;font-size:11px;color:var(--text3);">管理PIN：未設定（全操作がPINなしで実行されます）</div>`;
     }
   }
 }
@@ -712,6 +719,20 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 .pin-toggle-switch:checked::after{transform:translateX(18px);}
 .pin-desc{font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:14px;
   padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);}
+
+/* =====================================================
+   管理PIN 第2段階 UI [PIN-2]
+   ===================================================== */
+/* 管理操作ボタンの鍵マーク */
+.pin-lock-badge{font-size:10px;margin-left:4px;opacity:.7;}
+/* 材料カードの編集ロック通知 */
+.mat-lock-notice{background:#FFF8E1;border:1.5px solid #FFE082;border-radius:var(--radius-sm);
+  padding:9px 14px;margin-bottom:10px;font-size:12px;color:#5D4037;
+  display:flex;align-items:center;gap:8px;}
+.mat-lock-notice-btn{padding:5px 12px;background:#E65100;color:#fff;border:none;
+  border-radius:6px;font-family:'Noto Sans JP',sans-serif;font-size:11px;
+  font-weight:700;cursor:pointer;white-space:nowrap;}
+.mat-lock-notice-btn:active{background:#BF360C;}
 </style>
 </head>
 <body>
@@ -1128,30 +1149,75 @@ function updateInv(itemId,field,val){if(!state.inventory[itemId])state.inventory
 function getMatItems(){const evtId=String(state.currentEventId);if(!state.materialItems[evtId])state.materialItems[evtId]=[];return state.materialItems[evtId];}
 function saveMatItems(items){state.materialItems[String(state.currentEventId)]=items;saveState();}
 function calcMatItem(item){const waste=parseFloat(item.remainder.waste)||0;const reuse=parseFloat(item.remainder.reuse)||0;const used=Math.max(0,(parseFloat(item.qty)||0)-waste-reuse);const effectiveCost=(used+waste)*(parseFloat(item.unitPrice)||0);return{used,waste,reuse,effectiveCost};}
+/* [PIN-2] addMaterialItem: PIN保護 */
 function addMaterialItem(){
-  const items=getMatItems();
-  /* [ALLOC-1] 新フィールドを初期値付きで追加 */
-  items.push({
-    id:Date.now(),name:'',unit:'kg',unitPrice:'',qty:'',
-    remainder:{waste:'',reuse:''},
-    costMode:'direct',targetCategories:[],targetItemIds:[],note:''
+  requireAdminPin('材料品目を追加','材料品目を追加するには管理PINが必要です。',()=>{
+    const items=getMatItems();
+    items.push({
+      id:Date.now(),name:'',unit:'kg',unitPrice:'',qty:'',
+      remainder:{waste:'',reuse:''},
+      costMode:'direct',targetCategories:[],targetItemIds:[],note:''
+    });
+    saveMatItems(items);renderMaterial();
   });
-  saveMatItems(items);renderMaterial();
 }
-function deleteMatItem(id){saveMatItems(getMatItems().filter(i=>i.id!==id));renderMaterial();}
+/* [PIN-2] deleteMatItem: PIN→confirm の順 */
+function deleteMatItem(id){
+  const item=getMatItems().find(i=>i.id===id);
+  requireAdminPin('材料品目を削除',`「${item?item.name:'この品目'}」を削除するには管理PINが必要です。`,()=>{
+    showConfirm('材料品目を削除しますか？',`「${item?item.name:'この品目'}」を削除します。`,()=>{
+      saveMatItems(getMatItems().filter(i=>i.id!==id));renderMaterial();
+    });
+  });
+}
+/* [PIN-2] onMatInput: ロック中は入力を保存しない */
 function onMatInput(id,field,val){
+  if(isAdminPinRequired()){
+    /* ロック中は保存せずUIを復元（入力値を元に戻す） */
+    const items=getMatItems();const item=items.find(i=>i.id===id);
+    if(item)updateMatCardResult(item); /* 表示を元の値に戻す */
+    return;
+  }
   const items=getMatItems();const item=items.find(i=>i.id===id);if(!item)return;
   if(field==='rem_waste')item.remainder.waste=val;
   else if(field==='rem_reuse')item.remainder.reuse=val;
-  else item[field]=val; /* [ALLOC-1] costMode / note などもここで受ける */
+  else item[field]=val;
   saveMatItems(items);updateMatSummary(items);updateMatCardResult(item);
 }
-function onMatUnitChange(id,val){const items=getMatItems();const item=items.find(i=>i.id===id);if(!item)return;item.unit=val;saveMatItems(items);const card=document.querySelector(`[data-mat-id="${id}"]`);if(card)card.querySelectorAll('.mat-unit-label').forEach(el=>el.textContent=val);updateMatSummary(items);updateMatCardResult(item);}
+/* [PIN-2] onMatUnitChange: ロック中は変更しない */
+function onMatUnitChange(id,val){
+  if(isAdminPinRequired()){
+    const items=getMatItems();const item=items.find(i=>i.id===id);
+    if(item){const card=document.querySelector(`[data-mat-id="${id}"]`);if(card)card.querySelectorAll('.mat-unit-label').forEach(el=>el.textContent=item.unit);}
+    return;
+  }
+  const items=getMatItems();const item=items.find(i=>i.id===id);if(!item)return;
+  item.unit=val;saveMatItems(items);
+  const card=document.querySelector(`[data-mat-id="${id}"]`);
+  if(card)card.querySelectorAll('.mat-unit-label').forEach(el=>el.textContent=val);
+  updateMatSummary(items);updateMatCardResult(item);
+}
 function updateMatCardResult(item){const c=calcMatItem(item);const card=document.querySelector(`[data-mat-id="${item.id}"]`);if(!card)return;const prepCost=(parseFloat(item.qty)||0)*(parseFloat(item.unitPrice)||0);const prepEl=card.querySelector('.mat-prep-cost');if(prepEl)prepEl.textContent='¥'+prepCost.toLocaleString(undefined,{maximumFractionDigits:0});const usedEl=card.querySelector('.mat-used-val-text');if(usedEl)usedEl.textContent=c.used.toFixed(2)+(item.unit||'');const wasteEl=card.querySelector('.mat-waste-cost');if(wasteEl)wasteEl.textContent='¥'+(c.waste*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0});const reuseEl=card.querySelector('.mat-reuse-cost');if(reuseEl)reuseEl.textContent='¥'+(c.reuse*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0});const effEl=card.querySelector('.mat-eff-cost');if(effEl)effEl.textContent='¥'+c.effectiveCost.toLocaleString(undefined,{maximumFractionDigits:0});}
 function updateMatSummary(items){let tp=0,te=0,tw=0,tr=0;items.forEach(item=>{const c=calcMatItem(item);tp+=(parseFloat(item.qty)||0)*(parseFloat(item.unitPrice)||0);te+=c.effectiveCost;tw+=c.waste*(parseFloat(item.unitPrice)||0);tr+=c.reuse*(parseFloat(item.unitPrice)||0);});document.getElementById('summary-grid').innerHTML=`<div class="summary-item"><div class="summary-label">仕込み原価合計</div><div class="summary-val orange">¥${tp.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">原価算入額</div><div class="summary-val red">¥${te.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">廃棄ロス</div><div class="summary-val red">¥${tw.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">流用額（原価外）</div><div class="summary-val" style="color:var(--info);">¥${tr.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div>`;}
 function renderMaterial(){
   const items=getMatItems();
   updateMatSummary(items);
+  /* [PIN-2] ロック中は通知バナーを表示 */
+  const matPage=document.getElementById('page-material');
+  let lockNotice=document.getElementById('mat-lock-notice-bar');
+  if(isAdminPinRequired()){
+    if(!lockNotice){
+      lockNotice=document.createElement('div');
+      lockNotice.id='mat-lock-notice-bar';
+      lockNotice.className='mat-lock-notice';
+      const addBtn=matPage&&matPage.querySelector('.mat-add-btn');
+      if(addBtn)matPage.insertBefore(lockNotice,addBtn.parentElement);
+    }
+    lockNotice.innerHTML='🔒 管理ロック中です。材料の編集・追加・削除にはPIN解除が必要です。'+
+      '<button class="mat-lock-notice-btn" onclick="requireAdminPin('材料を編集','材料を編集するには管理PINが必要です。',()=>renderMaterial())">🔓 解除する</button>';
+  } else {
+    if(lockNotice)lockNotice.remove();
+  }
   const list=document.getElementById('material-list');
   if(!items.length){
     list.innerHTML='<div class="empty-state"><div class="empty-emoji">🥩</div>「＋ 品目追加」で材料を追加してください</div>';
@@ -1180,7 +1246,8 @@ function renderMaterial(){
     const modeSelectHtml=`
       <div class="mat-mode-row">
         <label class="mat-mode-label">原価反映方式</label>
-        <select class="mat-mode-select" onchange="onMatModeChange(${item.id},this.value)">
+        <select class="mat-mode-select" onchange="onMatModeChange(${item.id},this.value)"
+          ${isAdminPinRequired()?"disabled style=\"opacity:.55;cursor:not-allowed;\"":""}>
           <option value="direct"${costMode==='direct'?' selected':''}>直接原価（商品別利益には自動配賦しない）</option>
           <option value="allocate_all"${costMode==='allocate_all'?' selected':''}>全商品按分（販売数で均等配賦）</option>
           <option value="allocate_category"${costMode==='allocate_category'?' selected':''}>カテゴリ按分（指定カテゴリの販売数で配賦）</option>
@@ -1221,7 +1288,8 @@ function renderMaterial(){
       <div class="mat-note-row">
         <label class="mat-mode-label">メモ（任意）</label>
         <textarea class="mat-note-input" rows="1" placeholder="例：仕込み前処理分含む"
-          oninput="onMatInput(${item.id},'note',this.value)">${note}</textarea>
+          oninput="onMatInput(${item.id},'note',this.value)"
+          ${isAdminPinRequired()?"disabled style=\"opacity:.55;cursor:not-allowed;\"":""}>${note}</textarea>
       </div>`;
 
     /* --- 按分モードバッジ（カードヘッダー） --- */
@@ -1259,7 +1327,7 @@ function renderMaterial(){
     return`<div class="mat-card" data-mat-id="${item.id}">
       <div class="mat-card-head">
         <input class="mat-name-input" type="text" placeholder="品目名（例：鶏もも肉）"
-          value="${item.name}" oninput="onMatInput(${item.id},'name',this.value)">
+          value="${item.name}" oninput="onMatInput(${item.id},'name',this.value)" ${isAdminPinRequired()?"disabled style=\"opacity:.55;cursor:not-allowed;\"":""}>
         ${modeBadge}
         <button class="mat-del-btn" onclick="deleteMatItem(${item.id})">✕</button>
       </div>
@@ -1273,12 +1341,14 @@ function renderMaterial(){
         <div class="mat-field">
           <label class="mat-label">@単価(円/<span class="mat-unit-label">${item.unit}</span>)</label>
           <input class="mat-input" type="number" placeholder="0" value="${item.unitPrice}"
-            oninput="onMatInput(${item.id},'unitPrice',this.value)">
+            oninput="onMatInput(${item.id},'unitPrice',this.value)"
+            ${isAdminPinRequired()?"disabled style=\"opacity:.55;cursor:not-allowed;\"":""}>
         </div>
         <div class="mat-field">
           <label class="mat-label">仕込み数量(<span class="mat-unit-label">${item.unit}</span>)</label>
           <input class="mat-input" type="number" placeholder="0" step="0.1" value="${item.qty}"
-            oninput="onMatInput(${item.id},'qty',this.value)">
+            oninput="onMatInput(${item.id},'qty',this.value)"
+            ${isAdminPinRequired()?"disabled style=\"opacity:.55;cursor:not-allowed;\"":""}>
         </div>
       </div>
       <div class="mat-cost-bar">
@@ -1294,13 +1364,15 @@ function renderMaterial(){
             <label class="mat-label" style="color:#E65100;">🗑️ 廃棄(<span class="mat-unit-label">${item.unit}</span>)</label>
             <input class="remainder-input" style="border-color:#FFCC80;" type="number"
               placeholder="0" step="0.1" value="${item.remainder.waste}"
-              oninput="onMatInput(${item.id},'rem_waste',this.value)">
+              oninput="onMatInput(${item.id},'rem_waste',this.value)"
+              ${isAdminPinRequired()?"disabled style=\"opacity:.55;cursor:not-allowed;\"":""}>
           </div>
           <div class="remainder-field">
             <label class="mat-label" style="color:var(--info);">♻️ 流用(<span class="mat-unit-label">${item.unit}</span>)</label>
             <input class="remainder-input" style="border-color:#90CAF9;" type="number"
               placeholder="0" step="0.1" value="${item.remainder.reuse}"
-              oninput="onMatInput(${item.id},'rem_reuse',this.value)">
+              oninput="onMatInput(${item.id},'rem_reuse',this.value)"
+              ${isAdminPinRequired()?"disabled style=\"opacity:.55;cursor:not-allowed;\"":""}>
           </div>
         </div>
         <div class="mat-used-box" style="margin-bottom:8px;">
@@ -1575,30 +1647,72 @@ function exportXLSX(){
   showToast('📊 Excelをダウンロードしました（5シート）');
 }
 function renderCatTags(){document.getElementById('cat-tag-list').innerHTML=state.categories.map((c,i)=>`<span class="cat-tag">${c}<button class="cat-tag-del" onclick="deleteCat(${i})">✕</button></span>`).join('');}
-function addCategory(){const input=document.getElementById('new-cat-input');const val=input.value.trim();if(!val){showToast('⚠️ カテゴリ名を入力してください');return;}if(state.categories.includes(val)){showToast('⚠️ 既に存在します');return;}state.categories.push(val);saveState();input.value='';renderCatTags();renderCatFilter();showToast(`🏷️「${val}」を追加しました`);}
-/* [P1] カテゴリ削除確認 */
+/* [PIN-2] addCategory: PIN保護 */
+function addCategory(){
+  const input=document.getElementById('new-cat-input');
+  const val=input.value.trim();
+  if(!val){showToast('⚠️ カテゴリ名を入力してください');return;}
+  if(state.categories.includes(val)){showToast('⚠️ 既に存在します');return;}
+  requireAdminPin('カテゴリを追加',`カテゴリ「${val}」を追加するには管理PINが必要です。`,()=>{
+    state.categories.push(val);saveState();input.value='';renderCatTags();renderCatFilter();showToast(`🏷️「${val}」を追加しました`);
+  });
+}
+/* [PIN-2] deleteCat: PIN→confirm の順 */
 function deleteCat(idx){
   const name=state.categories[idx];
   if(state.menuItems.some(m=>m.cat===name)){showToast(`⚠️「${name}」は使用中です`);return;}
-  showConfirm('カテゴリを削除しますか？',`「${name}」を削除します。`,()=>{
-    state.categories.splice(idx,1);
-    saveState();renderCatTags();renderCatFilter();showToast('🗑️ 削除しました');
+  requireAdminPin('カテゴリを削除',`カテゴリ「${name}」を削除するには管理PINが必要です。`,()=>{
+    showConfirm('カテゴリを削除しますか？',`「${name}」を削除します。`,()=>{
+      state.categories.splice(idx,1);
+      saveState();renderCatTags();renderCatFilter();showToast('🗑️ 削除しました');
+    });
   });
 }
 function renderAccountTags(){document.getElementById('account-tag-list').innerHTML=state.accountItems.map((a,i)=>`<span class="cat-tag" style="background:#E8F5E9;color:#2E7D32;">${a}<button class="cat-tag-del" onclick="deleteAccount(${i})">✕</button></span>`).join('');}
-function addAccountItem(){const input=document.getElementById('new-account-input');const val=input.value.trim();if(!val){showToast('⚠️ 科目名を入力してください');return;}if(state.accountItems.includes(val)){showToast('⚠️ 既に存在します');return;}state.accountItems.push(val);saveState();input.value='';renderAccountTags();renderExpCatSelect();showToast(`📒「${val}」を追加しました`);}
-function deleteAccount(idx){state.accountItems.splice(idx,1);saveState();renderAccountTags();renderExpCatSelect();showToast('🗑️ 削除しました');}
+/* [PIN-2] addAccountItem: PIN保護 */
+function addAccountItem(){
+  const input=document.getElementById('new-account-input');
+  const val=input.value.trim();
+  if(!val){showToast('⚠️ 科目名を入力してください');return;}
+  if(state.accountItems.includes(val)){showToast('⚠️ 既に存在します');return;}
+  requireAdminPin('勘定科目を追加',`科目「${val}」を追加するには管理PINが必要です。`,()=>{
+    state.accountItems.push(val);saveState();input.value='';renderAccountTags();renderExpCatSelect();showToast(`📒「${val}」を追加しました`);
+  });
+}
+/* [PIN-2] deleteAccount: PIN→confirm の順 */
+function deleteAccount(idx){
+  const name=state.accountItems[idx]||'この科目';
+  requireAdminPin('勘定科目を削除',`科目「${name}」を削除するには管理PINが必要です。`,()=>{
+    showConfirm('勘定科目を削除しますか？',`「${name}」を削除します。`,()=>{
+      state.accountItems.splice(idx,1);saveState();renderAccountTags();renderExpCatSelect();showToast('🗑️ 削除しました');
+    });
+  });
+}
 function renderStaffList(){const el=document.getElementById('staff-list');if(!state.staffMembers||!state.staffMembers.length){el.innerHTML='<div class="empty-state" style="padding:16px;"><div style="font-size:24px;">👤</div>スタッフを追加してください</div>';return;}el.innerHTML=state.staffMembers.map(s=>`<div class="menu-sort-item"><span style="font-size:20px;">👤</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;">${s.name}</div><div style="font-size:11px;color:var(--text3);">${s.payType==='hourly'?`時給 ¥${s.rate.toLocaleString()}`:`日給 ¥${s.rate.toLocaleString()}`}</div></div><button class="icon-btn" onclick="openEditStaffModal(${s.id})">編集</button><button class="icon-btn" style="border-color:#F0A0A0;color:var(--danger);" onclick="deleteStaff(${s.id})">削除</button></div>`).join('');}
 function openAddStaffModal(){if(state.staffMembers&&state.staffMembers.length>=10){showToast('⚠️ スタッフは最大10名です');return;}document.getElementById('add-staff-title').textContent='👤 スタッフを追加';document.getElementById('s-name').value='';document.getElementById('s-rate').value='';document.getElementById('s-pay-type').value='hourly';document.getElementById('s-edit-id').value='';document.getElementById('add-staff-modal').classList.add('open');}
 function openEditStaffModal(id){const s=state.staffMembers.find(m=>m.id===id);if(!s)return;document.getElementById('add-staff-title').textContent='✏️ スタッフを編集';document.getElementById('s-name').value=s.name;document.getElementById('s-rate').value=s.rate;document.getElementById('s-pay-type').value=s.payType||'hourly';document.getElementById('s-edit-id').value=id;document.getElementById('add-staff-modal').classList.add('open');}
-function saveStaff(){const name=document.getElementById('s-name').value.trim();const rate=parseInt(document.getElementById('s-rate').value)||0;if(!name||!rate){showToast('⚠️ 名前と金額は必須です');return;}const editId=document.getElementById('s-edit-id').value;const staff={name,rate,payType:document.getElementById('s-pay-type').value};if(editId){const idx=state.staffMembers.findIndex(s=>s.id===parseInt(editId));if(idx>=0)state.staffMembers[idx]={...state.staffMembers[idx],...staff};}else{staff.id=Date.now();if(!state.staffMembers)state.staffMembers=[];state.staffMembers.push(staff);}saveState();closeModal('add-staff-modal');renderStaffList();renderStaffSelect();showToast('✅ スタッフを保存しました');}
-/* [P1] スタッフ削除確認 */
+/* [PIN-2] saveStaff: PIN保護 */
+function saveStaff(){
+  const name=document.getElementById('s-name').value.trim();
+  const rate=parseInt(document.getElementById('s-rate').value)||0;
+  if(!name||!rate){showToast('⚠️ 名前と金額は必須です');return;}
+  requireAdminPin('スタッフを保存','スタッフ情報を保存するには管理PINが必要です。',()=>{
+    const editId=document.getElementById('s-edit-id').value;
+    const staff={name,rate,payType:document.getElementById('s-pay-type').value};
+    if(editId){const idx=state.staffMembers.findIndex(s=>s.id===parseInt(editId));if(idx>=0)state.staffMembers[idx]={...state.staffMembers[idx],...staff};}
+    else{staff.id=Date.now();if(!state.staffMembers)state.staffMembers=[];state.staffMembers.push(staff);}
+    saveState();closeModal('add-staff-modal');renderStaffList();renderStaffSelect();showToast('✅ スタッフを保存しました');
+  });
+}
+/* [PIN-2] deleteStaff: PIN→confirm の順 */
 function deleteStaff(id){
   const s=state.staffMembers.find(m=>m.id===id);
   if(!s)return;
-  showConfirm('スタッフを削除しますか？',`「${s.name}」を削除します。`,()=>{
-    state.staffMembers=state.staffMembers.filter(m=>m.id!==id);
-    saveState();renderStaffList();renderStaffSelect();showToast('🗑️ 削除しました');
+  requireAdminPin('スタッフを削除',`「${s.name}」を削除するには管理PINが必要です。`,()=>{
+    showConfirm('スタッフを削除しますか？',`「${s.name}」を削除します。`,()=>{
+      state.staffMembers=state.staffMembers.filter(m=>m.id!==id);
+      saveState();renderStaffList();renderStaffSelect();showToast('🗑️ 削除しました');
+    });
   });
 }
 let dragSrcIdx=null;
@@ -1610,14 +1724,28 @@ function onDragEnd(){dragSrcIdx=null;document.querySelectorAll('.menu-sort-item'
 function renderMenuCatSelect(){const sel=document.getElementById('m-cat');if(!sel)return;const cur=sel.value;sel.innerHTML=state.categories.map(c=>`<option>${c}</option>`).join('');if(cur&&state.categories.includes(cur))sel.value=cur;}
 function openAddMenuModal(){document.getElementById('add-menu-title').textContent='🍗 メニューを追加';['m-name','m-price','m-cost','m-edit-id'].forEach(id=>document.getElementById(id).value='');document.getElementById('m-emoji').value='🍗';document.getElementById('m-is-set').checked=false;renderMenuCatSelect();document.getElementById('add-menu-modal').classList.add('open');}
 function openEditMenuModal(id){const item=state.menuItems.find(m=>String(m.id)===String(id));if(!item)return;document.getElementById('add-menu-title').textContent='✏️ メニューを編集';document.getElementById('m-emoji').value=item.emoji;document.getElementById('m-name').value=item.name;document.getElementById('m-price').value=item.price;document.getElementById('m-cost').value=item.cost;document.getElementById('m-is-set').checked=item.isSet;document.getElementById('m-edit-id').value=id;renderMenuCatSelect();document.getElementById('m-cat').value=item.cat;document.getElementById('add-menu-modal').classList.add('open');}
-function saveMenuItem(){const name=document.getElementById('m-name').value.trim();const price=parseInt(document.getElementById('m-price').value)||0;if(!name||!price){showToast('⚠️ 商品名と価格は必須です');return;}const editId=document.getElementById('m-edit-id').value;const item={emoji:document.getElementById('m-emoji').value||'🍗',name,cat:document.getElementById('m-cat').value,price,cost:parseInt(document.getElementById('m-cost').value)||0,isSet:document.getElementById('m-is-set').checked};if(editId){const idx=state.menuItems.findIndex(m=>String(m.id)===String(editId));if(idx>=0)state.menuItems[idx]={...state.menuItems[idx],...item};}else{item.id=Date.now();state.menuItems.push(item);}saveState();closeModal('add-menu-modal');renderSettings();showToast('✅ メニューを保存しました');}
-/* [P1] 商品削除確認 */
+/* [PIN-2] saveMenuItem: PIN保護 */
+function saveMenuItem(){
+  const name=document.getElementById('m-name').value.trim();
+  const price=parseInt(document.getElementById('m-price').value)||0;
+  if(!name||!price){showToast('⚠️ 商品名と価格は必須です');return;}
+  requireAdminPin('メニューを保存','メニューを保存するには管理PINが必要です。',()=>{
+    const editId=document.getElementById('m-edit-id').value;
+    const item={emoji:document.getElementById('m-emoji').value||'🍗',name,cat:document.getElementById('m-cat').value,price,cost:parseInt(document.getElementById('m-cost').value)||0,isSet:document.getElementById('m-is-set').checked};
+    if(editId){const idx=state.menuItems.findIndex(m=>String(m.id)===String(editId));if(idx>=0)state.menuItems[idx]={...state.menuItems[idx],...item};}
+    else{item.id=Date.now();state.menuItems.push(item);}
+    saveState();closeModal('add-menu-modal');renderSettings();showToast('✅ メニューを保存しました');
+  });
+}
+/* [PIN-2] deleteMenuItem: PIN→confirm の順 */
 function deleteMenuItem(id){
   const item=state.menuItems.find(m=>String(m.id)===String(id));
   if(!item)return;
-  showConfirm('商品を削除しますか？',`「${item.name}」を削除します。この操作は元に戻せません。`,()=>{
-    state.menuItems=state.menuItems.filter(m=>String(m.id)!==String(id));
-    saveState();renderSettings();showToast('🗑️ 削除しました');
+  requireAdminPin('商品を削除','商品を削除するには管理PINが必要です。',()=>{
+    showConfirm('商品を削除しますか？',`「${item.name}」を削除します。この操作は元に戻せません。`,()=>{
+      state.menuItems=state.menuItems.filter(m=>String(m.id)!==String(id));
+      saveState();renderSettings();showToast('🗑️ 削除しました');
+    });
   });
 }
 function openEventModal(){const el=document.getElementById('event-list-modal');el.innerHTML=(!state.events||!state.events.length)?'<div class="empty-state">イベントがありません</div>':state.events.map(e=>`<div class="menu-sort-item" style="cursor:pointer;" onclick="selectEvent(${e.id})"><span style="font-size:20px;">📅</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;">${e.name}</div><div style="font-size:11px;color:var(--text3);">${e.date||'日付未設定'}${e.place?' / '+e.place:''}</div></div>${e.id===state.currentEventId?'<span style="color:var(--primary);font-size:18px;">✓</span>':''}</div>`).join('');document.getElementById('event-modal').classList.add('open');}
@@ -1639,7 +1767,18 @@ function selectEvent(id){
     else if(pageId==='page-register')renderRegister();
   }
 }
-function saveEvent(){const name=document.getElementById('evt-name').value.trim();if(!name){showToast('⚠️ イベント名を入力してください');return;}const idx=state.events.findIndex(e=>e.id===state.currentEventId);const evtData={name,date:document.getElementById('evt-date').value,place:document.getElementById('evt-place').value};if(idx>=0){state.events[idx]={...state.events[idx],...evtData};}else{const newEvt={id:Date.now(),...evtData};state.events.push(newEvt);state.currentEventId=newEvt.id;}saveState();updateEventName();showToast('✅ イベントを保存しました');}
+/* [PIN-2] saveEvent: PIN保護 */
+function saveEvent(){
+  const name=document.getElementById('evt-name').value.trim();
+  if(!name){showToast('⚠️ イベント名を入力してください');return;}
+  requireAdminPin('イベント設定を保存','イベント情報を保存するには管理PINが必要です。',()=>{
+    const idx=state.events.findIndex(e=>e.id===state.currentEventId);
+    const evtData={name,date:document.getElementById('evt-date').value,place:document.getElementById('evt-place').value};
+    if(idx>=0){state.events[idx]={...state.events[idx],...evtData};}
+    else{const newEvt={id:Date.now(),...evtData};state.events.push(newEvt);state.currentEventId=newEvt.id;}
+    saveState();updateEventName();showToast('✅ イベントを保存しました');
+  });
+}
 function updateEventName(){const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);document.getElementById('current-event-name').textContent=evt?`📅 ${evt.name}`:'イベント未選択';}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
@@ -1773,19 +1912,21 @@ saveMenuItem=function(){
    ===================================================== */
 
 /* [P2] バックアップ（画像データ含む・最終日時記録） */
+/* [PIN-2] backupData: PIN保護 */
 function backupData(){
-  const json=JSON.stringify(state,null,2);
-  const blob=new Blob([json],{type:'application/json'});
-  const a=document.createElement('a');
-  const dt=new Date().toISOString().slice(0,16).replace('T','_').replace(':','h')+'m';
-  a.href=URL.createObjectURL(blob);
-  a.download=`karaage_backup_${dt}.json`;
-  a.click();
-  // 最終バックアップ日時をlocalStorageに記録
-  const lastTs=new Date().toISOString();
-  localStorage.setItem('karaage_last_backup',lastTs);
-  updateBackupLastInfo();
-  showToast('📤 バックアップしました（画像データ含む）');
+  requireAdminPin('バックアップを書き出し','バックアップファイルを書き出すには管理PINが必要です。',()=>{
+    const json=JSON.stringify(state,null,2);
+    const blob=new Blob([json],{type:'application/json'});
+    const a=document.createElement('a');
+    const dt=new Date().toISOString().slice(0,16).replace('T','_').replace(':','h')+'m';
+    a.href=URL.createObjectURL(blob);
+    a.download=`karaage_backup_${dt}.json`;
+    a.click();
+    const lastTs=new Date().toISOString();
+    localStorage.setItem('karaage_last_backup',lastTs);
+    updateBackupLastInfo();
+    showToast('📤 バックアップしました（画像データ含む）');
+  });
 }
 
 /* [P2] 最終バックアップ日時表示 */
@@ -1946,20 +2087,22 @@ function updateChecklist(){
    ===================================================== */
 
 /** 原価反映方式を変更してすぐに保存・再描画 */
+/* [PIN-2] onMatModeChange: ロック中は変更しない */
 function onMatModeChange(id, newMode){
+  if(isAdminPinRequired()){renderMaterial();return;} /* 変更を棄却して再描画でセレクトを元の値に戻す */
   const items=getMatItems();
   const item=items.find(i=>i.id===id);
   if(!item)return;
   item.costMode=newMode;
-  /* モード切替時は対象リストをリセット */
   if(newMode!=='allocate_category')item.targetCategories=[];
   if(newMode!=='allocate_items')item.targetItemIds=[];
   saveMatItems(items);
-  renderMaterial(); /* カード再描画（按分UIの表示切替のため全体再描画） */
+  renderMaterial();
 }
 
-/** カテゴリ按分: カテゴリのトグル選択 */
+/** カテゴリ按分: カテゴリのトグル選択 [PIN-2] ロック中は変更しない */
 function onMatAllocCatToggle(id, cat){
+  if(isAdminPinRequired())return;
   const items=getMatItems();
   const item=items.find(i=>i.id===id);
   if(!item)return;
@@ -1977,8 +2120,9 @@ function onMatAllocCatToggle(id, cat){
   }
 }
 
-/** 商品指定按分: 商品IDのトグル選択 */
+/** 商品指定按分: 商品IDのトグル選択 [PIN-2] ロック中は変更しない */
 function onMatAllocItemToggle(id, menuItemId){
+  if(isAdminPinRequired())return;
   const items=getMatItems();
   const item=items.find(i=>i.id===id);
   if(!item)return;
