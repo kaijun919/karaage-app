@@ -122,7 +122,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 .mat-card-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1.5px solid var(--border);}
 .mat-name-input{flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;background:var(--surface2);color:var(--text);outline:none;min-width:0;}
 .mat-name-input:focus{border-color:var(--primary);background:var(--primary-light);}
-.mat-del-btn{width:32px;height:32px;border:none;background:none;color:var(--text3);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;border-radius:6px;flex-shrink:0;}
+.mat-del-btn{width:44px;height:44px;border:2px solid transparent;background:none;color:var(--text3);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0;transition:background .1s,border-color .1s,color .1s,transform .1s;}
+.mat-del-btn:active{background:#FFEBEE;border-color:var(--danger);color:var(--danger);transform:scale(.88);}
 .mat-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
 .mat-field{display:flex;flex-direction:column;gap:4px;}
 .mat-label{font-size:11px;font-weight:700;color:var(--text2);}
@@ -254,7 +255,19 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 .checkout-btn:active{background:#C4520A;}
 .clear-btn{min-height:44px;font-size:13px;}
 .icon-btn{min-height:36px;font-size:12px;padding:8px 14px;}
-.mat-del-btn{min-width:36px;min-height:36px;}
+/* mat-del-btn サイズはメイン定義に統合 */
+
+/* 品目追加ボタン: タップ感触強化 */
+.mat-add-btn{
+  min-height:44px;
+  transition:background .1s, transform .12s, box-shadow .12s;
+  -webkit-tap-highlight-color:rgba(0,0,0,.15);
+}
+.mat-add-btn:active{
+  background:#7A4A00 !important;
+  transform:scale(.93) !important;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.25) !important;
+}
 .expense-del{min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;}
 .cat-tag-del{min-width:28px;min-height:28px;display:flex;align-items:center;justify-content:center;}
 
@@ -519,7 +532,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   </div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
     <div class="section-title" style="flex:1;margin-bottom:0;">🥩 仕込み品目</div>
-    <button class="add-btn" style="width:auto;padding:8px 18px;font-size:13px;margin-left:12px;" onclick="addMaterialItem()">＋ 品目追加</button>
+    <button class="add-btn mat-add-btn" style="width:auto;padding:8px 18px;font-size:13px;margin-left:12px;" onclick="addMaterialItem()">＋ 品目追加</button>
   </div>
   <div id="material-list"></div>
 </div>
@@ -1590,6 +1603,32 @@ function updateChecklist(){
    以下は旧 xlsx scriptタグ内のインライン部分を移動したもの
    （src属性付きscriptタグ内はブラウザが実行しないため修正）
    ============================================================= */
+
+/* =====================================================
+   タップフィードバック補強 (iPad対応) [UI-FIX]
+   ===================================================== */
+(function(){
+  /* touchstart で即座に色変化（:activeより確実） */
+  document.addEventListener('touchstart', function(e){
+    const btn=e.target.closest('.mat-add-btn');
+    if(btn){btn.style.background='#7A4A00';btn.style.transform='scale(.93)';}
+    const del=e.target.closest('.mat-del-btn');
+    if(del){del.style.background='#FFEBEE';del.style.borderColor='#E53E3E';del.style.color='#E53E3E';del.style.transform='scale(.88)';}
+  },{passive:true});
+  document.addEventListener('touchend', function(e){
+    const btn=e.target.closest('.mat-add-btn');
+    if(btn){setTimeout(()=>{btn.style.background='';btn.style.transform='';},180);}
+    const del=e.target.closest('.mat-del-btn');
+    if(del){setTimeout(()=>{del.style.background='';del.style.borderColor='';del.style.color='';del.style.transform='';},180);}
+  },{passive:true});
+  document.addEventListener('touchcancel', function(e){
+    const btn=e.target.closest('.mat-add-btn');
+    if(btn){btn.style.background='';btn.style.transform='';}
+    const del=e.target.closest('.mat-del-btn');
+    if(del){del.style.background='';del.style.borderColor='';del.style.color='';del.style.transform='';}
+  },{passive:true});
+})();
+
 /* =====================================================
    按分原価 新規関数 (第1段階) [ALLOC-1]
    ===================================================== */
