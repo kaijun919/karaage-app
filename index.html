@@ -6,335 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="屋外販売管理">
 <title>🍗 屋外販売管理</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-/* =====================================================
-   PHASE 1 NEW FUNCTIONS
-   ===================================================== */
-
-/* [P1] 汎用確認ダイアログ */
-function showConfirm(title,msg,onOk){
-  document.getElementById('confirm-title').textContent=title;
-  document.getElementById('confirm-msg').textContent=msg;
-  const btn=document.getElementById('confirm-ok-btn');
-  btn.onclick=()=>{closeModal('confirm-modal');onOk();};
-  document.getElementById('confirm-modal').classList.add('open');
-}
-
-/* [P1] 直前取消バナー（3分以内） */
-let _undoTimer=null;
-let _lastOrder=null;
-function showUndoBar(order){
-  _lastOrder=order;
-  const bar=document.getElementById('undo-bar');
-  document.getElementById('undo-msg').textContent=`¥${order.total.toLocaleString()} を取消できます（3分間）`;
-  bar.classList.add('show');
-  clearTimeout(_undoTimer);
-  _undoTimer=setTimeout(()=>{bar.classList.remove('show');_lastOrder=null;},180000);
-}
-function undoLastCheckout(){
-  if(!_lastOrder)return;
-  showConfirm('直前の会計を取り消しますか？',
-    `¥${_lastOrder.total.toLocaleString()}（${PAY_LABELS[_lastOrder.payMethod]}）の会計を取り消します。`,
-    ()=>{
-      // ordersから削除
-      state.orders=state.orders.filter(o=>o.id!==_lastOrder.id);
-      // inventory の sold を戻す
-      _lastOrder.items.forEach(i=>{
-        if(state.inventory[i.id]){
-          state.inventory[i.id].sold=Math.max(0,(state.inventory[i.id].sold||0)-i.qty);
-        }
-      });
-      saveState();
-      clearTimeout(_undoTimer);
-      document.getElementById('undo-bar').classList.remove('show');
-      _lastOrder=null;
-      showToast('↩️ 会計を取り消しました');
-      renderMenuGrid();
-    }
-  );
-}
-
-/* [P1] 商品画像選択・リサイズ */
-let _pendingImageData=null;
-function onMenuImgSelected(input){
-  const file=input.files[0];
-  if(!file)return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const img=new Image();
-    img.onload=()=>{
-      // 長辺200pxにリサイズ
-      const MAX=200;
-      let w=img.width,h=img.height;
-      if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}
-      const canvas=document.createElement('canvas');
-      canvas.width=w;canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      _pendingImageData=canvas.toDataURL('image/jpeg',0.75);
-      renderMenuImgPreview(_pendingImageData);
-    };
-    img.src=e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-function renderMenuImgPreview(data){
-  const area=document.getElementById('m-img-preview-area');
-  if(!data){area.innerHTML='';return;}
-  area.innerHTML=`<div class="img-preview-wrap">
-    <img class="img-preview" src="${data}" alt="プレビュー">
-    <button class="img-del-btn" onclick="clearMenuImg()" title="画像を削除">✕</button>
-  </div>`;
-}
-function clearMenuImg(){
-  _pendingImageData=null;
-  document.getElementById('m-img-preview-area').innerHTML='';
-  document.getElementById('m-img-input').value='';
-}
-
-/* [P1] openAddMenuModal / openEditMenuModal に画像対応を追加 */
-const _origOpenAdd=openAddMenuModal;
-openAddMenuModal=function(){
-  _pendingImageData=null;
-  _origOpenAdd();
-  renderMenuImgPreview(null);
-  document.getElementById('m-img-input').value='';
-};
-const _origOpenEdit=openEditMenuModal;
-openEditMenuModal=function(id){
-  _pendingImageData=null;
-  _origOpenEdit(id);
-  const item=state.menuItems.find(m=>String(m.id)===String(id));
-  _pendingImageData=item&&item.imageData?item.imageData:null;
-  renderMenuImgPreview(_pendingImageData);
-  document.getElementById('m-img-input').value='';
-};
-
-/* [P1] saveMenuItem に imageData を保存 */
-const _origSaveMenu=saveMenuItem;
-saveMenuItem=function(){
-  // 画像データを一時変数に退避してから元関数を呼ぶ
-  const editId=document.getElementById('m-edit-id').value;
-  _origSaveMenu();
-  // 元関数で追加/編集されたアイテムを探してimageDataをセット
-  if(editId){
-    const idx=state.menuItems.findIndex(m=>String(m.id)===String(editId));
-    if(idx>=0)state.menuItems[idx].imageData=_pendingImageData;
-  } else {
-    // 末尾に追加されたアイテム
-    if(state.menuItems.length>0){
-      state.menuItems[state.menuItems.length-1].imageData=_pendingImageData;
-    }
-  }
-  saveState();
-  _pendingImageData=null;
-};
-
-/* [P2] backupData/restoreData は末尾scriptブロックで定義 */
-
-
-/* =====================================================
-   按分原価 新規関数 (第1段階) [ALLOC-1]
-   ===================================================== */
-
-/** 原価反映方式を変更してすぐに保存・再描画 */
-function onMatModeChange(id, newMode){
-  const items=getMatItems();
-  const item=items.find(i=>i.id===id);
-  if(!item)return;
-  item.costMode=newMode;
-  /* モード切替時は対象リストをリセット */
-  if(newMode!=='allocate_category')item.targetCategories=[];
-  if(newMode!=='allocate_items')item.targetItemIds=[];
-  saveMatItems(items);
-  renderMaterial(); /* カード再描画（按分UIの表示切替のため全体再描画） */
-}
-
-/** カテゴリ按分: カテゴリのトグル選択 */
-function onMatAllocCatToggle(id, cat){
-  const items=getMatItems();
-  const item=items.find(i=>i.id===id);
-  if(!item)return;
-  if(!item.targetCategories)item.targetCategories=[];
-  const idx=item.targetCategories.indexOf(cat);
-  if(idx>=0)item.targetCategories.splice(idx,1);
-  else item.targetCategories.push(cat);
-  saveMatItems(items);
-  /* チップの selected だけ切替（フォーカス問題回避のためカード全体は再描画しない） */
-  const card=document.querySelector(`[data-mat-id="${id}"]`);
-  if(card){
-    card.querySelectorAll('.mat-alloc-chip').forEach(el=>{
-      if(el.textContent.trim()===cat)el.classList.toggle('selected',item.targetCategories.includes(cat));
-    });
-  }
-}
-
-/** 商品指定按分: 商品IDのトグル選択 */
-function onMatAllocItemToggle(id, menuItemId){
-  const items=getMatItems();
-  const item=items.find(i=>i.id===id);
-  if(!item)return;
-  if(!item.targetItemIds)item.targetItemIds=[];
-  const idx=item.targetItemIds.indexOf(menuItemId);
-  if(idx>=0)item.targetItemIds.splice(idx,1);
-  else item.targetItemIds.push(menuItemId);
-  saveMatItems(items);
-  /* チップのselectedだけ切替 */
-  const card=document.querySelector(`[data-mat-id="${id}"]`);
-  if(card){
-    card.querySelectorAll('.mat-alloc-chip').forEach(el=>{
-      const isSelected=item.targetItemIds.includes(menuItemId);
-      /* data属性がないのでonclick属性で判定 */
-      if(el.getAttribute('onclick')===`onMatAllocItemToggle(${id},${menuItemId})`){
-        el.classList.toggle('selected',isSelected);
-      }
-    });
-  }
-}
-
-/**
- * [ALLOC-1] calcAllocatedCost(item, orders, menuItems) — 次回実装の土台
- * 配賦モードに応じて材料費を商品別に配分する
- * 今回は計算結果を返すだけで、レポートへの反映はまだ行わない
- *
- * @param {object} item       - materialItem
- * @param {array}  orders     - 対象イベントの注文一覧
- * @param {array}  menuItems  - 全メニュー
- * @returns {object} { total: number, perItem: {menuItemId: cost} }
- */
-function calcAllocatedCost(item, orders, menuItems){
-  const c=calcMatItem(item);
-  const totalCost=c.effectiveCost;
-  const costMode=item.costMode||'direct';
-
-  if(costMode==='direct') return {total:totalCost, perItem:{}};
-
-  /* 対象商品を絞り込む */
-  let targetIds=menuItems.map(m=>m.id);
-  if(costMode==='allocate_category'){
-    const cats=item.targetCategories||[];
-    if(cats.length>0) targetIds=menuItems.filter(m=>cats.includes(m.cat)).map(m=>m.id);
-  } else if(costMode==='allocate_items'){
-    const ids=item.targetItemIds||[];
-    if(ids.length>0) targetIds=ids;
-  }
-
-  /* 対象商品の販売数を集計 */
-  const soldMap={};
-  targetIds.forEach(id=>{soldMap[id]=0;});
-  orders.forEach(o=>{
-    if(o.cancelledAt) return;
-    o.items.forEach(oi=>{
-      if(targetIds.includes(oi.id)) soldMap[oi.id]=(soldMap[oi.id]||0)+oi.qty;
-    });
-  });
-  const totalSold=Object.values(soldMap).reduce((s,v)=>s+v,0);
-
-  if(totalSold===0) return {total:totalCost, perItem:{}};
-
-  /* 販売数比率で按分 */
-  const perItem={};
-  targetIds.forEach(id=>{
-    perItem[id]=totalCost*(soldMap[id]/totalSold);
-  });
-
-  return {total:totalCost, perItem};
-}
-
-
-/* =====================================================
-   按分原価 第2段階 新関数 [ALLOC-2]
-   ===================================================== */
-
-/**
- * calcAllocatedCostAll(matItems, orders, menuItems)
- * 全材料を走査して商品別の按分原価合計を返す
- *
- * @returns {object} {
- *   perMenuItemId: { [menuItemId]: totalAllocCost },
- *   totalMat:        number  全材料費合計（effectiveCost合計）
- *   totalAllocated:  number  商品別へ配賦済みの材料費合計
- *   totalUnallocated:number  未配賦（direct + 販売数0）の材料費合計
- * }
- */
-function calcAllocatedCostAll(matItems, orders, menuItems){
-  const perMenuItemId={};  /* menuItemId => 累積按分原価 */
-  let totalMat=0, totalAllocated=0, totalUnallocated=0;
-
-  (matItems||[]).forEach(item=>{
-    const result=calcAllocatedCost(item, orders, menuItems);
-    totalMat+=result.total;
-
-    const isAllocated=Object.keys(result.perItem).length>0;
-    if(isAllocated){
-      /* perItem に配賦額がある → 商品別へ加算 */
-      let allocated=0;
-      Object.entries(result.perItem).forEach(([id,cost])=>{
-        const mid=Number(id);
-        perMenuItemId[mid]=(perMenuItemId[mid]||0)+cost;
-        allocated+=cost;
-      });
-      totalAllocated+=allocated;
-      /* 端数: 配賦後の残りは未配賦扱い（通常は0） */
-      totalUnallocated+=(result.total-allocated);
-    } else {
-      /* direct or 販売数0 → 未配賦 */
-      totalUnallocated+=result.total;
-    }
-  });
-
-  return {perMenuItemId, totalMat, totalAllocated, totalUnallocated};
-}
-
-/**
- * getMatAllocPreview(item, orders, menuItems)
- * 材料カード用: 1品目の按分プレビュー情報を返す
- *
- * @returns {object} {
- *   effectiveCost: number,
- *   targetSold: number,       対象商品の販売数合計
- *   perUnitCost: number,      1販売単位あたり按分原価
- *   isAllocatable: boolean,   配賦可能か
- *   targetLabel: string,      対象の説明文
- * }
- */
-function getMatAllocPreview(item, orders, menuItems){
-  const c=calcMatItem(item);
-  const costMode=item.costMode||'direct';
-
-  if(costMode==='direct'){
-    return {effectiveCost:c.effectiveCost,targetSold:0,perUnitCost:0,isAllocatable:false,targetLabel:'直接原価（配賦なし）'};
-  }
-
-  /* 対象商品を決定 */
-  let targetIds=menuItems.map(m=>m.id);
-  let targetLabel='全商品';
-  if(costMode==='allocate_category'){
-    const cats=item.targetCategories||[];
-    if(cats.length>0){targetIds=menuItems.filter(m=>cats.includes(m.cat)).map(m=>m.id);targetLabel='カテゴリ:'+cats.join('・');}
-    else{targetLabel='カテゴリ未選択（全商品）';}
-  } else if(costMode==='allocate_items'){
-    const ids=item.targetItemIds||[];
-    if(ids.length>0){targetIds=ids;targetLabel=menuItems.filter(m=>ids.includes(m.id)).map(m=>m.name).join('・');}
-    else{targetLabel='商品未選択（全商品）';}
-  }
-
-  /* 対象販売数 */
-  let targetSold=0;
-  (orders||[]).filter(o=>!o.cancelledAt).forEach(o=>{
-    o.items.forEach(oi=>{if(targetIds.includes(oi.id))targetSold+=oi.qty;});
-  });
-
-  const perUnitCost=targetSold>0?(c.effectiveCost/targetSold):0;
-  return {
-    effectiveCost:c.effectiveCost,
-    targetSold,
-    perUnitCost,
-    isAllocatable:targetSold>0,
-    targetLabel
-  };
-}
-
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Dela+Gothic+One&display=swap');
 :root{
@@ -1912,6 +1584,214 @@ function updateChecklist(){
   if(pct)pct.textContent=pctVal+'%';
   if(count)count.textContent=`${doneCount}/${checks.length}項目完了`;
 }
+
+
+/* =============================================================
+   以下は旧 xlsx scriptタグ内のインライン部分を移動したもの
+   （src属性付きscriptタグ内はブラウザが実行しないため修正）
+   ============================================================= */
+/* =====================================================
+   按分原価 新規関数 (第1段階) [ALLOC-1]
+   ===================================================== */
+
+/** 原価反映方式を変更してすぐに保存・再描画 */
+function onMatModeChange(id, newMode){
+  const items=getMatItems();
+  const item=items.find(i=>i.id===id);
+  if(!item)return;
+  item.costMode=newMode;
+  /* モード切替時は対象リストをリセット */
+  if(newMode!=='allocate_category')item.targetCategories=[];
+  if(newMode!=='allocate_items')item.targetItemIds=[];
+  saveMatItems(items);
+  renderMaterial(); /* カード再描画（按分UIの表示切替のため全体再描画） */
+}
+
+/** カテゴリ按分: カテゴリのトグル選択 */
+function onMatAllocCatToggle(id, cat){
+  const items=getMatItems();
+  const item=items.find(i=>i.id===id);
+  if(!item)return;
+  if(!item.targetCategories)item.targetCategories=[];
+  const idx=item.targetCategories.indexOf(cat);
+  if(idx>=0)item.targetCategories.splice(idx,1);
+  else item.targetCategories.push(cat);
+  saveMatItems(items);
+  /* チップの selected だけ切替（フォーカス問題回避のためカード全体は再描画しない） */
+  const card=document.querySelector(`[data-mat-id="${id}"]`);
+  if(card){
+    card.querySelectorAll('.mat-alloc-chip').forEach(el=>{
+      if(el.textContent.trim()===cat)el.classList.toggle('selected',item.targetCategories.includes(cat));
+    });
+  }
+}
+
+/** 商品指定按分: 商品IDのトグル選択 */
+function onMatAllocItemToggle(id, menuItemId){
+  const items=getMatItems();
+  const item=items.find(i=>i.id===id);
+  if(!item)return;
+  if(!item.targetItemIds)item.targetItemIds=[];
+  const idx=item.targetItemIds.indexOf(menuItemId);
+  if(idx>=0)item.targetItemIds.splice(idx,1);
+  else item.targetItemIds.push(menuItemId);
+  saveMatItems(items);
+  /* チップのselectedだけ切替 */
+  const card=document.querySelector(`[data-mat-id="${id}"]`);
+  if(card){
+    card.querySelectorAll('.mat-alloc-chip').forEach(el=>{
+      const isSelected=item.targetItemIds.includes(menuItemId);
+      /* data属性がないのでonclick属性で判定 */
+      if(el.getAttribute('onclick')===`onMatAllocItemToggle(${id},${menuItemId})`){
+        el.classList.toggle('selected',isSelected);
+      }
+    });
+  }
+}
+
+/**
+ * [ALLOC-1] calcAllocatedCost(item, orders, menuItems) — 次回実装の土台
+ * 配賦モードに応じて材料費を商品別に配分する
+ * 今回は計算結果を返すだけで、レポートへの反映はまだ行わない
+ *
+ * @param {object} item       - materialItem
+ * @param {array}  orders     - 対象イベントの注文一覧
+ * @param {array}  menuItems  - 全メニュー
+ * @returns {object} { total: number, perItem: {menuItemId: cost} }
+ */
+function calcAllocatedCost(item, orders, menuItems){
+  const c=calcMatItem(item);
+  const totalCost=c.effectiveCost;
+  const costMode=item.costMode||'direct';
+
+  if(costMode==='direct') return {total:totalCost, perItem:{}};
+
+  /* 対象商品を絞り込む */
+  let targetIds=menuItems.map(m=>m.id);
+  if(costMode==='allocate_category'){
+    const cats=item.targetCategories||[];
+    if(cats.length>0) targetIds=menuItems.filter(m=>cats.includes(m.cat)).map(m=>m.id);
+  } else if(costMode==='allocate_items'){
+    const ids=item.targetItemIds||[];
+    if(ids.length>0) targetIds=ids;
+  }
+
+  /* 対象商品の販売数を集計 */
+  const soldMap={};
+  targetIds.forEach(id=>{soldMap[id]=0;});
+  orders.forEach(o=>{
+    if(o.cancelledAt) return;
+    o.items.forEach(oi=>{
+      if(targetIds.includes(oi.id)) soldMap[oi.id]=(soldMap[oi.id]||0)+oi.qty;
+    });
+  });
+  const totalSold=Object.values(soldMap).reduce((s,v)=>s+v,0);
+
+  if(totalSold===0) return {total:totalCost, perItem:{}};
+
+  /* 販売数比率で按分 */
+  const perItem={};
+  targetIds.forEach(id=>{
+    perItem[id]=totalCost*(soldMap[id]/totalSold);
+  });
+
+  return {total:totalCost, perItem};
+}
+
+
+/* =====================================================
+   按分原価 第2段階 新関数 [ALLOC-2]
+   ===================================================== */
+
+/**
+ * calcAllocatedCostAll(matItems, orders, menuItems)
+ * 全材料を走査して商品別の按分原価合計を返す
+ *
+ * @returns {object} {
+ *   perMenuItemId: { [menuItemId]: totalAllocCost },
+ *   totalMat:        number  全材料費合計（effectiveCost合計）
+ *   totalAllocated:  number  商品別へ配賦済みの材料費合計
+ *   totalUnallocated:number  未配賦（direct + 販売数0）の材料費合計
+ * }
+ */
+function calcAllocatedCostAll(matItems, orders, menuItems){
+  const perMenuItemId={};  /* menuItemId => 累積按分原価 */
+  let totalMat=0, totalAllocated=0, totalUnallocated=0;
+
+  (matItems||[]).forEach(item=>{
+    const result=calcAllocatedCost(item, orders, menuItems);
+    totalMat+=result.total;
+
+    const isAllocated=Object.keys(result.perItem).length>0;
+    if(isAllocated){
+      /* perItem に配賦額がある → 商品別へ加算 */
+      let allocated=0;
+      Object.entries(result.perItem).forEach(([id,cost])=>{
+        const mid=Number(id);
+        perMenuItemId[mid]=(perMenuItemId[mid]||0)+cost;
+        allocated+=cost;
+      });
+      totalAllocated+=allocated;
+      /* 端数: 配賦後の残りは未配賦扱い（通常は0） */
+      totalUnallocated+=(result.total-allocated);
+    } else {
+      /* direct or 販売数0 → 未配賦 */
+      totalUnallocated+=result.total;
+    }
+  });
+
+  return {perMenuItemId, totalMat, totalAllocated, totalUnallocated};
+}
+
+/**
+ * getMatAllocPreview(item, orders, menuItems)
+ * 材料カード用: 1品目の按分プレビュー情報を返す
+ *
+ * @returns {object} {
+ *   effectiveCost: number,
+ *   targetSold: number,       対象商品の販売数合計
+ *   perUnitCost: number,      1販売単位あたり按分原価
+ *   isAllocatable: boolean,   配賦可能か
+ *   targetLabel: string,      対象の説明文
+ * }
+ */
+function getMatAllocPreview(item, orders, menuItems){
+  const c=calcMatItem(item);
+  const costMode=item.costMode||'direct';
+
+  if(costMode==='direct'){
+    return {effectiveCost:c.effectiveCost,targetSold:0,perUnitCost:0,isAllocatable:false,targetLabel:'直接原価（配賦なし）'};
+  }
+
+  /* 対象商品を決定 */
+  let targetIds=menuItems.map(m=>m.id);
+  let targetLabel='全商品';
+  if(costMode==='allocate_category'){
+    const cats=item.targetCategories||[];
+    if(cats.length>0){targetIds=menuItems.filter(m=>cats.includes(m.cat)).map(m=>m.id);targetLabel='カテゴリ:'+cats.join('・');}
+    else{targetLabel='カテゴリ未選択（全商品）';}
+  } else if(costMode==='allocate_items'){
+    const ids=item.targetItemIds||[];
+    if(ids.length>0){targetIds=ids;targetLabel=menuItems.filter(m=>ids.includes(m.id)).map(m=>m.name).join('・');}
+    else{targetLabel='商品未選択（全商品）';}
+  }
+
+  /* 対象販売数 */
+  let targetSold=0;
+  (orders||[]).filter(o=>!o.cancelledAt).forEach(o=>{
+    o.items.forEach(oi=>{if(targetIds.includes(oi.id))targetSold+=oi.qty;});
+  });
+
+  const perUnitCost=targetSold>0?(c.effectiveCost/targetSold):0;
+  return {
+    effectiveCost:c.effectiveCost,
+    targetSold,
+    perUnitCost,
+    isAllocatable:targetSold>0,
+    targetLabel
+  };
+}
+
 
 </script>
 </body>
