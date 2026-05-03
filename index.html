@@ -555,6 +555,40 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 .weather-report-stat{background:#fff;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;color:#1565C0;border:1px solid #BBDEFB;}
 .weather-report-note{font-size:11px;color:var(--text2);font-style:italic;padding:6px 10px;background:rgba(255,255,255,.6);border-radius:6px;margin-top:4px;}
 .weather-report-empty{font-size:12px;color:var(--text3);font-style:italic;}
+
+/* =====================================================
+   レポート画面 整理 [REPORT-1]
+   ===================================================== */
+
+/* サマリーカード（上段・常時表示） */
+.summary-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:6px;}
+.summary-kpi-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:14px 12px;text-align:center;box-shadow:var(--shadow);}
+.summary-kpi-label{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;letter-spacing:.03em;}
+.summary-kpi-value{font-size:22px;font-weight:900;font-family:'Dela Gothic One',sans-serif;line-height:1.1;}
+.summary-kpi-value.orange{color:var(--primary);}
+.summary-kpi-value.green{color:var(--success);}
+.summary-kpi-value.red{color:var(--danger);}
+.summary-kpi-value.blue{color:#1565C0;}
+.summary-kpi-value.gold{color:var(--gold-dark);}
+.summary-kpi-sub{font-size:10px;color:var(--text3);margin-top:3px;}
+
+/* 在庫注意バッジ */
+.inv-alert-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;}
+.inv-alert-badge.ok{background:#E8F5E9;color:#2E7D32;}
+.inv-alert-badge.warn{background:#FFF3E0;color:#E65100;}
+
+/* 詳細開閉ボタン */
+.detail-toggle-btn{width:100%;padding:11px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;box-shadow:var(--shadow);}
+.detail-toggle-btn:active{background:var(--surface2);}
+.detail-toggle-chevron{font-size:14px;transition:transform .2s;display:inline-block;}
+.detail-toggle-chevron.open{transform:rotate(180deg);}
+
+/* 詳細エリア */
+.detail-section{overflow:hidden;transition:none;}
+.detail-section.closed{display:none;}
+
+/* 時間帯チャート wrapper */
+.hour-chart-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:14px;box-shadow:var(--shadow);}
 </style>
 </head>
 <body>
@@ -679,28 +713,72 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   <div style="text-align:right;margin-top:10px;font-size:14px;font-weight:900;color:var(--brown);">合計経費: <span id="expense-total" style="font-family:'Dela Gothic One',sans-serif;font-size:18px;color:var(--primary);">¥0</span></div>
 </div>
 <div class="page" id="page-report">
-  <!-- [WEATHER-1] 天気カード -->
+
+  <!-- [REPORT-1] 天気カード（常時表示） -->
   <div id="weather-report-card-wrap"></div>
-  <div class="kpi-grid" id="kpi-grid"></div>
-  <div class="section-title" style="margin-bottom:10px;">📐 原価率・FL指標</div>
-  <div class="fl-grid" id="fl-grid"></div>
-  <div class="section-title" style="margin-bottom:8px;">🕐 時間帯別売上</div>
-  <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:14px;box-shadow:var(--shadow);"><div class="hour-chart" id="hour-chart"></div><div class="hour-labels" id="hour-labels"></div></div>
-  <!-- [ALLOC-2] 配賦サマリーカード -->
-  <div class="section-title" style="margin-bottom:8px;">📊 材料費配賦サマリー</div>
-  <div class="alloc-summary-grid" id="alloc-summary-grid"></div>
-  <!-- [ALLOC-2] 商品別集計（按分原価込み） -->
-  <div class="section-title" style="margin-bottom:8px;">🍗 商品別集計<span class="ref-label">参考値</span></div>
-  <div class="report-note">
-    <div class="report-note-title">📌 商品別利益は参考値です</div>
-    直接原価（各商品に設定した原価）＋ 共通材料の按分原価 から算出しています。<br>
-    <strong>含まれないもの：</strong>人件費・出店料・「直接原価」設定の材料費・按分対象販売数がゼロの材料費。<br>
-    正確な事業収支は全体KPI（上部）と経費合計をあわせてご確認ください。
+
+  <!-- [REPORT-1] ① 上段サマリー（常時表示） -->
+  <div class="summary-kpi-grid" id="summary-kpi-grid"></div>
+  <div id="inv-alert-row" style="margin-bottom:12px;"></div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.6;padding:0 2px;">
+    ※ 概算利益は売上－直接原価－材料費－経費の簡易値です。詳細は下の「詳細を見る」でご確認ください。
   </div>
-  <div id="alloc-note-unalloc" style="margin-bottom:10px;"></div>
-  <div class="report-table-wrap" style="margin-bottom:14px;overflow-x:auto;"><table class="report-table"><thead><tr><th>商品名</th><th class="num">販売数</th><th class="num">売上</th><th class="num">直接原価</th><th class="num alloc">共通材料按分</th><th class="num alloc">参考利益</th><th class="num alloc">参考利益率</th></tr></thead><tbody id="product-report-body"></tbody></table></div>
-  <div class="section-title" style="margin-bottom:8px;">💳 決済方法別</div>
-  <div class="report-table-wrap" style="margin-bottom:14px;"><table class="report-table"><thead><tr><th>決済方法</th><th class="num">件数</th><th class="num">売上</th></tr></thead><tbody id="pay-report-body"></tbody></table></div>
+
+  <!-- [REPORT-1] ② 詳細開閉ボタン -->
+  <button class="detail-toggle-btn" id="report-detail-toggle-btn" onclick="toggleReportDetail()">
+    <span id="report-detail-text">📊 詳細指標・商品別・決済別を見る</span>
+    <span class="detail-toggle-chevron" id="report-detail-chevron">▼</span>
+  </button>
+
+  <!-- [REPORT-1] ③ 詳細エリア（初期は閉じる） -->
+  <div class="detail-section closed" id="report-detail-section">
+
+    <!-- 既存KPIグリッド（8枚） -->
+    <div class="section-title" style="margin-bottom:8px;">📈 全指標</div>
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <!-- FL指標 -->
+    <div class="section-title" style="margin-bottom:10px;">📐 原価率・FL指標</div>
+    <div class="fl-grid" id="fl-grid"></div>
+
+    <!-- 時間帯チャート -->
+    <div class="section-title" style="margin-bottom:8px;">🕐 時間帯別売上</div>
+    <div class="hour-chart-wrap"><div class="hour-chart" id="hour-chart"></div><div class="hour-labels" id="hour-labels"></div></div>
+
+    <!-- 材料費配賦サマリー -->
+    <div class="section-title" style="margin-bottom:8px;">📊 材料費配賦サマリー</div>
+    <div class="alloc-summary-grid" id="alloc-summary-grid"></div>
+
+    <!-- 商品別集計 -->
+    <div class="section-title" style="margin-bottom:8px;">🍗 商品別集計<span class="ref-label">参考値</span></div>
+    <div class="report-note">
+      <div class="report-note-title">📌 商品別利益は参考値です</div>
+      直接原価＋共通材料の按分原価から算出。人件費・出店料・未配賦材料費は含まれません。
+    </div>
+    <div id="alloc-note-unalloc" style="margin-bottom:10px;"></div>
+    <div class="report-table-wrap" style="margin-bottom:14px;overflow-x:auto;">
+      <table class="report-table">
+        <thead><tr>
+          <th>商品名</th><th class="num">販売数</th><th class="num">売上</th>
+          <th class="num">直接原価</th><th class="num alloc">共通材料按分</th>
+          <th class="num alloc">参考利益</th><th class="num alloc">参考利益率</th>
+        </tr></thead>
+        <tbody id="product-report-body"></tbody>
+      </table>
+    </div>
+
+    <!-- 決済別 -->
+    <div class="section-title" style="margin-bottom:8px;">💳 決済方法別</div>
+    <div class="report-table-wrap" style="margin-bottom:14px;">
+      <table class="report-table">
+        <thead><tr><th>決済方法</th><th class="num">件数</th><th class="num">売上</th></tr></thead>
+        <tbody id="pay-report-body"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /detail-section -->
+
+  <!-- エクスポート（常時表示） -->
   <div class="section-title" style="margin-bottom:8px;">💾 エクスポート</div>
   <div class="export-row">
     <button class="export-btn" onclick="exportCSV()">📄 CSV（全シート）</button>
@@ -709,6 +787,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   <div class="export-row" style="margin-top:8px;">
     <button class="export-btn" style="border-color:#283593;color:#283593;" onclick="exportProductCSV()">📋 商品別利益CSV（参考値）</button>
   </div>
+
 </div>
 <div class="page" id="page-settings">
   <div class="settings-section"><div class="settings-section-header"><span>🍗 メニュー管理</span><button class="icon-btn" style="background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4);color:#fff;" onclick="openAddMenuModal()">＋ 追加</button></div><div id="menu-settings-list"></div></div>
@@ -1360,6 +1439,33 @@ function renderReport(){
   const laborCost=expenses.filter(e=>e.cat==='人件費'||e.cat==='外注費').reduce((s,e)=>s+e.amount,0);
   const rentCost=expenses.filter(e=>e.cat==='出店料').reduce((s,e)=>s+e.amount,0);
   const gp=totalSales-totalCOGS;const np=gp-totalExpenses-matCost;const mg=totalSales>0?Math.round(np/totalSales*100):0;
+  /* [REPORT-1] 上段サマリーカード（5枚）を先に描画 */
+  const avgOrder = activeOrders.length > 0 ? Math.round(totalSales / activeOrders.length) : 0;
+  /* 在庫注意件数 */
+  const invAlerts = state.menuItems.filter(m => {
+    const inv = getInventory(m.id);
+    const remaining = Math.max(0, inv.stocked - inv.sold - inv.wasted);
+    return inv.stocked > 0 && remaining <= 3; /* 残3個以下 */
+  });
+  document.getElementById('summary-kpi-grid').innerHTML = [
+    {label:'売上',       val:'¥'+totalSales.toLocaleString(),          cls:'orange'},
+    {label:'会計件数',   val:activeOrders.length+'件',                  cls:'blue'},
+    {label:'客単価',     val:'¥'+avgOrder.toLocaleString(),             cls:'gold'},
+    {label:'概算利益',   val:'¥'+np.toLocaleString(undefined,{maximumFractionDigits:0}), cls:np>=0?'green':'red'},
+    {label:'利益率',     val:mg+'%',                                    cls:mg>=20?'green':mg>=10?'gold':'red'},
+  ].map(({label,val,cls})=>`<div class="summary-kpi-card"><div class="summary-kpi-label">${label}</div><div class="summary-kpi-value ${cls}">${val}</div></div>`).join('');
+  /* 在庫注意バッジ */
+  const invAlertEl = document.getElementById('inv-alert-row');
+  if(invAlertEl){
+    if(invAlerts.length > 0){
+      invAlertEl.innerHTML = `<span class="inv-alert-badge warn">⚠️ 残少・注意商品 ${invAlerts.length}品（${invAlerts.map(m=>m.name).join('・')}）</span>`;
+    } else if(state.menuItems.length > 0){
+      invAlertEl.innerHTML = '<span class="inv-alert-badge ok">✅ 在庫問題なし</span>';
+    } else {
+      invAlertEl.innerHTML = '';
+    }
+  }
+
   document.getElementById('kpi-grid').innerHTML=`<div class="kpi-card"><div class="kpi-label">売上合計</div><div class="kpi-value orange">¥${totalSales.toLocaleString()}</div></div><div class="kpi-card"><div class="kpi-label">販売件数</div><div class="kpi-value blue">${activeOrders.length}件</div></div><div class="kpi-card"><div class="kpi-label">粗利益</div><div class="kpi-value green">¥${gp.toLocaleString()}</div></div><div class="kpi-card"><div class="kpi-label">経費合計</div><div class="kpi-value red">¥${totalExpenses.toLocaleString()}</div></div><div class="kpi-card"><div class="kpi-label">材料費(原価算入)</div><div class="kpi-value red">¥${matCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="kpi-card"><div class="kpi-label">廃棄ロス</div><div class="kpi-value red">¥${totalWasted.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="kpi-card"><div class="kpi-label">純利益</div><div class="kpi-value ${np>=0?'green':'red'}">¥${np.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="kpi-card"><div class="kpi-label">利益率</div><div class="kpi-value gold">${mg}%</div></div>`;
   const foodCost=matCost;const flValue=foodCost+laborCost;
   const costRate=totalSales>0?((totalCOGS+matCost)/totalSales*100):0;
@@ -2757,6 +2863,26 @@ function renderWeatherReportCard(){
     + '</div>';
 }
 
+
+/* =====================================================
+   レポート詳細 開閉 [REPORT-1 FIX]
+   ===================================================== */
+function toggleReportDetail(){
+  var section = document.getElementById('report-detail-section');
+  var chevron = document.getElementById('report-detail-chevron');
+  var textSpan = document.getElementById('report-detail-text');
+  if(!section) return;
+  var isOpen = !section.classList.contains('closed');
+  if(isOpen){
+    section.classList.add('closed');
+    if(chevron)  chevron.classList.remove('open');
+    if(textSpan) textSpan.textContent = '📊 詳細指標・商品別・決済別を見る';
+  } else {
+    section.classList.remove('closed');
+    if(chevron)  chevron.classList.add('open');
+    if(textSpan) textSpan.textContent = '📊 詳細指標を閉じる';
+  }
+}
 </script>
 </body>
 </html>
