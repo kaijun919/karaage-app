@@ -294,7 +294,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 .menu-card-emoji-large{font-size:40px;line-height:1;}
 
 /* [P1-D] 直前取消バナー */
-.undo-bar{display:none;position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;z-index:1999;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.3);white-space:nowrap;}
+.undo-bar{display:none;position:fixed;bottom:16px;right:16px;left:auto;transform:none;background:rgba(50,50,50,.92);color:#fff;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;z-index:1999;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.25);white-space:nowrap;max-width:calc(100vw - 32px);}
 .undo-bar.show{display:flex;}
 .undo-btn{background:#E8650A;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;cursor:pointer;}
 
@@ -2495,10 +2495,10 @@ let _lastOrder=null;
 function showUndoBar(order){
   _lastOrder=order;
   const bar=document.getElementById('undo-bar');
-  document.getElementById('undo-msg').textContent=`¥${order.total.toLocaleString()} を取消できます（3分間）`;
+  document.getElementById('undo-msg').textContent='取消 ¥'+order.total.toLocaleString();
   bar.classList.add('show');
   clearTimeout(_undoTimer);
-  _undoTimer=setTimeout(()=>{bar.classList.remove('show');_lastOrder=null;},180000);
+  _undoTimer=setTimeout(()=>{bar.classList.remove('show');_lastOrder=null;},30000);/* 30秒 */
 }
 function undoLastCheckout(){
   if(!_lastOrder)return;
