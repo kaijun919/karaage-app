@@ -6,255 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="屋外販売管理">
 <title>🍗 屋外販売管理</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-/* =====================================================
-   天気表示機能 [WEATHER-1]
-   Open-Meteo API（APIキー不要）を使用
-   失敗してもアプリ全体には影響しない設計
-   ===================================================== */
-
-/** 天気アイコンマッピング (WMO code → emoji) */
-const WMO_ICON = {
-  0:'☀️',1:'🌤️',2:'⛅',3:'☁️',
-  45:'🌫️',48:'🌫️',
-  51:'🌦️',53:'🌦️',55:'🌧️',
-  61:'🌧️',63:'🌧️',65:'🌧️',
-  71:'🌨️',73:'🌨️',75:'🌨️',80:'🌦️',81:'🌦️',82:'⛈️',
-  95:'⛈️',96:'⛈️',99:'⛈️'
-};
-const WMO_STATUS = {
-  0:'快晴',1:'晴れ',2:'晴れ時々曇り',3:'曇り',
-  45:'霧',48:'霧',
-  51:'小雨',53:'雨',55:'雨',
-  61:'小雨',63:'雨',65:'大雨',
-  71:'小雪',73:'雪',75:'大雪',80:'にわか雨',81:'雨',82:'強雨',
-  95:'雷雨',96:'雷雨',99:'雷雨'
-};
-
-/**
- * 天気サマリー文字列を整形
- * @param {object} weather - event.weather
- * @returns {string} 例: "晴れ / 18〜25℃ / 降水30%"
- */
-function formatWeatherSummary(weather){
-  if(!weather||!weather.status) return '未取得';
-  const parts=[weather.icon||'',weather.status];
-  if(weather.tempMin!=null&&weather.tempMax!=null) parts.push(`${weather.tempMin}〜${weather.tempMax}℃`);
-  if(weather.rainProb!=null) parts.push(`降水${weather.rainProb}%`);
-  return parts.filter(Boolean).join(' / ');
-}
-
-/**
- * 場所名→緯度経度 (Nominatim OSM, 無料・キー不要)
- * @param {string} place
- * @returns {Promise<{lat:number,lon:number}|null>}
- */
-async function geocodePlace(place){
-  if(!place||!place.trim()) return null;
-  try{
-    const q=encodeURIComponent(place.trim()+' 日本');
-    const res=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,{
-      headers:{'Accept-Language':'ja','User-Agent':'karaage-event-app/1.0'}
-    });
-    if(!res.ok) return null;
-    const data=await res.json();
-    if(!data||!data.length) return null;
-    return {lat:parseFloat(data[0].lat),lon:parseFloat(data[0].lon)};
-  }catch(e){
-    console.warn('[WEATHER] geocode失敗:',e);
-    return null;
-  }
-}
-
-/**
- * Open-Meteo から指定日の天気を取得
- * @param {number} lat
- * @param {number} lon
- * @param {string} date - "YYYY-MM-DD"
- * @returns {Promise<object|null>}
- */
-async function fetchOpenMeteo(lat, lon, date){
-  try{
-    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
-      +`&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max`
-      +`&timezone=Asia%2FTokyo&start_date=${date}&end_date=${date}`;
-    const res=await fetch(url);
-    if(!res.ok) return null;
-    const data=await res.json();
-    if(!data.daily||!data.daily.time||!data.daily.time.length) return null;
-    const wc=data.daily.weathercode[0];
-    return {
-      weatherCode:wc,
-      status:WMO_STATUS[wc]||`コード${wc}`,
-      icon:WMO_ICON[wc]||'🌤️',
-      tempMax:Math.round(data.daily.temperature_2m_max[0]),
-      tempMin:Math.round(data.daily.temperature_2m_min[0]),
-      rainProb:Math.round(data.daily.precipitation_probability_max[0]||0)
-    };
-  }catch(e){
-    console.warn('[WEATHER] Open-Meteo取得失敗:',e);
-    return null;
-  }
-}
-
-/**
- * イベントオブジェクトから天気を取得してevent.weatherに保存
- * @param {object} eventObj
- * @returns {Promise<boolean>} 成功/失敗
- */
-async function fetchEventWeather(eventObj){
-  if(!eventObj) return false;
-  try{
-    /* 場所チェック */
-    if(!eventObj.place||!eventObj.place.trim()){
-      showToast('⚠️ 場所が未設定です。イベントの場所を入力してください。');
-      return false;
-    }
-    /* 日付チェック */
-    if(!eventObj.date){
-      showToast('⚠️ 日付が未設定です。イベントの開催日を入力してください。');
-      return false;
-    }
-    /* ジオコーディング */
-    showToast('📍 場所を検索中...');
-    const coords=await geocodePlace(eventObj.place);
-    if(!coords){
-      showToast('⚠️ 場所の座標取得に失敗しました。場所名を確認してください。');
-      return false;
-    }
-    /* 天気取得 */
-    showToast('🌤️ 天気情報を取得中...');
-    const weather=await fetchOpenMeteo(coords.lat,coords.lon,eventObj.date);
-    if(!weather){
-      showToast('⚠️ 天気情報の取得に失敗しました。日付が過去または遠すぎる可能性があります。');
-      return false;
-    }
-    /* 保存（noteは既存を維持） */
-    const existingNote=(eventObj.weather&&eventObj.weather.note)||'';
-    eventObj.weather={
-      status:weather.status,
-      tempMin:weather.tempMin,
-      tempMax:weather.tempMax,
-      rainProb:weather.rainProb,
-      icon:weather.icon,
-      fetchedAt:new Date().toISOString(),
-      source:'Open-Meteo / OSM',
-      note:existingNote
-    };
-    saveState();
-    return true;
-  }catch(e){
-    console.error('[WEATHER] fetchEventWeather error:',e);
-    showToast('⚠️ 天気取得中にエラーが発生しました。');
-    return false;
-  }
-}
-
-/**
- * 現在のイベントの天気を更新（ボタン押下時）
- */
-async function updateCurrentEventWeather(){
-  const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);
-  if(!evt){showToast('⚠️ イベントを選択してください');return;}
-  const btn=document.getElementById('weather-update-btn');
-  if(btn){btn.disabled=true;btn.textContent='⏳ 取得中...';}
-  try{
-    const ok=await fetchEventWeather(evt);
-    if(ok){
-      showToast(`✅ 天気を更新しました：${formatWeatherSummary(evt.weather)}`);
-      updateEventName(); /* ヘッダーバッジ更新 */
-      renderWeatherSettingsUI(); /* 設定UI更新 */
-    }
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent='🔄 天気を更新';}
-  }
-}
-
-/**
- * 天気メモを保存
- * @param {string} val
- */
-function saveWeatherNote(val){
-  const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);
-  if(!evt)return;
-  if(!evt.weather)evt.weather={status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'',note:''};
-  evt.weather.note=val;
-  saveState();
-}
-
-/**
- * 設定画面の天気UIを現在のイベントに合わせて更新
- */
-function renderWeatherSettingsUI(){
-  const grid=document.getElementById('weather-info-grid');
-  const fetchedAt=document.getElementById('weather-fetched-at');
-  const noteInput=document.getElementById('weather-note-input');
-  if(!grid)return;
-
-  const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);
-  const w=evt&&evt.weather;
-
-  if(!w||!w.status){
-    grid.innerHTML='<div style="grid-column:1/-1;font-size:12px;color:var(--text3);text-align:center;padding:8px;">イベントの場所・日付を設定して「天気を更新」を押してください</div>';
-    if(fetchedAt)fetchedAt.textContent='';
-    if(noteInput)noteInput.value='';
-    return;
-  }
-
-  grid.innerHTML=[
-    {label:'天気',val:`${w.icon} ${w.status}`},
-    {label:'最高気温',val:w.tempMax!=null?`${w.tempMax}℃`:'—'},
-    {label:'最低気温',val:w.tempMin!=null?`${w.tempMin}℃`:'—'},
-    {label:'降水確率',val:w.rainProb!=null?`${w.rainProb}%`:'—'},
-  ].map(({label,val})=>`<div class="weather-info-item"><div class="weather-info-label">${label}</div><div class="weather-info-val">${val}</div></div>`).join('');
-
-  if(fetchedAt){
-    fetchedAt.textContent=w.fetchedAt
-      ?`最終更新: ${new Date(w.fetchedAt).toLocaleString('ja-JP')} (${w.source||''})`
-      :'';
-  }
-  if(noteInput) noteInput.value=w.note||'';
-}
-
-/**
- * レポート画面の天気カードを描画
- */
-function renderWeatherReportCard(){
-  const wrap=document.getElementById('weather-report-card-wrap');
-  if(!wrap)return;
-
-  const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);
-  const w=evt&&evt.weather;
-
-  if(!w||!w.status){
-    wrap.innerHTML=`<div class="weather-report-card">
-      <div class="weather-report-icon">🌤️</div>
-      <div class="weather-report-body">
-        <div class="weather-report-title">当日天気</div>
-        <div class="weather-report-empty">天気情報が未取得です。設定画面のイベント設定から取得してください。</div>
-      </div>
-    </div>`;
-    return;
-  }
-
-  const note=w.note?`<div class="weather-report-note">📝 ${w.note}</div>`:'';
-  const statsHtml=[
-    w.status?`<div class="weather-report-stat">${w.icon} ${w.status}</div>`:'',
-    (w.tempMin!=null&&w.tempMax!=null)?`<div class="weather-report-stat">🌡️ ${w.tempMin}〜${w.tempMax}℃</div>`:'',
-    w.rainProb!=null?`<div class="weather-report-stat">☂️ 降水${w.rainProb}%</div>`:'',
-  ].filter(Boolean).join('');
-
-  wrap.innerHTML=`<div class="weather-report-card">
-    <div class="weather-report-icon">${w.icon||'🌤️'}</div>
-    <div class="weather-report-body">
-      <div class="weather-report-title">当日天気 — ${evt.date||'日付未設定'} ${evt.place?'@ '+evt.place:''}</div>
-      <div class="weather-report-stats">${statsHtml}</div>
-      ${note}
-    </div>
-  </div>`;
-}
-
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Dela+Gothic+One&display=swap');
 :root{
@@ -1254,7 +1006,7 @@ function migrateState(){
       ...e,
       /* 既存のweatherがあればnoteだけ保持してその他はマージ */
       weather: Object.assign(
-        {status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'',note:''},
+        {status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'',note:'',_stale:false},
         e.weather||{}
       )
     }));
@@ -1929,16 +1681,18 @@ function selectEvent(id){
   updateEventName();
   closeModal('event-modal');
   showToast('📅 イベントを切り替えました');
+  updateEventName(); /* [WEATHER-2] ヘッダー天気バッジ更新 */
   /* 現在表示中のページを再描画 */
   const activePage=document.querySelector('.page.active');
   if(activePage){
     const pageId=activePage.id;
-    if(pageId==='page-report')renderReport();
-    else if(pageId==='page-material')renderMaterial();
-    else if(pageId==='page-inventory')renderInventory();
-    else if(pageId==='page-expense')renderExpenses();
-    else if(pageId==='page-register')renderRegister();
-    if(pageId==='page-settings')renderPinSettingsUI();/* [PIN-3] */
+    if(pageId==='page-report'){renderReport();}
+    else if(pageId==='page-material'){renderMaterial();}
+    else if(pageId==='page-inventory'){renderInventory();}
+    else if(pageId==='page-expense'){renderExpenses();}
+    else if(pageId==='page-register'){renderRegister();}
+    if(pageId==='page-settings'){renderPinSettingsUI();renderWeatherSettingsUI();}/* [WEATHER-2] */
+    if(pageId==='page-report'){renderWeatherReportCard();}/* [WEATHER-2] */
   }
 }
 /* [PIN-2] saveEvent: PIN保護 */
@@ -1947,10 +1701,19 @@ function saveEvent(){
   if(!name){showToast('⚠️ イベント名を入力してください');return;}
   requireAdminPin('イベント設定を保存','イベント情報を保存するには管理PINが必要です。',()=>{
     const idx=state.events.findIndex(e=>e.id===state.currentEventId);
-    const evtData={name,date:document.getElementById('evt-date').value,place:document.getElementById('evt-place').value};
-    if(idx>=0){state.events[idx]={...state.events[idx],...evtData};}
-    else{const newEvt={id:Date.now(),...evtData};state.events.push(newEvt);state.currentEventId=newEvt.id;}
-    saveState();updateEventName();showToast('✅ イベントを保存しました');
+    const newDate=document.getElementById('evt-date').value;
+    const newPlace=document.getElementById('evt-place').value;
+    const evtData={name,date:newDate,place:newPlace};
+    if(idx>=0){
+      const old=state.events[idx];
+      if(old.place!==newPlace||old.date!==newDate){markWeatherStale(old);}/* [WEATHER-2] */
+      state.events[idx]={...state.events[idx],...evtData};
+    }else{
+      const newEvt={id:Date.now(),...evtData};
+      state.events.push(newEvt);state.currentEventId=newEvt.id;
+    }
+    saveState();updateEventName();renderWeatherSettingsUI();/* [WEATHER-2] */
+    showToast('✅ イベントを保存しました');
   });
 }
 function updateEventName(){
@@ -1961,11 +1724,12 @@ function updateEventName(){
   if(badge){
     const w=evt&&evt.weather;
     if(w&&w.status){
+      const staleIco=w._stale?'⚠️ ':'';
       const icon=w.icon||'🌤️';
-      const temp=(w.tempMin!=null&&w.tempMax!=null)?` ${w.tempMin}〜${w.tempMax}℃`:'';
-      const rain=(w.rainProb!=null)?` 降水${w.rainProb}%`:'';
-      badge.innerHTML=`<span class="weather-badge-icon">${icon}</span><span>${w.status}${temp}${rain}</span>`;
-    } else {
+      const temp=(w.tempMin!=null&&w.tempMax!=null)?(' '+w.tempMin+'〜'+w.tempMax+'℃'):'';
+      const rain=(w.rainProb!=null)?(' 降水'+w.rainProb+'%'):'';
+      badge.innerHTML='<span class="weather-badge-icon">'+staleIco+icon+'</span><span>'+(w.status||'')+temp+rain+'</span>';
+    }else{
       badge.innerHTML='';
     }
   }
@@ -2727,6 +2491,270 @@ function _doSavePin(newPin){
   document.getElementById('pin-confirm-input').value = '';
   renderPinSettingsUI();
   showToast('✅ 管理PINを保存しました');
+}
+
+
+/* =====================================================
+   天気表示機能 完全版 [WEATHER-2]
+   Open-Meteo API / Nominatim OSM（APIキー不要）
+   ===================================================== */
+
+const WMO_ICON = {
+  0:'☀️',1:'🌤️',2:'⛅',3:'☁️',
+  45:'🌫️',48:'🌫️',
+  51:'🌦️',53:'🌦️',55:'🌧️',
+  61:'🌧️',63:'🌧️',65:'🌧️',
+  71:'🌨️',73:'🌨️',75:'🌨️',
+  80:'🌦️',81:'🌦️',82:'⛈️',
+  95:'⛈️',96:'⛈️',99:'⛈️'
+};
+const WMO_STATUS = {
+  0:'快晴',1:'晴れ',2:'晴れ時々曇り',3:'曇り',
+  45:'霧',48:'霧',
+  51:'小雨',53:'雨',55:'雨',
+  61:'小雨',63:'雨',65:'大雨',
+  71:'小雪',73:'雪',75:'大雪',
+  80:'にわか雨',81:'雨',82:'強雨',
+  95:'雷雨',96:'雷雨',99:'雷雨'
+};
+
+/* 二重取得防止フラグ [WEATHER-2] */
+let _weatherFetching = false;
+
+/** 天気サマリー整形（null安全） */
+function formatWeatherSummary(weather){
+  if(!weather || !weather.status) return '未取得';
+  const icon = weather.icon || '';
+  const stat = weather.status || '';
+  const temp = (weather.tempMin != null && weather.tempMax != null)
+    ? (weather.tempMin + '〜' + weather.tempMax + '℃') : '';
+  const rain = (weather.rainProb != null)
+    ? ('降水' + weather.rainProb + '%') : '';
+  return [icon, stat, temp, rain].filter(Boolean).join(' / ');
+}
+
+/** 場所名→座標（Nominatim OSM） */
+async function geocodePlace(place){
+  if(!place || !place.trim()) return null;
+  try{
+    const q = encodeURIComponent(place.trim() + ' 日本');
+    const res = await fetch(
+      'https://nominatim.openstreetmap.org/search?q=' + q + '&format=json&limit=1',
+      {headers:{'Accept-Language':'ja','User-Agent':'karaage-event-app/1.0'}}
+    );
+    if(!res.ok) return null;
+    const data = await res.json();
+    if(!data || !data.length) return null;
+    return {lat:parseFloat(data[0].lat), lon:parseFloat(data[0].lon)};
+  }catch(e){
+    console.warn('[WEATHER] geocode失敗:', e);
+    return null;
+  }
+}
+
+/** Open-Meteo から天気取得（過去日→archive API にフォールバック） */
+async function fetchOpenMeteo(lat, lon, date){
+  try{
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diffDays = Math.round((new Date(date) - today) / 86400000);
+    const base = diffDays >= -1 && diffDays <= 16
+      ? 'https://api.open-meteo.com/v1/forecast'
+      : 'https://archive-api.open-meteo.com/v1/archive';
+    const url = base + '?latitude=' + lat + '&longitude=' + lon
+      + '&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max'
+      + '&timezone=Asia%2FTokyo&start_date=' + date + '&end_date=' + date;
+    const res = await fetch(url);
+    if(!res.ok) return null;
+    const data = await res.json();
+    if(!data.daily || !data.daily.time || !data.daily.time.length) return null;
+    const wc = data.daily.weathercode[0];
+    const rainArr = data.daily.precipitation_probability_max;
+    return {
+      status: WMO_STATUS[wc] || ('コード' + wc),
+      icon:   WMO_ICON[wc]   || '🌤️',
+      tempMax: Math.round(data.daily.temperature_2m_max[0]),
+      tempMin: Math.round(data.daily.temperature_2m_min[0]),
+      rainProb: (rainArr && rainArr[0] != null) ? Math.round(rainArr[0]) : null,
+      isArchive: diffDays < -1
+    };
+  }catch(e){
+    console.warn('[WEATHER] Open-Meteo失敗:', e);
+    return null;
+  }
+}
+
+/** イベントの天気を取得→保存（失敗してもアプリ影響なし） */
+async function fetchEventWeather(eventObj){
+  if(!eventObj) return false;
+  if(_weatherFetching) return false;
+  _weatherFetching = true;
+  try{
+    if(!eventObj.place || !eventObj.place.trim()){
+      showToast('⚠️ 場所が未設定です。場所を入力してください。');
+      return false;
+    }
+    if(!eventObj.date){
+      showToast('⚠️ 日付が未設定です。開催日を入力してください。');
+      return false;
+    }
+    showToast('📍 場所を検索中...');
+    const coords = await geocodePlace(eventObj.place);
+    if(!coords){
+      showToast('⚠️ 場所の座標取得に失敗しました。場所名を確認してください。');
+      return false;
+    }
+    showToast('🌤️ 天気情報を取得中...');
+    const weather = await fetchOpenMeteo(coords.lat, coords.lon, eventObj.date);
+    if(!weather){
+      showToast('⚠️ 天気情報の取得に失敗しました。');
+      return false;
+    }
+    const existingNote = (eventObj.weather && eventObj.weather.note) || '';
+    eventObj.weather = {
+      status:   weather.status,
+      tempMin:  weather.tempMin,
+      tempMax:  weather.tempMax,
+      rainProb: weather.rainProb,
+      icon:     weather.icon,
+      fetchedAt:new Date().toISOString(),
+      source:   'Open-Meteo / OSM' + (weather.isArchive ? ' (過去データ)' : ''),
+      note:     existingNote,
+      _stale:   false
+    };
+    saveState();
+    return true;
+  }catch(e){
+    console.error('[WEATHER] fetchEventWeather error:', e);
+    showToast('⚠️ 天気取得中にエラーが発生しました。');
+    return false;
+  }finally{
+    _weatherFetching = false;
+  }
+}
+
+/** 現在イベントの天気を手動更新（ボタン押下） */
+async function updateCurrentEventWeather(){
+  if(_weatherFetching){ showToast('⚠️ 取得中です。しばらくお待ちください。'); return; }
+  const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
+  if(!evt){ showToast('⚠️ イベントを選択してください'); return; }
+  const btn = document.getElementById('weather-update-btn');
+  if(btn){ btn.disabled = true; btn.innerHTML = '⏳ 取得中...'; }
+  try{
+    const ok = await fetchEventWeather(evt);
+    if(ok){
+      showToast('✅ 天気を更新しました：' + formatWeatherSummary(evt.weather));
+      updateEventName();
+      renderWeatherSettingsUI();
+      const active = document.querySelector('.page.active');
+      if(active && active.id === 'page-report') renderWeatherReportCard();
+    }
+  }finally{
+    if(btn){ btn.disabled = false; btn.innerHTML = '🔄 天気を更新'; }
+  }
+}
+
+/** place/date変更時に既存天気を「再取得待ち」にマーク（noteは保持） */
+function markWeatherStale(eventObj){
+  if(!eventObj || !eventObj.weather || !eventObj.weather.status) return;
+  eventObj.weather._stale = true;
+}
+
+/** 天気メモを保存 */
+function saveWeatherNote(val){
+  const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
+  if(!evt) return;
+  if(!evt.weather) evt.weather = {status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'',note:'',_stale:false};
+  evt.weather.note = val;
+  saveState();
+}
+
+/** 設定画面の天気UI更新（状態別表示） */
+function renderWeatherSettingsUI(){
+  const grid      = document.getElementById('weather-info-grid');
+  const fetchedEl = document.getElementById('weather-fetched-at');
+  const noteInput = document.getElementById('weather-note-input');
+  if(!grid) return;
+
+  const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
+  const w   = evt && evt.weather;
+
+  if(!w || !w.status){
+    grid.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text3);text-align:center;padding:8px;">場所・日付を設定して「天気を更新」を押してください</div>';
+    if(fetchedEl) fetchedEl.textContent = '';
+    if(noteInput) noteInput.value = '';
+    return;
+  }
+
+  const staleBanner = w._stale
+    ? '<div style="grid-column:1/-1;background:#FFF3E0;border:1px solid #FFB74D;border-radius:6px;padding:7px 10px;font-size:11px;color:#E65100;margin-bottom:6px;">⚠️ 場所または日付が変更されました。「天気を更新」で再取得してください。</div>'
+    : '';
+  const items = [
+    {label:'天気',    val: (w.icon||'') + ' ' + (w.status||'')},
+    {label:'最高気温', val: w.tempMax != null ? (w.tempMax + '℃') : '—'},
+    {label:'最低気温', val: w.tempMin != null ? (w.tempMin + '℃') : '—'},
+    {label:'降水確率', val: w.rainProb != null ? (w.rainProb + '%') : '—'}
+  ];
+  grid.innerHTML = staleBanner + items.map(function(x){
+    return '<div class="weather-info-item">'
+      + '<div class="weather-info-label">' + x.label + '</div>'
+      + '<div class="weather-info-val">' + x.val + '</div>'
+      + '</div>';
+  }).join('');
+
+  if(fetchedEl){
+    const fa  = w.fetchedAt ? new Date(w.fetchedAt).toLocaleString('ja-JP') : '';
+    const src2 = w.source || '';
+    fetchedEl.textContent = fa ? ('最終更新: ' + fa + (src2 ? ' (' + src2 + ')' : '')) : '';
+  }
+  if(noteInput) noteInput.value = w.note || '';
+}
+
+/** レポート画面の天気カード（補助分析文言付き） */
+function renderWeatherReportCard(){
+  const wrap = document.getElementById('weather-report-card-wrap');
+  if(!wrap) return;
+
+  const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
+  const w   = evt && evt.weather;
+
+  if(!w || !w.status){
+    wrap.innerHTML = '<div class="weather-report-card">'
+      + '<div class="weather-report-icon">🌤️</div>'
+      + '<div class="weather-report-body">'
+      + '<div class="weather-report-title">当日天気</div>'
+      + '<div class="weather-report-empty">天気情報が未取得です。設定画面のイベント設定から取得してください。</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-top:8px;">💡 天気は売上分析の補助情報です。降水確率・気温・実地メモを次回出店判断に活用できます。</div>'
+      + '</div>'
+      + '</div>';
+    return;
+  }
+
+  const staleNote = w._stale
+    ? '<div style="font-size:10px;color:#E65100;background:#FFF3E0;border-radius:4px;padding:4px 8px;margin-top:4px;">⚠️ 場所または日付が変更されたため再取得をお勧めします</div>'
+    : '';
+  const archiveNote = (w.source && w.source.indexOf('過去') >= 0)
+    ? '<div style="font-size:10px;color:var(--text3);margin-top:3px;">📊 過去の実績データ</div>' : '';
+  const note = w.note
+    ? '<div class="weather-report-note">📝 ' + w.note + '</div>' : '';
+  const datePlace = [evt.date, evt.place ? ('@ ' + evt.place) : ''].filter(Boolean).join(' ');
+
+  const statsHtml = [
+    '<div class="weather-report-stat">' + (w.icon||'') + ' ' + (w.status||'') + '</div>',
+    (w.tempMin != null && w.tempMax != null)
+      ? '<div class="weather-report-stat">🌡️ ' + w.tempMin + '〜' + w.tempMax + '℃</div>' : '',
+    w.rainProb != null
+      ? '<div class="weather-report-stat">☂️ 降水' + w.rainProb + '%</div>' : ''
+  ].filter(Boolean).join('');
+
+  wrap.innerHTML = '<div class="weather-report-card">'
+    + '<div class="weather-report-icon">' + (w.icon||'🌤️') + '</div>'
+    + '<div class="weather-report-body">'
+    + '<div class="weather-report-title">当日天気' + (datePlace ? ' — ' + datePlace : '') + '</div>'
+    + '<div class="weather-report-stats">' + statsHtml + '</div>'
+    + staleNote + archiveNote + note
+    + '<div style="font-size:11px;color:var(--text3);margin-top:8px;">💡 天気は売上分析の補助情報です。降水確率・気温・メモを次回出店判断に活用しましょう。</div>'
+    + '</div>'
+    + '</div>';
 }
 
 </script>
