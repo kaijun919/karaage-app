@@ -689,6 +689,16 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   font-size:11px;color:var(--text3);text-align:center;
   margin-top:4px;
 }
+
+/* 営業終了ボタン */
+.end-of-day-btn{
+  width:100%;padding:16px;margin:0 0 0;
+  background:#B71C1C;color:#fff;border:none;border-radius:var(--radius-sm);
+  font-family:'Dela Gothic One',sans-serif;font-size:17px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+  box-shadow:0 3px 12px rgba(183,28,28,.35);
+}
+.end-of-day-btn:active{background:#7F0000;transform:scale(.98);}
 </style>
 </head>
 <body>
@@ -965,6 +975,13 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
       <input type="file" id="restore-input" accept=".json" style="display:none;" onchange="restoreData(this)">
     </div>
     <div id="backup-last-info" style="padding:0 14px 12px;font-size:11px;color:var(--text3);"></div>
+    <!-- 営業終了ボタン -->
+    <div style="padding:0 14px 14px;">
+      <button class="end-of-day-btn" onclick="endOfDay()">🏁 営業終了・データをリセット</button>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6;text-align:center;">
+        売上・在庫・経費・注文のデータをリセットします。<br>メニュー・スタッフ・設定は残ります。
+      </div>
+    </div>
   </div>
 
   <div class="settings-section"><div class="settings-section-header"><span>📅 イベント設定</span></div><div style="padding:14px;"><div class="form-row"><div class="form-group"><label class="form-label">イベント名</label><input class="form-input" id="evt-name" placeholder="例：春祭り2025"></div><div class="form-group"><label class="form-label">開催日</label><input class="form-input" type="date" id="evt-date"></div></div><div class="form-group" style="margin-bottom:10px;"><label class="form-label">場所</label><input class="form-input" id="evt-place" placeholder="例：〇〇公園"></div><button class="add-btn" onclick="saveEvent()">✓ イベントを保存</button>
@@ -3122,6 +3139,40 @@ function openHourDetail(hour){
 function closeHourDetail(){
   var overlay = document.getElementById('hour-detail-overlay');
   if(overlay) overlay.classList.remove('open');
+}
+
+
+/* =====================================================
+   営業終了・データリセット
+   ===================================================== */
+function endOfDay(){
+  /* ステップ1: バックアップを促す確認 */
+  showConfirm(
+    '🏁 営業終了・データをリセット',
+    '先にバックアップ（JSONで書き出し）を取ることをお勧めします。\n\n続けると売上・注文・在庫・経費・材料費のデータがすべてリセットされます。\nメニュー・スタッフ・カテゴリ・設定は残ります。\n\n本当にリセットしますか？',
+    function(){
+      requireAdminPin('営業終了・リセット', 'データをリセットするには管理PINが必要です。', function(){
+        /* リセット実行 */
+        state.orders       = [];
+        state.inventory    = {};
+        state.expenses     = [];
+        state.materialItems= {};
+        state.auditLog     = state.auditLog || [];
+        /* イベントのレジ締めフラグもリセット */
+        if(state.events){
+          state.events = state.events.map(function(e){
+            return Object.assign({}, e, {isClosedFlag:false, closedAt:null});
+          });
+        }
+        saveState();
+        /* 表示リセット */
+        updateEventName();
+        renderRegister();
+        showToast('✅ データをリセットしました。新しい営業日の準備ができました！');
+        addAuditLog('end_of_day', '営業終了・データリセットを実行');
+      });
+    }
+  );
 }
 
 </script>
