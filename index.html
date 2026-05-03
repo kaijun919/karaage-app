@@ -516,6 +516,14 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   border-radius:6px;font-family:'Noto Sans JP',sans-serif;font-size:11px;
   font-weight:700;cursor:pointer;white-space:nowrap;}
 .mat-lock-notice-btn:active{background:#BF360C;}
+
+/* =====================================================
+   PIN 第3段階 UI 修正 [PIN-3]
+   ===================================================== */
+/* PIN入力フィールド内のshow/hideボタン領域確保 */
+.pin-input-field{padding-right:48px !important;}
+/* ロック中の材料カード: 全体を少し暗くして視認性確保 */
+#material-list[data-locked="true"] .mat-card{opacity:.72;pointer-events:none;}
 </style>
 </head>
 <body>
@@ -697,17 +705,32 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
     <div class="pin-settings-body">
       <div class="pin-desc">メニュー・スタッフ・カテゴリの編集/削除、バックアップ復元などをPINで保護します。<br>PINは<strong>4〜6桁の数字</strong>で設定してください。販売レジ画面・閲覧操作には影響しません。</div>
       <div class="pin-toggle-row">
-        <label class="pin-toggle-label" for="pin-enabled-toggle">管理PIN保護を使う</label>
+        <label class="pin-toggle-label" for="pin-enabled-toggle">管理PIN保護を使う
+          <span style="font-size:10px;font-weight:400;color:var(--text3);display:block;margin-top:2px;">PINを入力して保存すると有効になります</span>
+        </label>
         <input type="checkbox" class="pin-toggle-switch" id="pin-enabled-toggle" onchange="onPinToggleChange(this.checked)">
       </div>
       <div id="pin-input-area">
         <div class="form-group" style="margin-bottom:10px;">
           <label class="form-label">新しいPIN（4〜6桁の数字）</label>
-          <input class="form-input" type="password" id="pin-new-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="例：1234" autocomplete="new-password">
+          <div style="position:relative;">
+        <input class="form-input" type="password" id="pin-new-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="例：1234" autocomplete="new-password" style="padding-right:44px;">
+        <button type="button"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);"
+          onclick="(function(){var i=document.getElementById('pin-new-input');i.type=i.type==='password'?'text':'password';})()"
+          title="表示/非表示">👁</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">数字のみ・4〜6桁。このPINは画面越しに見えないよう周囲に注意して入力してください。</div>
         </div>
         <div class="form-group" style="margin-bottom:12px;">
           <label class="form-label">PIN確認（もう一度入力）</label>
-          <input class="form-input" type="password" id="pin-confirm-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="例：1234" autocomplete="new-password">
+          <div style="position:relative;">
+        <input class="form-input" type="password" id="pin-confirm-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="例：1234" autocomplete="new-password" style="padding-right:44px;">
+        <button type="button"
+          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);"
+          onclick="(function(){var i=document.getElementById('pin-confirm-input');i.type=i.type==='password'?'text':'password';})()"
+          title="表示/非表示">👁</button>
+      </div>
         </div>
         <button class="add-btn" style="background:#1565C0;box-shadow:none;" onclick="savePinSettings()">🔐 PINを保存する</button>
       </div>
@@ -800,14 +823,22 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 </div>
 
 <!-- [PIN-1] 管理PIN認証モーダル -->
-<div class="pin-modal-overlay" id="admin-pin-modal">
+<div class="pin-modal-overlay" id="admin-pin-modal" onclick="if(event.target===this)adminPinModalCancel()">
   <div class="pin-modal-box">
     <div class="pin-modal-title" id="admin-pin-modal-title">🔐 管理PIN確認</div>
     <div class="pin-modal-msg" id="admin-pin-modal-msg">この操作を続けるには管理PINを入力してください。</div>
-    <input class="pin-input-field" type="password" id="admin-pin-modal-input"
-      inputmode="numeric" pattern="[0-9]*" maxlength="6"
-      placeholder="••••" autocomplete="off"
-      onkeydown="if(event.key==='Enter')adminPinModalOk()">
+    <div style="position:relative;margin-bottom:0;">
+      <input class="pin-input-field" type="password" id="admin-pin-modal-input"
+        inputmode="numeric" pattern="[0-9]*" maxlength="6"
+        placeholder="••••" autocomplete="off"
+        onkeydown="if(event.key==='Enter')adminPinModalOk()"
+        style="padding-right:44px;">
+      <button type="button"
+        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
+               background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);padding:4px;"
+        onclick="(function(){var i=document.getElementById('admin-pin-modal-input');i.type=i.type==='password'?'text':'password';})()"
+        title="表示/非表示">👁</button>
+    </div>
     <div class="pin-modal-err" id="admin-pin-modal-err"></div>
     <div class="pin-modal-footer">
       <button class="modal-btn cancel" style="flex:1;" onclick="adminPinModalCancel()">キャンセル</button>
@@ -853,7 +884,14 @@ let adminSessionUnlocked=false;
 let _adminPinCallback=null; /* PIN認証成功後のコールバック退避 */
 /* [PIN-3] データ破損フォールバック強化 */
 function loadState(){try{const s=localStorage.getItem(DB_KEY);if(s){let p;try{p=JSON.parse(s);}catch(je){console.error('JSON破損',je);showToast('⚠️ 保存データ破損。初期状態で起動します。');return;}if(typeof p==='object'&&p!==null){state={...state,...p};}if(!state.categories||!state.categories.length)state.categories=[...DEFAULT_CATS];if(!state.accountItems||!state.accountItems.length)state.accountItems=[...DEFAULT_ACCOUNTS];if(!state.staffMembers)state.staffMembers=[];if(!state.materialItems)state.materialItems={};}}catch(e){}}
-function saveState(){try{localStorage.setItem(DB_KEY,JSON.stringify(state));}catch(e){}}
+function saveState(){
+  try{
+    /* [PIN-3] adminSessionUnlocked がstateに混入していても保存しない */
+    const toSave={...state};
+    delete toSave.adminSessionUnlocked;
+    localStorage.setItem(DB_KEY,JSON.stringify(toSave));
+  }catch(e){console.error('saveState error',e);}
+}
 let cart=[],payMethod='cash',receivedStr='',tenkeyOpen=false,rentType='fixed';
 /* [P1] データマイグレーション: imageData フィールド補完 */
 function migrateState(){
@@ -877,9 +915,11 @@ function migrateState(){
   }
   if(!state.auditLog)state.auditLog=[];
   if(state.events){state.events=state.events.map(e=>({isClosedFlag:false,...e}));}
-  /* [PIN-1] 管理PIN フィールド補完 */
-  if(state.adminPinEnabled===undefined)state.adminPinEnabled=false;
-  if(state.adminPin===undefined)state.adminPin='';
+  /* [PIN-1] 管理PIN フィールド補完 (undefined/null 両対応) */
+  if(state.adminPinEnabled===undefined||state.adminPinEnabled===null)state.adminPinEnabled=false;
+  if(state.adminPin===undefined||state.adminPin===null)state.adminPin='';
+  /* [PIN-3] 復元データに adminSessionUnlocked が混入していても無視 */
+  delete state.adminSessionUnlocked;
 }
 
 function seedDefaultData(){if(!state.menuItems||!state.menuItems.length){state.menuItems=[{id:1,emoji:'🍗',name:'唐揚げ 3個',cat:'唐揚げ',price:400,cost:110,isSet:false},{id:2,emoji:'🍗',name:'唐揚げ 5個',cat:'唐揚げ',price:600,cost:170,isSet:false},{id:3,emoji:'🍱',name:'唐揚げ弁当',cat:'セット',price:800,cost:260,isSet:true},{id:4,emoji:'🍺',name:'ビール',cat:'ドリンク',price:500,cost:200,isSet:false},{id:5,emoji:'🥤',name:'ソフトドリンク',cat:'ドリンク',price:200,cost:60,isSet:false},{id:6,emoji:'🍟',name:'ポテト S',cat:'サイド',price:300,cost:80,isSet:false},{id:7,emoji:'🌶️',name:'激辛唐揚げ 3個',cat:'唐揚げ',price:450,cost:120,isSet:false}];}if(!state.events||!state.events.length){state.events=[{id:1,name:'春まつり2025',date:new Date().toISOString().slice(0,10),place:'サンプル公園'}];state.currentEventId=1;}if(!Array.isArray(state.expenses))state.expenses=[];if(!state.inventory)state.inventory={};if(!state.staffMembers)state.staffMembers=[];if(!state.materialItems)state.materialItems={};saveState();}
@@ -999,15 +1039,19 @@ function renderMaterial(){
       lockNotice=document.createElement('div');
       lockNotice.id='mat-lock-notice-bar';
       lockNotice.className='mat-lock-notice';
-      const addBtn=matPage&&matPage.querySelector('.mat-add-btn');
-      if(addBtn)matPage.insertBefore(lockNotice,addBtn.parentElement);
+      /* 安全な挿入先: material-listの直前 */
+      const matList=document.getElementById('material-list');
+      if(matList&&matList.parentElement)matList.parentElement.insertBefore(lockNotice,matList);
+      else if(matPage)matPage.insertBefore(lockNotice,matPage.firstChild);
     }
-    lockNotice.innerHTML='🔒 管理ロック中です。材料の編集・追加・削除にはPIN解除が必要です。'+
-      '<button class="mat-lock-notice-btn" onclick="requireAdminPin('材料を編集','材料を編集するには管理PINが必要です。',function(){renderMaterial();})">🔓 解除する</button>';
+    lockNotice.innerHTML='🔒 管理ロック中 — 材料の編集・追加・削除にはPIN解除が必要です。'+
+      '<button class="mat-lock-notice-btn" onclick="requireAdminPin('材料を編集','材料を編集するには管理PINが必要です。',function(){renderMaterial();})">🔓 解除</button>';
   } else {
     if(lockNotice)lockNotice.remove();
   }
   const list=document.getElementById('material-list');
+  /* [PIN-3] ロック状態をdata属性で管理（CSSでカード全体を暗化） */
+  if(list) list.setAttribute('data-locked', isAdminPinRequired() ? 'true' : 'false');
   if(!items.length){
     list.innerHTML='<div class="empty-state"><div class="empty-emoji">🥩</div>「＋ 品目追加」で材料を追加してください</div>';
     return;
@@ -2261,6 +2305,7 @@ function renderPinSettingsUI(){
  */
 function onPinToggleChange(checked){
   if(!checked){
+    /* 無効化: PIN設定済みならPIN認証が必要 */
     if(state.adminPinEnabled && state.adminPin){
       requireAdminPin(
         '管理PIN保護を無効にする',
@@ -2279,6 +2324,17 @@ function onPinToggleChange(checked){
           if(tog) tog.checked = true;
         }
       );
+    } else {
+      /* PIN未設定で無効化 → 何もしない（既に無効状態） */
+      renderPinSettingsUI();
+    }
+  } else {
+    /* checked=true: まだPIN未設定なら入力を促す */
+    if(!state.adminPinEnabled || !state.adminPin){
+      showToast('💡 下のPIN入力欄に4〜6桁の数字を入力して「PINを保存する」を押してください');
+      /* チェックを元に戻す（PINが保存されるまでは有効化しない） */
+      var tog = document.getElementById('pin-enabled-toggle');
+      if(tog) setTimeout(function(){ tog.checked = false; }, 80);
     }
   }
 }
