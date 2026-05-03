@@ -1684,20 +1684,37 @@ function checkout(){if(!cart.length)return;
 let _checkoutInProgress=false;
 function _doCheckout(){
   if(!cart.length)return;
-  if(_checkoutInProgress)return; /* [PIN-3] 連打防止 */
+  if(_checkoutInProgress)return;
   _checkoutInProgress=true;
-  setTimeout(()=>{_checkoutInProgress=false;},1500);const total=cart.reduce((s,c)=>s+c.price*c.qty,0);if(payMethod==='cash'){const received=parseInt(receivedStr)||0;if(received>0&&received<finalTotal){showToast('⚠️ 預かり金額が不足しています');return;}}/* [DISC-1] order に値引き情報を追加 */
-  const subtotalBeforeDiscount=cart.reduce((s,c)=>s+c.price*c.qty,0);
+  setTimeout(function(){_checkoutInProgress=false;},1500);
+
+  /* 値引き計算を最初に確定 */
+  const subtotalBeforeDiscount=cart.reduce(function(s,c){return s+c.price*c.qty;},0);
   const disc=Math.min(discountAmount,subtotalBeforeDiscount);
   const finalTotal=Math.max(0,subtotalBeforeDiscount-disc);
-  /* [BOARD-1] orderNo採番: イベント内最大値+1（101始まり） */
+
+  /* 現金不足チェック（finalTotal確定後） */
+  if(payMethod==='cash'){
+    const received=parseInt(receivedStr)||0;
+    if(received>0&&received<finalTotal){
+      showToast('⚠️ 預かり金額が不足しています');
+      _checkoutInProgress=false;
+      return;
+    }
+  }
+
+  /* orderNo採番 */
   const evtOrders=(state.orders||[]).filter(function(o){return o.eventId===state.currentEventId;});
   const maxNo=evtOrders.reduce(function(m,o){return Math.max(m,o.orderNo||0);},100);
+
+  /* 注文オブジェクト生成 */
   const order={
-    id:Date.now(),eventId:state.currentEventId,
-    time:new Date().toISOString(),payMethod,
+    id:Date.now(),
+    eventId:state.currentEventId,
+    time:new Date().toISOString(),
+    payMethod,
     receivedAmount:payMethod==='cash'?(parseInt(receivedStr)||0):null,
-    items:cart.map(c=>({...c})),
+    items:cart.map(function(c){return Object.assign({},c);}),
     subtotalBeforeDiscount,
     discountAmount:disc,
     discountType:disc>0?discountType:'',
@@ -1706,7 +1723,37 @@ function _doCheckout(){
     fulfillmentStatus:'paid',
     servedAt:null,
     servedBy:''
-  };if(!state.orders)state.orders=[];state.orders.push(order);cart.forEach(c=>{if(!state.inventory[c.id])state.inventory[c.id]={stocked:0,wasted:0,sold:0};state.inventory[c.id].sold=(state.inventory[c.id].sold||0)+c.qty;});saveState();const recv=payMethod==='cash'&&order.receivedAmount?order.receivedAmount:0;const changeMsg=recv>0?` おつり ¥${(recv-finalTotal).toLocaleString()}`:'';showToast(`✅ 決済完了 ¥${finalTotal.toLocaleString()}（${PAY_LABELS[payMethod]}）${changeMsg}`);showUndoBar(order);cart=[];discountAmount=0;discountType='set';receivedStr='';tenkeyOpen=false;/* [DISC-1] 値引きリセット */document.getElementById('tenkey-wrap').style.display='none';updateReceivedDisp();renderMenuGrid();renderCart();calcChange();renderCashPresets();renderBoard();/* [BOARD-1] */}
+  };
+
+  /* 保存・在庫更新 */
+  if(!state.orders)state.orders=[];
+  state.orders.push(order);
+  cart.forEach(function(c){
+    if(!state.inventory[c.id])state.inventory[c.id]={stocked:0,wasted:0,sold:0};
+    state.inventory[c.id].sold=(state.inventory[c.id].sold||0)+c.qty;
+  });
+  saveState();
+
+  /* 完了通知 */
+  const recv=payMethod==='cash'&&order.receivedAmount?order.receivedAmount:0;
+  const changeMsg=recv>0?' おつり ¥'+(recv-finalTotal).toLocaleString():'';
+  showToast('✅ 決済完了 ¥'+finalTotal.toLocaleString()+'（'+PAY_LABELS[payMethod]+'）'+changeMsg);
+  showUndoBar(order);
+
+  /* カートリセット */
+  cart=[];
+  discountAmount=0;
+  discountType='set';
+  receivedStr='';
+  tenkeyOpen=false;
+  document.getElementById('tenkey-wrap').style.display='none';
+  updateReceivedDisp();
+  renderMenuGrid();
+  renderCart();
+  calcChange();
+  renderCashPresets();
+  renderBoard();
+}
 function getInventory(itemId){const inv=state.inventory[itemId]||{};return{stocked:inv.stocked||0,wasted:inv.wasted||0,sold:inv.sold||0};}
 function renderInventory(){/* [P2] 在庫画面: メニュー未登録時のガイド */
   if(!state.menuItems||!state.menuItems.length){
