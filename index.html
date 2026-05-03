@@ -2378,7 +2378,7 @@ function deleteStaff(id){
   });
 }
 let dragSrcIdx=null;
-function renderSettings(){renderCatTags();renderAccountTags();renderStaffList();renderMenuCatSelect();updateChecklist();updateBackupLastInfo();renderPinSettingsUI();renderWeatherSettingsUI();/* [WEATHER-1] */document.getElementById('menu-settings-list').innerHTML=state.menuItems.map((item,idx)=>`<div class="menu-sort-item" draggable="true" data-idx="${idx}" ondragstart="onDragStart(event,${idx})" ondragover="onDragOver(event,${idx})" ondrop="onDrop(event,${idx})" ondragend="onDragEnd()"><span class="drag-handle">⠿⠿</span><span style="font-size:20px;flex-shrink:0;">${item.emoji}</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">SET</span>':''}</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">${item.cat}</div></div><span style="font-size:14px;font-weight:900;color:var(--primary);min-width:55px;text-align:right;flex-shrink:0;">¥${item.price.toLocaleString()}</span><button class="icon-btn" onclick="openEditMenuModal(${item.id})">編集</button><button class="icon-btn" style="border-color:#F0A0A0;color:var(--danger);" onclick="deleteMenuItem(${item.id})">削除</button></div>`).join('');const evt=state.events.find(e=>e.id===state.currentEventId);if(evt){document.getElementById('evt-name').value=evt.name||'';document.getElementById('evt-date').value=evt.date||'';document.getElementById('evt-place').value=evt.place||'';}}
+function renderSettings(){renderCatTags();renderAccountTags();renderStaffList();renderMenuCatSelect();updateChecklist();updateBackupLastInfo();renderPinSettingsUI();renderWeatherSettingsUI();renderRegisterCloseArea();/* [PA-RESTORE] */document.getElementById('menu-settings-list').innerHTML=state.menuItems.map((item,idx)=>`<div class="menu-sort-item" draggable="true" data-idx="${idx}" ondragstart="onDragStart(event,${idx})" ondragover="onDragOver(event,${idx})" ondrop="onDrop(event,${idx})" ondragend="onDragEnd()"><span class="drag-handle">⠿⠿</span><span style="font-size:20px;flex-shrink:0;">${item.emoji}</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">SET</span>':''}</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">${item.cat}</div></div><span style="font-size:14px;font-weight:900;color:var(--primary);min-width:55px;text-align:right;flex-shrink:0;">¥${item.price.toLocaleString()}</span><button class="icon-btn" onclick="openEditMenuModal(${item.id})">編集</button><button class="icon-btn" style="border-color:#F0A0A0;color:var(--danger);" onclick="deleteMenuItem(${item.id})">削除</button></div>`).join('');const evt=state.events.find(e=>e.id===state.currentEventId);if(evt){document.getElementById('evt-name').value=evt.name||'';document.getElementById('evt-date').value=evt.date||'';document.getElementById('evt-place').value=evt.place||'';}}
 function onDragStart(e,idx){dragSrcIdx=idx;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(idx));setTimeout(()=>e.currentTarget.classList.add('dragging'),0);}
 function onDragOver(e,idx){e.preventDefault();e.dataTransfer.dropEffect='move';document.querySelectorAll('.menu-sort-item').forEach(el=>el.classList.remove('drag-over'));if(idx!==dragSrcIdx)e.currentTarget.classList.add('drag-over');}
 function onDrop(e,idx){e.preventDefault();if(dragSrcIdx===null||dragSrcIdx===idx){onDragEnd();return;}const items=[...state.menuItems];const[moved]=items.splice(dragSrcIdx,1);items.splice(idx,0,moved);state.menuItems=items;dragSrcIdx=null;saveState();renderSettings();showToast('↕️ 並び順を変更しました');}
@@ -3970,6 +3970,94 @@ function startBoardTimer(){
 }
 /* ページ読み込み時に自動開始 */
 startBoardTimer();
+
+
+/* =====================================================
+   レジ締め関数群（復元） [PA-RESTORE]
+   ===================================================== */
+
+/** 現在イベントがレジ締め済みか判定 */
+function isCurrentEventClosed(){
+  const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
+  return !!(evt && evt.isClosedFlag);
+}
+
+/** レジ締めモーダルを開く */
+function openRegisterCloseModal(){
+  const orders = (state.orders||[]).filter(function(o){
+    return o.eventId === state.currentEventId && !o.cancelledAt;
+  });
+  const cashSales = orders.filter(function(o){ return o.payMethod==='cash'; })
+    .reduce(function(s,o){ return s+o.total; }, 0);
+  document.getElementById('rc-theory').textContent = '¥' + cashSales.toLocaleString();
+  document.getElementById('rc-actual').value = '';
+  document.getElementById('rc-diff').textContent = '—';
+  document.getElementById('rc-diff').className = '';
+  document.getElementById('rc-note').value = '';
+  document.getElementById('register-close-modal').classList.add('open');
+}
+
+/** レジ締めモーダルの差異計算 */
+function calcRegisterDiff(){
+  const theory = parseInt(document.getElementById('rc-theory').textContent.replace(/[¥,]/g,'')) || 0;
+  const actual = parseInt(document.getElementById('rc-actual').value) || 0;
+  const diff = actual - theory;
+  const el = document.getElementById('rc-diff');
+  el.textContent = (diff >= 0 ? '+' : '') + '¥' + diff.toLocaleString();
+  el.className = diff > 0 ? 'diff-positive' : diff < 0 ? 'diff-negative' : '';
+}
+
+/** レジ締め確定 */
+function confirmRegisterClose(){
+  const theory = parseInt(document.getElementById('rc-theory').textContent.replace(/[¥,]/g,'')) || 0;
+  const actual = parseInt(document.getElementById('rc-actual').value) || 0;
+  const note = document.getElementById('rc-note').value;
+  if(!document.getElementById('rc-actual').value){ showToast('⚠️ 実査額を入力してください'); return; }
+  closeModal('register-close-modal');
+  requireAdminPin('レジ締め確定', 'レジ締めを確定するには管理PINが必要です。', function(){
+    const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
+    if(!evt) return;
+    evt.isClosedFlag = true;
+    evt.closedAt = new Date().toISOString();
+    evt.closeTheory = theory;
+    evt.closeActual = actual;
+    evt.closeDiff = actual - theory;
+    evt.closeNote = note;
+    saveState();
+    renderRegisterCloseArea();
+    showToast('🏁 レジ締めを完了しました');
+  });
+}
+
+/** レジ締め解除 */
+function reopenRegister(){
+  requireAdminPin('レジ締め解除', 'レジ締めを解除するには管理PINが必要です。', function(){
+    const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
+    if(!evt) return;
+    evt.isClosedFlag = false;
+    saveState();
+    renderRegisterCloseArea();
+    showToast('🔓 レジ締めを解除しました');
+  });
+}
+
+/** 設定画面のレジ締めボタンエリアを更新 */
+function renderRegisterCloseArea(){
+  const el = document.getElementById('register-close-area');
+  if(!el) return;
+  const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
+  if(!evt){ el.innerHTML = ''; return; }
+  if(evt.isClosedFlag){
+    el.innerHTML = '<div class="close-info-bar">'
+      + '🏁 レジ締め済み <small style="font-weight:400;">'
+      + (evt.closedAt ? new Date(evt.closedAt).toLocaleString('ja-JP') : '') + '</small>'
+      + '<button class="close-info-bar-btn" onclick="reopenRegister()">締め解除</button>'
+      + '</div>';
+  } else {
+    el.innerHTML = '<button class="add-btn" style="background:#B71C1C;box-shadow:none;margin-top:0;"'
+      + ' onclick="openRegisterCloseModal()">🏁 レジ締めを行う</button>';
+  }
+}
 
 </script>
 </body>
