@@ -294,7 +294,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 .menu-card-emoji-large{font-size:40px;line-height:1;}
 
 /* [P1-D] 直前取消バナー */
-.undo-bar{display:none;position:fixed;bottom:16px;right:16px;left:auto;transform:none;background:rgba(50,50,50,.92);color:#fff;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;z-index:1999;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.25);white-space:nowrap;max-width:calc(100vw - 32px);}
+/* [UX] undo-bar は非表示（レジ画面内ボタンに移行） */
+.undo-bar{display:none !important;}
 .undo-bar.show{display:flex;}
 .undo-btn{background:#E8650A;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;cursor:pointer;}
 
@@ -993,7 +994,14 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
             <div class="change-result"><span class="change-result-label">おつり</span><span class="change-result-amount" id="change-amount">—</span></div>
           </div>
           <button class="checkout-btn" id="checkout-btn" onclick="checkout()" disabled>決　済</button>
-          <button class="clear-btn" onclick="clearCart()">クリア</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+            <button class="clear-btn" onclick="clearCart()">クリア</button>
+            <button class="clear-btn" id="undo-checkout-btn"
+              onclick="startUndoFlow()"
+              style="display:none;background:#FFF3E0;border-color:#FFB300;color:#E65100;">
+              ↩️ 直前取消
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1403,8 +1411,9 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 </div>
 <!-- [P1] 直前取消バナー -->
 <div class="undo-bar" id="undo-bar">
-  <span id="undo-msg">決済を取り消せます</span>
-  <button class="undo-btn" onclick="undoLastCheckout()">取消</button>
+  <span id="undo-msg">取消</span>
+  <button class="undo-btn" onclick="startUndoFlow()">取消</button>
+  <button onclick="closeUndoBar()" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:16px;cursor:pointer;padding:0 2px;line-height:1;">✕</button>
 </div>
 <!-- [UX] 材料費 品目追加フローティングボタン -->
 <button class="mat-fab" id="mat-fab" onclick="addMaterialItem()" title="品目追加">＋</button>
@@ -1516,8 +1525,13 @@ function migrateState(){
       return Object.assign(
         {cancelledAt:null,cancelReason:null,
          discountAmount:0,discountType:'',subtotalBeforeDiscount:o.total,
-         orderNo:0,fulfillmentStatus:'served',servedAt:null,servedBy:''/* [BOARD-1] 既存注文はserved扱い */},
-        o
+         orderNo:0,
+         fulfillmentStatus:'served', /* デフォルト: 既存注文は提供済み扱い */
+         servedAt:null,servedBy:''},
+        o,
+        /* [BOARD-1 FIX] fulfillmentStatusが未設定の場合のみservedを適用
+           すでに'paid'/'served'が入っていれば上書きしない */
+        {fulfillmentStatus: o.fulfillmentStatus || 'served'}
       );
     });
   }
@@ -2492,13 +2506,32 @@ function showConfirm(title,msg,onOk){
 /* [P1] 直前取消バナー（3分以内） */
 let _undoTimer=null;
 let _lastOrder=null;
+function closeUndoBar(){
+  const bar=document.getElementById('undo-bar');
+  if(bar)bar.classList.remove('show');
+  clearTimeout(_undoTimer);
+  _lastOrder=null;
+  const undoBtn=document.getElementById('undo-checkout-btn');
+  if(undoBtn){undoBtn.style.display='none';undoBtn.textContent='↩️ 直前取消';}
+}
 function showUndoBar(order){
   _lastOrder=order;
+  /* [UX] レジ画面内の直前取消ボタンを表示 */
+  const undoBtn=document.getElementById('undo-checkout-btn');
+  if(undoBtn){
+    undoBtn.style.display='';
+    undoBtn.textContent='↩️ 直前取消 ¥'+order.total.toLocaleString();
+  }
   const bar=document.getElementById('undo-bar');
   document.getElementById('undo-msg').textContent='取消 ¥'+order.total.toLocaleString();
   bar.classList.add('show');
   clearTimeout(_undoTimer);
-  _undoTimer=setTimeout(()=>{bar.classList.remove('show');_lastOrder=null;},30000);/* 30秒 */
+  _undoTimer=setTimeout(function(){
+    bar.classList.remove('show');
+    _lastOrder=null;
+    const undoBtn=document.getElementById('undo-checkout-btn');
+    if(undoBtn){undoBtn.style.display='none';undoBtn.textContent='↩️ 直前取消';}
+  },30000);/* 30秒 */
 }
 function undoLastCheckout(){
   if(!_lastOrder)return;
