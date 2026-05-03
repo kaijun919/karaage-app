@@ -729,6 +729,96 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 }
 .mat-fab.show{display:flex;}
 .mat-fab:active{background:var(--primary-dark);transform:scale(.93);}
+
+/* =====================================================
+   セット値引き機能 [DISC-1]
+   ===================================================== */
+
+/* カート内の値引き表示行 */
+.cart-discount-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 10px;background:#FFF8E1;border:1.5px dashed #FFB300;
+  border-radius:8px;margin:4px 0;font-size:13px;
+}
+.cart-discount-label{color:#E65100;font-weight:700;}
+.cart-discount-amount{color:#E65100;font-weight:900;font-family:'Dela Gothic One',sans-serif;}
+.cart-discount-del{background:none;border:none;color:#E65100;font-size:15px;cursor:pointer;padding:2px 6px;line-height:1;}
+.cart-discount-del:active{opacity:.6;}
+
+/* 値引きボタン（カートフッター） */
+.discount-row{display:flex;gap:6px;margin-bottom:8px;}
+.discount-btn{
+  flex:1;padding:9px 4px;border:1.5px solid #FFB300;border-radius:8px;
+  background:#FFFDE7;color:#E65100;font-family:'Noto Sans JP',sans-serif;
+  font-size:12px;font-weight:700;cursor:pointer;text-align:center;
+}
+.discount-btn:active{background:#FFE082;}
+.discount-btn.applied{background:#FFB300;color:#fff;border-color:#E65100;}
+
+/* 値引きモーダル */
+.disc-modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.5);z-index:1200;
+  align-items:flex-end;justify-content:center;
+}
+.disc-modal-overlay.open{display:flex;}
+.disc-modal{
+  background:#fff;border-radius:18px 18px 0 0;
+  width:100%;max-width:480px;padding:20px 18px 32px;
+  box-shadow:0 -4px 24px rgba(0,0,0,.15);
+}
+.disc-modal-handle{width:40px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 14px;}
+.disc-modal-title{font-family:'Dela Gothic One',sans-serif;font-size:17px;color:var(--brown);margin-bottom:14px;}
+.disc-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+.disc-preset-btn{
+  padding:13px 4px;border:1.5px solid var(--border);border-radius:10px;
+  background:var(--surface2);font-family:'Dela Gothic One',sans-serif;
+  font-size:15px;color:var(--text);cursor:pointer;text-align:center;
+}
+.disc-preset-btn:active{background:var(--primary-light);border-color:var(--primary);}
+.disc-preset-btn.selected{background:var(--primary);color:#fff;border-color:var(--primary);}
+.disc-type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;}
+.disc-type-btn{
+  padding:10px 6px;border:1.5px solid var(--border);border-radius:8px;
+  background:var(--surface);font-family:'Noto Sans JP',sans-serif;
+  font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;text-align:center;
+}
+.disc-type-btn:active{background:var(--primary-light);}
+.disc-type-btn.selected{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);}
+.disc-custom-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;}
+.disc-custom-input{
+  flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'Dela Gothic One',sans-serif;font-size:16px;text-align:right;
+  background:var(--surface2);color:var(--text);outline:none;
+}
+.disc-custom-input:focus{border-color:var(--primary);}
+.disc-summary{
+  background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px;
+  margin-bottom:14px;font-size:13px;
+}
+.disc-summary-row{display:flex;justify-content:space-between;padding:3px 0;}
+.disc-summary-total{font-weight:900;font-size:15px;color:var(--primary-dark);}
+.disc-apply-btn{
+  width:100%;padding:13px;background:var(--primary);color:#fff;border:none;
+  border-radius:var(--radius-sm);font-family:'Dela Gothic One',sans-serif;
+  font-size:16px;cursor:pointer;
+}
+.disc-apply-btn:active{background:var(--primary-dark);}
+.disc-apply-btn:disabled{background:#ccc;cursor:not-allowed;}
+.disc-cancel-btn{
+  width:100%;padding:11px;background:var(--surface2);color:var(--text2);border:none;
+  border-radius:var(--radius-sm);font-family:'Noto Sans JP',sans-serif;
+  font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;
+}
+.disc-cancel-btn:active{background:var(--border);}
+
+/* 小計・値引き後合計の表示 */
+.cart-subtotal-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  margin-bottom:3px;
+}
+.cart-subtotal-label{font-size:11px;color:var(--text3);}
+.cart-subtotal-amount{font-size:13px;color:var(--text3);font-family:'Dela Gothic One',sans-serif;}
 </style>
 </head>
 <body>
@@ -755,7 +845,20 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
         <div class="cart-header"><span>🛒 注文内容</span><span id="cart-count" style="font-size:11px;color:var(--text3);">0品</span></div>
         <div class="cart-items" id="cart-items"><div class="empty-state"><div class="empty-emoji">🍗</div>メニューをタップして追加</div></div>
         <div class="cart-footer">
-          <div class="cart-total-row"><span class="cart-total-label">合計</span><span class="cart-total-amount" id="cart-total">¥0</span></div>
+          <!-- [DISC-1] 小計・値引き表示 -->
+          <div class="cart-subtotal-row" id="cart-subtotal-row" style="display:none;">
+            <span class="cart-subtotal-label">小計</span>
+            <span class="cart-subtotal-amount" id="cart-subtotal">¥0</span>
+          </div>
+          <div id="cart-discount-display"></div>
+          <div class="cart-total-row">
+            <span class="cart-total-label" id="cart-total-label">合計</span>
+            <span class="cart-total-amount" id="cart-total">¥0</span>
+          </div>
+          <!-- [DISC-1] 値引きボタン -->
+          <div class="discount-row">
+            <button class="discount-btn" id="discount-toggle-btn" onclick="openDiscModal()">✂️ 値引き</button>
+          </div>
           <div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:5px;">決済方法</div>
           <div class="pay-method-grid">
             <button class="pay-btn cash-btn selected" onclick="selectPay(this,'cash')"><span class="pay-icon">💴</span>現金<span class="pay-check">✓</span></button>
@@ -1183,6 +1286,51 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 </div>
 <!-- [UX] 材料費 品目追加フローティングボタン -->
 <button class="mat-fab" id="mat-fab" onclick="addMaterialItem()" title="品目追加">＋</button>
+<!-- [DISC-1] セット値引きモーダル -->
+<div class="disc-modal-overlay" id="disc-modal-overlay" onclick="if(event.target===this)closeDiscModal()">
+  <div class="disc-modal">
+    <div class="disc-modal-handle"></div>
+    <div class="disc-modal-title">✂️ 値引き設定</div>
+
+    <!-- 定型値引きボタン -->
+    <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;">定型値引き</div>
+    <div class="disc-presets" id="disc-presets">
+      <button class="disc-preset-btn" onclick="selectDiscPreset(50)">−50円</button>
+      <button class="disc-preset-btn" onclick="selectDiscPreset(100)">−100円</button>
+      <button class="disc-preset-btn" onclick="selectDiscPreset(150)">−150円</button>
+      <button class="disc-preset-btn" onclick="selectDiscPreset(200)">−200円</button>
+    </div>
+
+    <!-- 任意金額入力 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;">任意入力（円）</div>
+    <div class="disc-custom-row">
+      <span style="font-size:16px;font-weight:700;color:var(--text2);">−</span>
+      <input class="disc-custom-input" type="number" id="disc-amount-input" min="0" placeholder="0"
+        oninput="onDiscAmountInput(this.value)">
+      <span style="font-size:13px;color:var(--text3);">円</span>
+    </div>
+
+    <!-- 値引き理由 -->
+    <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px;">値引き理由</div>
+    <div class="disc-type-grid">
+      <button class="disc-type-btn selected" id="disc-type-set"    onclick="selectDiscType('set')">🍱 セット値引き</button>
+      <button class="disc-type-btn"          id="disc-type-service" onclick="selectDiscType('service')">🎁 サービス</button>
+      <button class="disc-type-btn"          id="disc-type-claim"   onclick="selectDiscType('claim')">🙇 クレーム対応</button>
+      <button class="disc-type-btn"          id="disc-type-other"   onclick="selectDiscType('other')">📝 その他</button>
+    </div>
+
+    <!-- プレビュー -->
+    <div class="disc-summary" id="disc-summary">
+      <div class="disc-summary-row"><span>小計</span><span id="disc-preview-sub">¥0</span></div>
+      <div class="disc-summary-row"><span>値引き</span><span id="disc-preview-disc" style="color:var(--danger);">−¥0</span></div>
+      <div class="disc-summary-row disc-summary-total"><span>合計</span><span id="disc-preview-total">¥0</span></div>
+    </div>
+
+    <button class="disc-apply-btn" id="disc-apply-btn" onclick="applyDiscount()">値引きを適用</button>
+    <button class="disc-cancel-btn" onclick="closeDiscModal()">キャンセル</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <script>
 const DB_KEY='karaage_v6';
@@ -1234,13 +1382,18 @@ function saveState(){
   }catch(e){console.error('saveState error',e);}
 }
 let cart=[],payMethod='cash',receivedStr='',tenkeyOpen=false,rentType='fixed';
+/* [DISC-1] 値引き状態（カートと同じライフサイクル） */
+let discountAmount=0,discountType='set';
 /* [P1] データマイグレーション: imageData フィールド補完 */
 function migrateState(){
   if(state.menuItems){
     state.menuItems=state.menuItems.map(m=>({imageData:null,...m}));
   }
   if(state.orders){
-    state.orders=state.orders.map(o=>({cancelledAt:null,cancelReason:null,...o}));
+    state.orders=state.orders.map(o=>({
+      cancelledAt:null,cancelReason:null,
+      discountAmount:0,discountType:'',subtotalBeforeDiscount:o.total,...o /* [DISC-1] */
+    }));
   }
   /* [ALLOC-1] materialItems の各品目に按分フィールドを補完 */
   if(state.materialItems){
@@ -1305,25 +1458,100 @@ function renderMenuGrid(){const items=currentCat==='全て'?state.menuItems:stat
       :`<div class="menu-card-img-wrap"><span class="menu-card-emoji-large">${item.emoji}</span></div>`;
     return`<div class="menu-card${inCart?' in-cart':''}${outOfStock?'" style="opacity:.4;pointer-events:none;"':'"'} onclick="addToCart(${item.id})">${inCart?`<div class="menu-card-badge">${inCart.qty}</div>`:''}${imgHtml}<div class="menu-card-name">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px;">SET</span>':''}</div><div class="menu-card-price">¥${item.price.toLocaleString()}</div>${outOfStock?'<div style="font-size:10px;color:var(--danger);font-weight:700;margin-top:2px;">SOLD OUT</div>':''}</div>`;}).join('');}
 function addToCart(id){const item=state.menuItems.find(m=>m.id===id);if(!item)return;const ex=cart.find(c=>c.id===id);if(ex)ex.qty++;else cart.push({id,name:item.name,price:item.price,qty:1,emoji:item.emoji});renderMenuGrid();renderCart();calcChange();renderCashPresets();}
-function renderCart(){const el=document.getElementById('cart-items');const total=cart.reduce((s,c)=>s+c.price*c.qty,0);const count=cart.reduce((s,c)=>s+c.qty,0);document.getElementById('cart-count').textContent=count+'品';document.getElementById('cart-total').textContent='¥'+total.toLocaleString();document.getElementById('checkout-btn').disabled=cart.length===0;if(!cart.length){el.innerHTML='<div class="empty-state"><div class="empty-emoji">🍗</div>メニューをタップして追加</div>';return;}el.innerHTML=cart.map(c=>`<div class="cart-item"><span style="font-size:16px;">${c.emoji}</span><span class="cart-item-name">${c.name}</span><div style="display:flex;align-items:center;gap:4px;"><button class="qty-btn" onclick="changeQty(${c.id},-1)">−</button><span class="cart-item-qty">${c.qty}</span><button class="qty-btn" onclick="changeQty(${c.id},1)">＋</button></div><span class="cart-item-subtotal">¥${(c.price*c.qty).toLocaleString()}</span><button class="cart-remove" onclick="removeFromCart(${c.id})">✕</button></div>`).join('');}
+/* [DISC-1] renderCart: 値引き対応 */
+function renderCart(){
+  const el=document.getElementById('cart-items');
+  const subtotal=cart.reduce((s,c)=>s+c.price*c.qty,0);
+  const disc=Math.min(discountAmount,subtotal); /* 値引きは小計を超えない */
+  const total=Math.max(0,subtotal-disc);
+  const count=cart.reduce((s,c)=>s+c.qty,0);
+
+  document.getElementById('cart-count').textContent=count+'品';
+  document.getElementById('cart-total').textContent='¥'+total.toLocaleString();
+  document.getElementById('checkout-btn').disabled=cart.length===0;
+
+  /* 小計行・合計ラベル切替 */
+  const subRow=document.getElementById('cart-subtotal-row');
+  const subEl =document.getElementById('cart-subtotal');
+  const lblEl =document.getElementById('cart-total-label');
+  if(disc>0){
+    if(subRow){subRow.style.display='flex';} if(subEl)subEl.textContent='¥'+subtotal.toLocaleString();
+    if(lblEl)lblEl.textContent='値引き後合計';
+  } else {
+    if(subRow){subRow.style.display='none';}
+    if(lblEl)lblEl.textContent='合計';
+  }
+
+  /* 値引き表示行 */
+  const ddEl=document.getElementById('cart-discount-display');
+  if(ddEl){
+    const DISC_LABELS={set:'セット値引き',service:'サービス',claim:'クレーム対応',other:'その他'};
+    ddEl.innerHTML=disc>0
+      ?`<div class="cart-discount-row">
+          <span class="cart-discount-label">✂️ 値引き（${DISC_LABELS[discountType]||discountType}）</span>
+          <span style="display:flex;align-items:center;gap:6px;">
+            <span class="cart-discount-amount">−¥${disc.toLocaleString()}</span>
+            <button class="cart-discount-del" onclick="clearDiscount()">✕</button>
+          </span>
+        </div>`
+      :'';
+  }
+
+  /* 値引きボタンの状態 */
+  const dtBtn=document.getElementById('discount-toggle-btn');
+  if(dtBtn)dtBtn.classList.toggle('applied',disc>0);
+
+  if(!cart.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-emoji">🍗</div>メニューをタップして追加</div>';
+    return;
+  }
+  el.innerHTML=cart.map(c=>`<div class="cart-item"><span style="font-size:16px;">${c.emoji}</span><span class="cart-item-name">${c.name}</span><div style="display:flex;align-items:center;gap:4px;"><button class="qty-btn" onclick="changeQty(${c.id},-1)">−</button><span class="cart-item-qty">${c.qty}</span><button class="qty-btn" onclick="changeQty(${c.id},1)">＋</button></div><span class="cart-item-subtotal">¥${(c.price*c.qty).toLocaleString()}</span><button class="cart-remove" onclick="removeFromCart(${c.id})">✕</button></div>`).join('');
+}
 function changeQty(id,delta){const item=cart.find(c=>c.id===id);if(!item)return;item.qty+=delta;if(item.qty<=0)cart=cart.filter(c=>c.id!==id);renderMenuGrid();renderCart();calcChange();renderCashPresets();}
 function removeFromCart(id){cart=cart.filter(c=>c.id!==id);renderMenuGrid();renderCart();calcChange();renderCashPresets();}
-function clearCart(){cart=[];receivedStr='';tenkeyOpen=false;document.getElementById('tenkey-wrap').style.display='none';updateReceivedDisp();renderMenuGrid();renderCart();calcChange();renderCashPresets();}
+/* [DISC-1] clearCart: 値引きもリセット */
+function clearCart(){
+  cart=[];discountAmount=0;discountType='set';
+  receivedStr='';tenkeyOpen=false;
+  document.getElementById('tenkey-wrap').style.display='none';
+  updateReceivedDisp();renderMenuGrid();renderCart();calcChange();renderCashPresets();
+}
 function selectPay(btn,method){payMethod=method;document.querySelectorAll('.pay-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');updateChangeArea();}
 function updateChangeArea(){const area=document.getElementById('change-area');if(payMethod==='cash'){area.classList.remove('hidden');renderCashPresets();calcChange();}else area.classList.add('hidden');}
 function toggleTenkey(){tenkeyOpen=!tenkeyOpen;document.getElementById('tenkey-wrap').style.display=tenkeyOpen?'block':'none';}
 function tkeyPress(v){if(v==='del')receivedStr=receivedStr.slice(0,-1);else if(v==='clear')receivedStr='';else if(v==='00'){if(receivedStr.length>0)receivedStr+='00';}else{if(receivedStr.length<7)receivedStr+=v;}receivedStr=receivedStr.replace(/^0+/,'');updateReceivedDisp();calcChange();const val=parseInt(receivedStr)||0;document.querySelectorAll('.cash-preset-btn').forEach(b=>{b.classList.toggle('active',parseInt(b.dataset.amount)===val&&val>0);});}
 function updateReceivedDisp(){const el=document.getElementById('received-value-disp');if(!receivedStr){el.textContent='タップして入力';el.className='received-value empty';}else{el.textContent='¥'+parseInt(receivedStr).toLocaleString();el.className='received-value';}}
-function renderCashPresets(){const total=cart.reduce((s,c)=>s+c.price*c.qty,0);const result=new Set();[10,50,100,500,1000,5000,10000].forEach(b=>{const c=Math.ceil(total/b)*b;if(c>=total&&c<=total*4)result.add(c);});[1000,5000,10000].forEach(v=>{if(v>=total)result.add(v);});const presets=[...result].sort((a,b)=>a-b).slice(0,5);const cur=parseInt(receivedStr)||0;document.getElementById('cash-presets').innerHTML=presets.map(p=>`<button class="cash-preset-btn${cur===p?' active':''}" data-amount="${p}" onclick="setPreset(${p})">¥${p.toLocaleString()}</button>`).join('');}
+/* [DISC-1] renderCashPresets: 値引き後合計ベース */
+function renderCashPresets(){
+  const subtotal=cart.reduce((s,c)=>s+c.price*c.qty,0);
+  const disc=Math.min(discountAmount,subtotal);
+  const total=Math.max(0,subtotal-disc);
+  /* 元のロジックをtotal変数で流用 */const result=new Set();[10,50,100,500,1000,5000,10000].forEach(b=>{const c=Math.ceil(total/b)*b;if(c>=total&&c<=total*4)result.add(c);});[1000,5000,10000].forEach(v=>{if(v>=total)result.add(v);});const presets=[...result].sort((a,b)=>a-b).slice(0,5);const cur=parseInt(receivedStr)||0;document.getElementById('cash-presets').innerHTML=presets.map(p=>`<button class="cash-preset-btn${cur===p?' active':''}" data-amount="${p}" onclick="setPreset(${p})">¥${p.toLocaleString()}</button>`).join('');}
 function setPreset(a){receivedStr=String(a);updateReceivedDisp();calcChange();document.querySelectorAll('.cash-preset-btn').forEach(b=>{b.classList.toggle('active',parseInt(b.dataset.amount)===a);});}
-function calcChange(){const total=cart.reduce((s,c)=>s+c.price*c.qty,0);const received=parseInt(receivedStr)||0;const el=document.getElementById('change-amount');if(!received){el.textContent='—';el.className='change-result-amount';return;}const change=received-total;if(change<0){el.textContent='¥'+Math.abs(change).toLocaleString()+' 不足';el.className='change-result-amount short';}else{el.textContent='¥'+change.toLocaleString();el.className='change-result-amount';}}
+/* [DISC-1] calcChange: 値引き後合計ベース */
+function calcChange(){
+  const subtotal=cart.reduce((s,c)=>s+c.price*c.qty,0);
+  const disc=Math.min(discountAmount,subtotal);
+  const total=Math.max(0,subtotal-disc);
+  const received=parseInt(receivedStr)||0;
+  const el=document.getElementById('change-amount');
+  if(!received){el.textContent='—';el.className='change-result-amount';return;}
+  const change=received-total;
+  if(change<0){el.textContent='¥'+Math.abs(change).toLocaleString()+' 不足';el.className='change-result-amount short';}
+  else{el.textContent='¥'+change.toLocaleString();el.className='change-result-amount';}
+}
 /* [P1] 会計確定前確認 */
+/* [DISC-1] checkout: 値引き後合計で確認 */
 function checkout(){if(!cart.length)return;
-  const total=cart.reduce((s,c)=>s+c.price*c.qty,0);
+  if(isCurrentEventClosed()){showToast('⚠️ レジ締め済みです。会計できません');return;}
+  const subtotal=cart.reduce((s,c)=>s+c.price*c.qty,0);
+  const disc=Math.min(discountAmount,subtotal);
+  const total=Math.max(0,subtotal-disc);
   const itemsSummary=cart.map(c=>`${c.name}×${c.qty}`).join('、');
+  const discStr=disc>0?`\n値引き：−¥${disc.toLocaleString()}`:'';
   showConfirm(
     '会計を確定しますか？',
-    `${itemsSummary}\n合計：¥${total.toLocaleString()}（${PAY_LABELS[payMethod]}）`,
+    `${itemsSummary}${discStr}\n合計：¥${total.toLocaleString()}（${PAY_LABELS[payMethod]}）`,
     ()=>_doCheckout()
   );
 }
@@ -1332,7 +1560,20 @@ function _doCheckout(){
   if(!cart.length)return;
   if(_checkoutInProgress)return; /* [PIN-3] 連打防止 */
   _checkoutInProgress=true;
-  setTimeout(()=>{_checkoutInProgress=false;},1500);const total=cart.reduce((s,c)=>s+c.price*c.qty,0);if(payMethod==='cash'){const received=parseInt(receivedStr)||0;if(received>0&&received<total){showToast('⚠️ 預かり金額が不足しています');return;}}const order={id:Date.now(),eventId:state.currentEventId,time:new Date().toISOString(),payMethod,receivedAmount:payMethod==='cash'?(parseInt(receivedStr)||0):null,items:cart.map(c=>({...c})),total};if(!state.orders)state.orders=[];state.orders.push(order);cart.forEach(c=>{if(!state.inventory[c.id])state.inventory[c.id]={stocked:0,wasted:0,sold:0};state.inventory[c.id].sold=(state.inventory[c.id].sold||0)+c.qty;});saveState();const recv=payMethod==='cash'&&order.receivedAmount?order.receivedAmount:0;const changeMsg=recv>0?` おつり ¥${(recv-total).toLocaleString()}`:'';showToast(`✅ 決済完了 ¥${total.toLocaleString()}（${PAY_LABELS[payMethod]}）${changeMsg}`);showUndoBar(order);cart=[];receivedStr='';tenkeyOpen=false;document.getElementById('tenkey-wrap').style.display='none';updateReceivedDisp();renderMenuGrid();renderCart();calcChange();renderCashPresets();}
+  setTimeout(()=>{_checkoutInProgress=false;},1500);const total=cart.reduce((s,c)=>s+c.price*c.qty,0);if(payMethod==='cash'){const received=parseInt(receivedStr)||0;if(received>0&&received<finalTotal){showToast('⚠️ 預かり金額が不足しています');return;}}/* [DISC-1] order に値引き情報を追加 */
+  const subtotalBeforeDiscount=cart.reduce((s,c)=>s+c.price*c.qty,0);
+  const disc=Math.min(discountAmount,subtotalBeforeDiscount);
+  const finalTotal=Math.max(0,subtotalBeforeDiscount-disc);
+  const order={
+    id:Date.now(),eventId:state.currentEventId,
+    time:new Date().toISOString(),payMethod,
+    receivedAmount:payMethod==='cash'?(parseInt(receivedStr)||0):null,
+    items:cart.map(c=>({...c})),
+    subtotalBeforeDiscount,
+    discountAmount:disc,
+    discountType:disc>0?discountType:'',
+    total:finalTotal
+  };if(!state.orders)state.orders=[];state.orders.push(order);cart.forEach(c=>{if(!state.inventory[c.id])state.inventory[c.id]={stocked:0,wasted:0,sold:0};state.inventory[c.id].sold=(state.inventory[c.id].sold||0)+c.qty;});saveState();const recv=payMethod==='cash'&&order.receivedAmount?order.receivedAmount:0;const changeMsg=recv>0?` おつり ¥${(recv-finalTotal).toLocaleString()}`:'';showToast(`✅ 決済完了 ¥${finalTotal.toLocaleString()}（${PAY_LABELS[payMethod]}）${changeMsg}`);showUndoBar(order);cart=[];discountAmount=0;discountType='set';receivedStr='';tenkeyOpen=false;/* [DISC-1] 値引きリセット */document.getElementById('tenkey-wrap').style.display='none';updateReceivedDisp();renderMenuGrid();renderCart();calcChange();renderCashPresets();}
 function getInventory(itemId){const inv=state.inventory[itemId]||{};return{stocked:inv.stocked||0,wasted:inv.wasted||0,sold:inv.sold||0};}
 function renderInventory(){/* [P2] 在庫画面: メニュー未登録時のガイド */
   if(!state.menuItems||!state.menuItems.length){
@@ -1765,7 +2006,7 @@ function buildExportData(){
   const evt=state.events.find(e=>e.id===state.currentEventId);
   const matItems=getMatItems();
   const salesRows=[];
-  orders.forEach(o=>o.items.forEach(i=>{const m=state.menuItems.find(m=>m.id===i.id);salesRows.push({'日時':new Date(o.time).toLocaleString('ja-JP'),'イベント':evt?evt.name:'','商品名':i.name,'数量':i.qty,'単価':i.price,'小計':i.price*i.qty,'原価単価':m?m.cost:0,'原価小計':m?m.cost*i.qty:0,'決済方法':PAY_LABELS[o.payMethod]||o.payMethod,'預かり金額':o.receivedAmount||''});}));const expenseRows=expenses.map(e=>({'日時':new Date(e.time).toLocaleString('ja-JP'),'勘定科目':e.cat,'メモ':e.memo,'金額':e.amount}));/* [ALLOC-3] 材料CSV: 按分情報列を追加 */
+  orders.forEach(o=>o.items.forEach(i=>{const m=state.menuItems.find(m=>m.id===i.id);salesRows.push({'日時':new Date(o.time).toLocaleString('ja-JP'),'イベント':evt?evt.name:'','商品名':i.name,'数量':i.qty,'単価':i.price,'小計':i.price*i.qty,'原価単価':m?m.cost:0,'原価小計':m?m.cost*i.qty:0,'決済方法':PAY_LABELS[o.payMethod]||o.payMethod,'預かり金額':o.receivedAmount||'','値引き額':o.discountAmount||0,'値引き理由':o.discountType||''});/* [DISC-1] */}));const expenseRows=expenses.map(e=>({'日時':new Date(e.time).toLocaleString('ja-JP'),'勘定科目':e.cat,'メモ':e.memo,'金額':e.amount}));/* [ALLOC-3] 材料CSV: 按分情報列を追加 */
   const matRows=matItems.map(item=>{
     const c=calcMatItem(item);
     const MODE_LABEL={'direct':'直接原価','allocate_all':'全商品按分','allocate_category':'カテゴリ按分','allocate_items':'商品指定按分'};
@@ -3278,6 +3519,106 @@ function toggleRemainder(id, btn){
     if(btn)  btn.style.borderBottomRightRadius = '';
   }
 }
+
+/* =====================================================
+   値引き機能 [DISC-1]
+   ===================================================== */
+
+let _discTempAmount = 0;
+let _discTempType   = 'set';
+
+const DISC_TYPE_LABELS = {set:'セット値引き',service:'サービス',claim:'クレーム対応',other:'その他'};
+
+/** 値引きモーダルを開く */
+function openDiscModal(){
+  if(!cart.length){ showToast('⚠️ カートが空です'); return; }
+  _discTempAmount = discountAmount;
+  _discTempType   = discountType;
+  /* 入力欄を現在値で初期化 */
+  const inp = document.getElementById('disc-amount-input');
+  if(inp) inp.value = _discTempAmount > 0 ? _discTempAmount : '';
+  selectDiscType(_discTempType, true);
+  updateDiscPreview();
+  /* プリセットボタンの選択状態を復元 */
+  document.querySelectorAll('.disc-preset-btn').forEach(function(b){
+    b.classList.remove('selected');
+  });
+  document.getElementById('disc-modal-overlay').classList.add('open');
+}
+
+/** 値引きモーダルを閉じる */
+function closeDiscModal(){
+  document.getElementById('disc-modal-overlay').classList.remove('open');
+}
+
+/** プリセットボタン選択 */
+function selectDiscPreset(amount){
+  _discTempAmount = amount;
+  const inp = document.getElementById('disc-amount-input');
+  if(inp) inp.value = amount;
+  document.querySelectorAll('.disc-preset-btn').forEach(function(b){
+    b.classList.toggle('selected', parseInt(b.textContent.replace(/[^0-9]/g,'')) === amount);
+  });
+  updateDiscPreview();
+}
+
+/** 任意金額入力 */
+function onDiscAmountInput(val){
+  _discTempAmount = parseInt(val) || 0;
+  document.querySelectorAll('.disc-preset-btn').forEach(function(b){
+    b.classList.remove('selected');
+  });
+  updateDiscPreview();
+}
+
+/** 値引き種別選択 */
+function selectDiscType(type, skipFocus){
+  _discTempType = type;
+  ['set','service','claim','other'].forEach(function(t){
+    const el = document.getElementById('disc-type-'+t);
+    if(el) el.classList.toggle('selected', t === type);
+  });
+}
+
+/** プレビュー更新 */
+function updateDiscPreview(){
+  const subtotal = cart.reduce(function(s,c){return s+c.price*c.qty;},0);
+  const disc     = Math.min(Math.max(0,_discTempAmount), subtotal);
+  const total    = Math.max(0, subtotal - disc);
+  const subEl  = document.getElementById('disc-preview-sub');
+  const discEl = document.getElementById('disc-preview-disc');
+  const totEl  = document.getElementById('disc-preview-total');
+  if(subEl)  subEl.textContent  = '¥' + subtotal.toLocaleString();
+  if(discEl) discEl.textContent = '−¥' + disc.toLocaleString();
+  if(totEl)  totEl.textContent  = '¥' + total.toLocaleString();
+  /* 適用ボタンの有効/無効 */
+  const btn = document.getElementById('disc-apply-btn');
+  if(btn) btn.disabled = disc <= 0;
+}
+
+/** 値引きを適用してカートに反映 */
+function applyDiscount(){
+  const subtotal = cart.reduce(function(s,c){return s+c.price*c.qty;},0);
+  const disc = Math.min(Math.max(0,_discTempAmount), subtotal);
+  if(disc <= 0){ showToast('⚠️ 値引き額を入力してください'); return; }
+  discountAmount = disc;
+  discountType   = _discTempType;
+  closeDiscModal();
+  renderCart();
+  calcChange();
+  renderCashPresets();
+  showToast('✂️ 値引き −¥' + disc.toLocaleString() + '（' + (DISC_TYPE_LABELS[discountType]||discountType) + '）を適用しました');
+}
+
+/** 値引きをクリア */
+function clearDiscount(){
+  discountAmount = 0;
+  discountType   = 'set';
+  renderCart();
+  calcChange();
+  renderCashPresets();
+}
+
 </script>
 </body>
 </html>
