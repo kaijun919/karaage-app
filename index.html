@@ -6,7 +6,255 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="屋外販売管理">
 <title>🍗 屋外販売管理</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+/* =====================================================
+   天気表示機能 [WEATHER-1]
+   Open-Meteo API（APIキー不要）を使用
+   失敗してもアプリ全体には影響しない設計
+   ===================================================== */
+
+/** 天気アイコンマッピング (WMO code → emoji) */
+const WMO_ICON = {
+  0:'☀️',1:'🌤️',2:'⛅',3:'☁️',
+  45:'🌫️',48:'🌫️',
+  51:'🌦️',53:'🌦️',55:'🌧️',
+  61:'🌧️',63:'🌧️',65:'🌧️',
+  71:'🌨️',73:'🌨️',75:'🌨️',80:'🌦️',81:'🌦️',82:'⛈️',
+  95:'⛈️',96:'⛈️',99:'⛈️'
+};
+const WMO_STATUS = {
+  0:'快晴',1:'晴れ',2:'晴れ時々曇り',3:'曇り',
+  45:'霧',48:'霧',
+  51:'小雨',53:'雨',55:'雨',
+  61:'小雨',63:'雨',65:'大雨',
+  71:'小雪',73:'雪',75:'大雪',80:'にわか雨',81:'雨',82:'強雨',
+  95:'雷雨',96:'雷雨',99:'雷雨'
+};
+
+/**
+ * 天気サマリー文字列を整形
+ * @param {object} weather - event.weather
+ * @returns {string} 例: "晴れ / 18〜25℃ / 降水30%"
+ */
+function formatWeatherSummary(weather){
+  if(!weather||!weather.status) return '未取得';
+  const parts=[weather.icon||'',weather.status];
+  if(weather.tempMin!=null&&weather.tempMax!=null) parts.push(`${weather.tempMin}〜${weather.tempMax}℃`);
+  if(weather.rainProb!=null) parts.push(`降水${weather.rainProb}%`);
+  return parts.filter(Boolean).join(' / ');
+}
+
+/**
+ * 場所名→緯度経度 (Nominatim OSM, 無料・キー不要)
+ * @param {string} place
+ * @returns {Promise<{lat:number,lon:number}|null>}
+ */
+async function geocodePlace(place){
+  if(!place||!place.trim()) return null;
+  try{
+    const q=encodeURIComponent(place.trim()+' 日本');
+    const res=await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,{
+      headers:{'Accept-Language':'ja','User-Agent':'karaage-event-app/1.0'}
+    });
+    if(!res.ok) return null;
+    const data=await res.json();
+    if(!data||!data.length) return null;
+    return {lat:parseFloat(data[0].lat),lon:parseFloat(data[0].lon)};
+  }catch(e){
+    console.warn('[WEATHER] geocode失敗:',e);
+    return null;
+  }
+}
+
+/**
+ * Open-Meteo から指定日の天気を取得
+ * @param {number} lat
+ * @param {number} lon
+ * @param {string} date - "YYYY-MM-DD"
+ * @returns {Promise<object|null>}
+ */
+async function fetchOpenMeteo(lat, lon, date){
+  try{
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+      +`&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max`
+      +`&timezone=Asia%2FTokyo&start_date=${date}&end_date=${date}`;
+    const res=await fetch(url);
+    if(!res.ok) return null;
+    const data=await res.json();
+    if(!data.daily||!data.daily.time||!data.daily.time.length) return null;
+    const wc=data.daily.weathercode[0];
+    return {
+      weatherCode:wc,
+      status:WMO_STATUS[wc]||`コード${wc}`,
+      icon:WMO_ICON[wc]||'🌤️',
+      tempMax:Math.round(data.daily.temperature_2m_max[0]),
+      tempMin:Math.round(data.daily.temperature_2m_min[0]),
+      rainProb:Math.round(data.daily.precipitation_probability_max[0]||0)
+    };
+  }catch(e){
+    console.warn('[WEATHER] Open-Meteo取得失敗:',e);
+    return null;
+  }
+}
+
+/**
+ * イベントオブジェクトから天気を取得してevent.weatherに保存
+ * @param {object} eventObj
+ * @returns {Promise<boolean>} 成功/失敗
+ */
+async function fetchEventWeather(eventObj){
+  if(!eventObj) return false;
+  try{
+    /* 場所チェック */
+    if(!eventObj.place||!eventObj.place.trim()){
+      showToast('⚠️ 場所が未設定です。イベントの場所を入力してください。');
+      return false;
+    }
+    /* 日付チェック */
+    if(!eventObj.date){
+      showToast('⚠️ 日付が未設定です。イベントの開催日を入力してください。');
+      return false;
+    }
+    /* ジオコーディング */
+    showToast('📍 場所を検索中...');
+    const coords=await geocodePlace(eventObj.place);
+    if(!coords){
+      showToast('⚠️ 場所の座標取得に失敗しました。場所名を確認してください。');
+      return false;
+    }
+    /* 天気取得 */
+    showToast('🌤️ 天気情報を取得中...');
+    const weather=await fetchOpenMeteo(coords.lat,coords.lon,eventObj.date);
+    if(!weather){
+      showToast('⚠️ 天気情報の取得に失敗しました。日付が過去または遠すぎる可能性があります。');
+      return false;
+    }
+    /* 保存（noteは既存を維持） */
+    const existingNote=(eventObj.weather&&eventObj.weather.note)||'';
+    eventObj.weather={
+      status:weather.status,
+      tempMin:weather.tempMin,
+      tempMax:weather.tempMax,
+      rainProb:weather.rainProb,
+      icon:weather.icon,
+      fetchedAt:new Date().toISOString(),
+      source:'Open-Meteo / OSM',
+      note:existingNote
+    };
+    saveState();
+    return true;
+  }catch(e){
+    console.error('[WEATHER] fetchEventWeather error:',e);
+    showToast('⚠️ 天気取得中にエラーが発生しました。');
+    return false;
+  }
+}
+
+/**
+ * 現在のイベントの天気を更新（ボタン押下時）
+ */
+async function updateCurrentEventWeather(){
+  const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);
+  if(!evt){showToast('⚠️ イベントを選択してください');return;}
+  const btn=document.getElementById('weather-update-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ 取得中...';}
+  try{
+    const ok=await fetchEventWeather(evt);
+    if(ok){
+      showToast(`✅ 天気を更新しました：${formatWeatherSummary(evt.weather)}`);
+      updateEventName(); /* ヘッダーバッジ更新 */
+      renderWeatherSettingsUI(); /* 設定UI更新 */
+    }
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='🔄 天気を更新';}
+  }
+}
+
+/**
+ * 天気メモを保存
+ * @param {string} val
+ */
+function saveWeatherNote(val){
+  const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);
+  if(!evt)return;
+  if(!evt.weather)evt.weather={status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'',note:''};
+  evt.weather.note=val;
+  saveState();
+}
+
+/**
+ * 設定画面の天気UIを現在のイベントに合わせて更新
+ */
+function renderWeatherSettingsUI(){
+  const grid=document.getElementById('weather-info-grid');
+  const fetchedAt=document.getElementById('weather-fetched-at');
+  const noteInput=document.getElementById('weather-note-input');
+  if(!grid)return;
+
+  const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);
+  const w=evt&&evt.weather;
+
+  if(!w||!w.status){
+    grid.innerHTML='<div style="grid-column:1/-1;font-size:12px;color:var(--text3);text-align:center;padding:8px;">イベントの場所・日付を設定して「天気を更新」を押してください</div>';
+    if(fetchedAt)fetchedAt.textContent='';
+    if(noteInput)noteInput.value='';
+    return;
+  }
+
+  grid.innerHTML=[
+    {label:'天気',val:`${w.icon} ${w.status}`},
+    {label:'最高気温',val:w.tempMax!=null?`${w.tempMax}℃`:'—'},
+    {label:'最低気温',val:w.tempMin!=null?`${w.tempMin}℃`:'—'},
+    {label:'降水確率',val:w.rainProb!=null?`${w.rainProb}%`:'—'},
+  ].map(({label,val})=>`<div class="weather-info-item"><div class="weather-info-label">${label}</div><div class="weather-info-val">${val}</div></div>`).join('');
+
+  if(fetchedAt){
+    fetchedAt.textContent=w.fetchedAt
+      ?`最終更新: ${new Date(w.fetchedAt).toLocaleString('ja-JP')} (${w.source||''})`
+      :'';
+  }
+  if(noteInput) noteInput.value=w.note||'';
+}
+
+/**
+ * レポート画面の天気カードを描画
+ */
+function renderWeatherReportCard(){
+  const wrap=document.getElementById('weather-report-card-wrap');
+  if(!wrap)return;
+
+  const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);
+  const w=evt&&evt.weather;
+
+  if(!w||!w.status){
+    wrap.innerHTML=`<div class="weather-report-card">
+      <div class="weather-report-icon">🌤️</div>
+      <div class="weather-report-body">
+        <div class="weather-report-title">当日天気</div>
+        <div class="weather-report-empty">天気情報が未取得です。設定画面のイベント設定から取得してください。</div>
+      </div>
+    </div>`;
+    return;
+  }
+
+  const note=w.note?`<div class="weather-report-note">📝 ${w.note}</div>`:'';
+  const statsHtml=[
+    w.status?`<div class="weather-report-stat">${w.icon} ${w.status}</div>`:'',
+    (w.tempMin!=null&&w.tempMax!=null)?`<div class="weather-report-stat">🌡️ ${w.tempMin}〜${w.tempMax}℃</div>`:'',
+    w.rainProb!=null?`<div class="weather-report-stat">☂️ 降水${w.rainProb}%</div>`:'',
+  ].filter(Boolean).join('');
+
+  wrap.innerHTML=`<div class="weather-report-card">
+    <div class="weather-report-icon">${w.icon||'🌤️'}</div>
+    <div class="weather-report-body">
+      <div class="weather-report-title">当日天気 — ${evt.date||'日付未設定'} ${evt.place?'@ '+evt.place:''}</div>
+      <div class="weather-report-stats">${statsHtml}</div>
+      ${note}
+    </div>
+  </div>`;
+}
+
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Dela+Gothic+One&display=swap');
 :root{
@@ -524,12 +772,43 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 .pin-input-field{padding-right:48px !important;}
 /* ロック中の材料カード: 全体を少し暗くして視認性確保 */
 #material-list[data-locked="true"] .mat-card{opacity:.72;pointer-events:none;}
+
+/* =====================================================
+   天気表示 [WEATHER-1]
+   ===================================================== */
+/* ヘッダー天気バッジ */
+.weather-badge{font-size:10px;opacity:.9;margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+.weather-badge-icon{font-size:13px;}
+
+/* 設定画面・天気セクション */
+.weather-section{background:#EBF5FF;border:1.5px solid #90CAF9;border-radius:var(--radius-sm);padding:12px 14px;margin-top:10px;}
+.weather-section-title{font-size:12px;font-weight:700;color:#0D47A1;margin-bottom:8px;display:flex;align-items:center;gap:6px;justify-content:space-between;}
+.weather-info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:10px;}
+.weather-info-item{background:#fff;border-radius:6px;padding:8px 10px;text-align:center;border:1px solid #BBDEFB;}
+.weather-info-label{font-size:10px;color:#1565C0;margin-bottom:3px;}
+.weather-info-val{font-size:15px;font-weight:700;font-family:'Dela Gothic One',sans-serif;color:#0D47A1;}
+.weather-update-btn{padding:7px 14px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;}
+.weather-update-btn:active{background:#0D47A1;}
+.weather-update-btn:disabled{background:#90CAF9;cursor:not-allowed;}
+.weather-fetched-at{font-size:10px;color:var(--text3);margin-top:6px;}
+.weather-note-input{width:100%;padding:8px 10px;border:1.5px solid #90CAF9;border-radius:6px;font-family:'Noto Sans JP',sans-serif;font-size:12px;background:#fff;color:var(--text);outline:none;resize:none;margin-top:8px;}
+.weather-note-input:focus{border-color:#1565C0;}
+
+/* レポート画面・天気カード */
+.weather-report-card{background:linear-gradient(135deg,#E3F2FD,#EDE7F6);border:1.5px solid #90CAF9;border-radius:var(--radius);padding:14px;margin-bottom:14px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;}
+.weather-report-icon{font-size:40px;flex-shrink:0;}
+.weather-report-body{flex:1;min-width:180px;}
+.weather-report-title{font-size:13px;font-weight:700;color:#0D47A1;margin-bottom:6px;}
+.weather-report-stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
+.weather-report-stat{background:#fff;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;color:#1565C0;border:1px solid #BBDEFB;}
+.weather-report-note{font-size:11px;color:var(--text2);font-style:italic;padding:6px 10px;background:rgba(255,255,255,.6);border-radius:6px;margin-top:4px;}
+.weather-report-empty{font-size:12px;color:var(--text3);font-style:italic;}
 </style>
 </head>
 <body>
 <div class="app">
 <div class="header">
-  <div><div class="header-title">🍗 屋外販売管理</div><div class="header-sub" id="current-event-name">イベント未選択</div></div>
+  <div><div class="header-title">🍗 屋外販売管理</div><div class="header-sub" id="current-event-name">イベント未選択</div><div class="weather-badge" id="header-weather-badge"></div></div>
   <div class="event-badge" onclick="openEventModal()">📅 イベント</div>
 </div>
 <div class="nav">
@@ -648,6 +927,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   <div style="text-align:right;margin-top:10px;font-size:14px;font-weight:900;color:var(--brown);">合計経費: <span id="expense-total" style="font-family:'Dela Gothic One',sans-serif;font-size:18px;color:var(--primary);">¥0</span></div>
 </div>
 <div class="page" id="page-report">
+  <!-- [WEATHER-1] 天気カード -->
+  <div id="weather-report-card-wrap"></div>
   <div class="kpi-grid" id="kpi-grid"></div>
   <div class="section-title" style="margin-bottom:10px;">📐 原価率・FL指標</div>
   <div class="fl-grid" id="fl-grid"></div>
@@ -755,7 +1036,29 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
     <div id="backup-last-info" style="padding:0 14px 12px;font-size:11px;color:var(--text3);"></div>
   </div>
 
-  <div class="settings-section"><div class="settings-section-header"><span>📅 イベント設定</span></div><div style="padding:14px;"><div class="form-row"><div class="form-group"><label class="form-label">イベント名</label><input class="form-input" id="evt-name" placeholder="例：春祭り2025"></div><div class="form-group"><label class="form-label">開催日</label><input class="form-input" type="date" id="evt-date"></div></div><div class="form-group" style="margin-bottom:10px;"><label class="form-label">場所</label><input class="form-input" id="evt-place" placeholder="例：〇〇公園"></div><button class="add-btn" onclick="saveEvent()">✓ イベントを保存</button></div></div>
+  <div class="settings-section"><div class="settings-section-header"><span>📅 イベント設定</span></div><div style="padding:14px;"><div class="form-row"><div class="form-group"><label class="form-label">イベント名</label><input class="form-input" id="evt-name" placeholder="例：春祭り2025"></div><div class="form-group"><label class="form-label">開催日</label><input class="form-input" type="date" id="evt-date"></div></div><div class="form-group" style="margin-bottom:10px;"><label class="form-label">場所</label><input class="form-input" id="evt-place" placeholder="例：〇〇公園"></div><button class="add-btn" onclick="saveEvent()">✓ イベントを保存</button>
+      <div id="register-close-area" style="margin-top:10px;"></div>
+      <!-- [WEATHER-1] 天気情報セクション -->
+      <div class="weather-section" id="weather-settings-section">
+        <div class="weather-section-title">
+          <span>🌤️ 当日天気情報</span>
+          <button class="weather-update-btn" id="weather-update-btn" onclick="updateCurrentEventWeather()">
+            🔄 天気を更新
+          </button>
+        </div>
+        <div class="weather-info-grid" id="weather-info-grid">
+          <div style="grid-column:1/-1;font-size:12px;color:var(--text3);text-align:center;padding:8px;">
+            イベントの場所・日付を設定して「天気を更新」を押してください
+          </div>
+        </div>
+        <div class="weather-fetched-at" id="weather-fetched-at"></div>
+        <div style="margin-top:8px;">
+          <label class="form-label" style="font-size:11px;color:#1565C0;">📝 天気メモ（当日の状況など）</label>
+          <textarea class="weather-note-input" id="weather-note-input" rows="2"
+            placeholder="例：風が強く体感寒い、小雨で客足鈍め、真夏日で飲み物売れた など"
+            oninput="saveWeatherNote(this.value)"></textarea>
+        </div>
+      </div></div></div>
 </div>
 </div></div>
 <div class="modal-overlay" id="event-modal"><div class="modal"><div class="modal-title">📅 イベント選択</div><div id="event-list-modal"></div><div class="modal-footer"><button class="modal-btn cancel" onclick="closeModal('event-modal')">閉じる</button></div></div></div>
@@ -941,6 +1244,21 @@ function migrateState(){
   if(state.adminPin===undefined||state.adminPin===null)state.adminPin='';
   /* [PIN-3] 復元データに adminSessionUnlocked が混入していても無視 */
   delete state.adminSessionUnlocked;
+  /* [WEATHER-1] events に weather フィールド補完 */
+  if(state.events){
+    state.events=state.events.map(e=>({
+      weather:{
+        status:'',tempMin:null,tempMax:null,rainProb:null,
+        icon:'',fetchedAt:'',source:'',note:''
+      },
+      ...e,
+      /* 既存のweatherがあればnoteだけ保持してその他はマージ */
+      weather: Object.assign(
+        {status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'',note:''},
+        e.weather||{}
+      )
+    }));
+  }
 }
 
 function seedDefaultData(){if(!state.menuItems||!state.menuItems.length){state.menuItems=[{id:1,emoji:'🍗',name:'唐揚げ 3個',cat:'唐揚げ',price:400,cost:110,isSet:false},{id:2,emoji:'🍗',name:'唐揚げ 5個',cat:'唐揚げ',price:600,cost:170,isSet:false},{id:3,emoji:'🍱',name:'唐揚げ弁当',cat:'セット',price:800,cost:260,isSet:true},{id:4,emoji:'🍺',name:'ビール',cat:'ドリンク',price:500,cost:200,isSet:false},{id:5,emoji:'🥤',name:'ソフトドリンク',cat:'ドリンク',price:200,cost:60,isSet:false},{id:6,emoji:'🍟',name:'ポテト S',cat:'サイド',price:300,cost:80,isSet:false},{id:7,emoji:'🌶️',name:'激辛唐揚げ 3個',cat:'唐揚げ',price:450,cost:120,isSet:false}];}if(!state.events||!state.events.length){state.events=[{id:1,name:'春まつり2025',date:new Date().toISOString().slice(0,10),place:'サンプル公園'}];state.currentEventId=1;}if(!Array.isArray(state.expenses))state.expenses=[];if(!state.inventory)state.inventory={};if(!state.staffMembers)state.staffMembers=[];if(!state.materialItems)state.materialItems={};saveState();}
@@ -1276,6 +1594,8 @@ function onStaffTypeChange(){const type=document.getElementById('staff-pay-type'
 function calcStaffWage(){const type=document.getElementById('staff-pay-type').value;if(type==='daily')return;const sel=document.getElementById('staff-select');const staff=state.staffMembers.find(s=>s.id===parseInt(sel.value));if(!staff)return;const start=document.getElementById('staff-start').value;const end=document.getElementById('staff-end').value;if(!start||!end){document.getElementById('staff-hours-disp').value='';document.getElementById('staff-wage-disp').textContent='¥0';return;}const[sh,sm]=start.split(':').map(Number);const[eh,em]=end.split(':').map(Number);let mins=(eh*60+em)-(sh*60+sm);if(mins<0)mins+=1440;const hours=mins/60;document.getElementById('staff-hours-disp').value=`${Math.floor(hours)}h${mins%60>0?`${mins%60}m`:''}`;document.getElementById('staff-wage-disp').textContent='¥'+(Math.round(staff.rate*hours)).toLocaleString();}
 function addStaffExpense(){const sel=document.getElementById('staff-select');const staff=state.staffMembers.find(s=>s.id===parseInt(sel.value));if(!staff){showToast('⚠️ スタッフを選択してください');return;}const type=document.getElementById('staff-pay-type').value;let amount=0,memo='';if(type==='daily'){amount=staff.rate;memo=`${staff.name}（日給）`;}else{const start=document.getElementById('staff-start').value;const end=document.getElementById('staff-end').value;if(!start||!end){showToast('⚠️ 勤務時間を入力してください');return;}const[sh,sm]=start.split(':').map(Number);const[eh,em]=end.split(':').map(Number);let mins=(eh*60+em)-(sh*60+sm);if(mins<0)mins+=1440;amount=Math.round(staff.rate*(mins/60));memo=`${staff.name}（時給 ${start}〜${end}）`;}if(!amount){showToast('⚠️ 金額が0円です');return;}state.expenses.push({id:Date.now(),eventId:state.currentEventId,cat:'人件費',amount,memo,time:new Date().toISOString()});saveState();document.getElementById('staff-start').value='';document.getElementById('staff-end').value='';document.getElementById('staff-hours-disp').value='';document.getElementById('staff-wage-disp').textContent='¥0';renderExpenses();showToast(`👤 ${memo} ¥${amount.toLocaleString()} を追加しました`);}
 function renderReport(){
+  /* [WEATHER-1] 天気カード描画 */
+  renderWeatherReportCard();
   /* [ALLOC-3] eventId + cancelledAt 除外を最初に確定 */
   const allEvtOrders=(state.orders||[]).filter(o=>o.eventId===state.currentEventId);
   const activeOrders=allEvtOrders.filter(o=>!o.cancelledAt); /* 取消済除外 */
@@ -1569,7 +1889,7 @@ function deleteStaff(id){
   });
 }
 let dragSrcIdx=null;
-function renderSettings(){renderCatTags();renderAccountTags();renderStaffList();renderMenuCatSelect();updateChecklist();updateBackupLastInfo();renderPinSettingsUI();/* [PIN-1] */document.getElementById('menu-settings-list').innerHTML=state.menuItems.map((item,idx)=>`<div class="menu-sort-item" draggable="true" data-idx="${idx}" ondragstart="onDragStart(event,${idx})" ondragover="onDragOver(event,${idx})" ondrop="onDrop(event,${idx})" ondragend="onDragEnd()"><span class="drag-handle">⠿⠿</span><span style="font-size:20px;flex-shrink:0;">${item.emoji}</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">SET</span>':''}</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">${item.cat}</div></div><span style="font-size:14px;font-weight:900;color:var(--primary);min-width:55px;text-align:right;flex-shrink:0;">¥${item.price.toLocaleString()}</span><button class="icon-btn" onclick="openEditMenuModal(${item.id})">編集</button><button class="icon-btn" style="border-color:#F0A0A0;color:var(--danger);" onclick="deleteMenuItem(${item.id})">削除</button></div>`).join('');const evt=state.events.find(e=>e.id===state.currentEventId);if(evt){document.getElementById('evt-name').value=evt.name||'';document.getElementById('evt-date').value=evt.date||'';document.getElementById('evt-place').value=evt.place||'';}}
+function renderSettings(){renderCatTags();renderAccountTags();renderStaffList();renderMenuCatSelect();updateChecklist();updateBackupLastInfo();renderPinSettingsUI();renderWeatherSettingsUI();/* [WEATHER-1] */document.getElementById('menu-settings-list').innerHTML=state.menuItems.map((item,idx)=>`<div class="menu-sort-item" draggable="true" data-idx="${idx}" ondragstart="onDragStart(event,${idx})" ondragover="onDragOver(event,${idx})" ondrop="onDrop(event,${idx})" ondragend="onDragEnd()"><span class="drag-handle">⠿⠿</span><span style="font-size:20px;flex-shrink:0;">${item.emoji}</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">SET</span>':''}</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">${item.cat}</div></div><span style="font-size:14px;font-weight:900;color:var(--primary);min-width:55px;text-align:right;flex-shrink:0;">¥${item.price.toLocaleString()}</span><button class="icon-btn" onclick="openEditMenuModal(${item.id})">編集</button><button class="icon-btn" style="border-color:#F0A0A0;color:var(--danger);" onclick="deleteMenuItem(${item.id})">削除</button></div>`).join('');const evt=state.events.find(e=>e.id===state.currentEventId);if(evt){document.getElementById('evt-name').value=evt.name||'';document.getElementById('evt-date').value=evt.date||'';document.getElementById('evt-place').value=evt.place||'';}}
 function onDragStart(e,idx){dragSrcIdx=idx;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(idx));setTimeout(()=>e.currentTarget.classList.add('dragging'),0);}
 function onDragOver(e,idx){e.preventDefault();e.dataTransfer.dropEffect='move';document.querySelectorAll('.menu-sort-item').forEach(el=>el.classList.remove('drag-over'));if(idx!==dragSrcIdx)e.currentTarget.classList.add('drag-over');}
 function onDrop(e,idx){e.preventDefault();if(dragSrcIdx===null||dragSrcIdx===idx){onDragEnd();return;}const items=[...state.menuItems];const[moved]=items.splice(dragSrcIdx,1);items.splice(idx,0,moved);state.menuItems=items;dragSrcIdx=null;saveState();renderSettings();showToast('↕️ 並び順を変更しました');}
@@ -1633,7 +1953,23 @@ function saveEvent(){
     saveState();updateEventName();showToast('✅ イベントを保存しました');
   });
 }
-function updateEventName(){const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);document.getElementById('current-event-name').textContent=evt?`📅 ${evt.name}`:'イベント未選択';}
+function updateEventName(){
+  const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);
+  document.getElementById('current-event-name').textContent=evt?`📅 ${evt.name}`:'イベント未選択';
+  /* [WEATHER-1] ヘッダー天気バッジ更新 */
+  const badge=document.getElementById('header-weather-badge');
+  if(badge){
+    const w=evt&&evt.weather;
+    if(w&&w.status){
+      const icon=w.icon||'🌤️';
+      const temp=(w.tempMin!=null&&w.tempMax!=null)?` ${w.tempMin}〜${w.tempMax}℃`:'';
+      const rain=(w.rainProb!=null)?` 降水${w.rainProb}%`:'';
+      badge.innerHTML=`<span class="weather-badge-icon">${icon}</span><span>${w.status}${temp}${rain}</span>`;
+    } else {
+      badge.innerHTML='';
+    }
+  }
+}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
 function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2800);}
