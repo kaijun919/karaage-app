@@ -819,6 +819,112 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 }
 .cart-subtotal-label{font-size:11px;color:var(--text3);}
 .cart-subtotal-amount{font-size:13px;color:var(--text3);font-family:'Dela Gothic One',sans-serif;}
+
+/* =====================================================
+   提供待ちボード [BOARD-1]
+   ===================================================== */
+
+/* 提供待ちエリア（レジ画面下部） */
+.board-section{
+  margin-top:14px;
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.board-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;
+  background:linear-gradient(135deg,#1A237E,#283593);
+  color:#fff;
+}
+.board-header-title{
+  font-family:'Dela Gothic One',sans-serif;font-size:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.board-badge{
+  background:#fff;color:#1A237E;
+  font-size:11px;font-weight:900;
+  padding:2px 8px;border-radius:10px;
+  font-family:'Dela Gothic One',sans-serif;
+}
+.board-empty{
+  text-align:center;padding:22px 0;
+  font-size:13px;color:var(--text3);
+}
+
+/* 注文カード */
+.board-card{
+  border-bottom:1px solid var(--border);
+  padding:12px 14px;
+  transition:background .15s;
+}
+.board-card:last-child{border-bottom:none;}
+.board-card.urgent{background:#FFF8E1;} /* 5分以上 */
+.board-card.very-urgent{background:#FFEBEE;} /* 10分以上 */
+.board-card-top{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:6px;
+}
+.board-order-no{
+  font-family:'Dela Gothic One',sans-serif;font-size:20px;color:#1A237E;
+}
+.board-elapsed{
+  font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px;
+  background:#E3F2FD;color:#1565C0;
+}
+.board-elapsed.urgent{background:#FFF3E0;color:#E65100;}
+.board-elapsed.very-urgent{background:#FFEBEE;color:#C62828;}
+.board-card-mid{
+  display:flex;align-items:baseline;gap:8px;
+  margin-bottom:6px;flex-wrap:wrap;
+}
+.board-items-summary{
+  font-size:12px;font-weight:700;color:var(--text);flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;
+}
+.board-total{
+  font-size:13px;font-weight:900;
+  font-family:'Dela Gothic One',sans-serif;color:var(--primary);
+}
+.board-pay-label{
+  font-size:10px;color:var(--text3);
+  background:var(--surface2);padding:2px 6px;border-radius:8px;
+}
+.board-card-bottom{
+  display:flex;align-items:center;justify-content:space-between;
+}
+.board-time-text{font-size:10px;color:var(--text3);}
+.board-serve-btn{
+  padding:9px 18px;
+  background:#2E7D32;color:#fff;border:none;border-radius:8px;
+  font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  min-height:40px;
+}
+.board-serve-btn:active{background:#1B5E20;transform:scale(.96);}
+.board-serve-btn:disabled{background:#A5D6A7;cursor:not-allowed;}
+
+/* 「さらに○件」ボタン */
+.board-more-btn{
+  width:100%;padding:10px;border:none;background:var(--surface2);
+  font-family:'Noto Sans JP',sans-serif;font-size:12px;
+  color:var(--text2);font-weight:700;cursor:pointer;
+}
+.board-more-btn:active{background:var(--border);}
+
+/* 直前取消undo（提供済み） */
+.board-undo-bar{
+  display:none;padding:8px 14px;background:#1B5E20;color:#fff;
+  font-size:12px;display:flex;align-items:center;justify-content:space-between;
+}
+.board-undo-bar.show{display:flex;}
+.board-undo-link{
+  background:none;border:none;color:#A5D6A7;font-weight:700;
+  font-size:12px;cursor:pointer;text-decoration:underline;
+}
 </style>
 </head>
 <body>
@@ -892,6 +998,22 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
       </div>
     </div>
   </div>
+
+  <!-- [BOARD-1] 提供待ちボード -->
+  <div class="board-section" id="board-section">
+    <div class="board-header">
+      <div class="board-header-title">
+        🔔 提供待ち
+        <span class="board-badge" id="board-count-badge">0</span>
+      </div>
+    </div>
+    <div id="board-undo-bar" class="board-undo-bar">
+      <span id="board-undo-msg">提供済みを取り消せます</span>
+      <button class="board-undo-link" onclick="undoLastServed()">取消</button>
+    </div>
+    <div id="board-list"></div>
+  </div>
+
 </div>
 <div class="page" id="page-inventory">
   <div class="section-title" style="margin-bottom:12px;">📦 在庫・廃棄管理</div>
@@ -1390,10 +1512,14 @@ function migrateState(){
     state.menuItems=state.menuItems.map(m=>({imageData:null,...m}));
   }
   if(state.orders){
-    state.orders=state.orders.map(o=>({
-      cancelledAt:null,cancelReason:null,
-      discountAmount:0,discountType:'',subtotalBeforeDiscount:o.total,...o /* [DISC-1] */
-    }));
+    state.orders=state.orders.map(function(o){
+      return Object.assign(
+        {cancelledAt:null,cancelReason:null,
+         discountAmount:0,discountType:'',subtotalBeforeDiscount:o.total,
+         orderNo:0,fulfillmentStatus:'served',servedAt:null,servedBy:''/* [BOARD-1] 既存注文はserved扱い */},
+        o
+      );
+    });
   }
   /* [ALLOC-1] materialItems の各品目に按分フィールドを補完 */
   if(state.materialItems){
@@ -1449,7 +1575,7 @@ function showPage(name,btn){
   if(name==='settings')renderSettings();
 }
 let currentCat='全て';
-function renderRegister(){renderCatFilter();renderMenuGrid();renderCart();updateChangeArea();}
+function renderRegister(){renderCatFilter();renderMenuGrid();renderCart();updateChangeArea();renderBoard();/* [BOARD-1] */}
 function renderCatFilter(){const cats=['全て',...state.categories];document.getElementById('cat-filter').innerHTML=cats.map(c=>`<div class="cat-chip${c===currentCat?' active':''}" onclick="filterCat('${c}')">${c}</div>`).join('');}
 function filterCat(cat){currentCat=cat;renderCatFilter();renderMenuGrid();}
 function renderMenuGrid(){const items=currentCat==='全て'?state.menuItems:state.menuItems.filter(m=>m.cat===currentCat);const el=document.getElementById('menu-grid');if(!items.length){el.innerHTML='<div class="empty-state"><div class="empty-emoji">😅</div>メニューがありません</div>';return;}el.innerHTML=items.map(item=>{const inCart=cart.find(c=>c.id===item.id);const inv=getInventory(item.id);const outOfStock=inv.stocked>0&&(inv.stocked-inv.sold-inv.wasted)<=0;/* [P1] 画像 or emoji 表示 */
@@ -1457,7 +1583,7 @@ function renderMenuGrid(){const items=currentCat==='全て'?state.menuItems:stat
       ?`<div class="menu-card-img-wrap"><img class="menu-card-img" src="${item.imageData}" alt="${item.name}" onerror="this.parentElement.innerHTML='<span class=\'menu-card-emoji-large\'>${item.emoji}</span>'"></div>`
       :`<div class="menu-card-img-wrap"><span class="menu-card-emoji-large">${item.emoji}</span></div>`;
     return`<div class="menu-card${inCart?' in-cart':''}${outOfStock?'" style="opacity:.4;pointer-events:none;"':'"'} onclick="addToCart(${item.id})">${inCart?`<div class="menu-card-badge">${inCart.qty}</div>`:''}${imgHtml}<div class="menu-card-name">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px;">SET</span>':''}</div><div class="menu-card-price">¥${item.price.toLocaleString()}</div>${outOfStock?'<div style="font-size:10px;color:var(--danger);font-weight:700;margin-top:2px;">SOLD OUT</div>':''}</div>`;}).join('');}
-function addToCart(id){const item=state.menuItems.find(m=>m.id===id);if(!item)return;const ex=cart.find(c=>c.id===id);if(ex)ex.qty++;else cart.push({id,name:item.name,price:item.price,qty:1,emoji:item.emoji});renderMenuGrid();renderCart();calcChange();renderCashPresets();}
+function addToCart(id){const item=state.menuItems.find(m=>m.id===id);if(!item)return;const ex=cart.find(c=>c.id===id);if(ex)ex.qty++;else cart.push({id,name:item.name,price:item.price,qty:1,emoji:item.emoji});renderMenuGrid();renderCart();calcChange();renderCashPresets();renderBoard();/* [BOARD-1] */}
 /* [DISC-1] renderCart: 値引き対応 */
 function renderCart(){
   const el=document.getElementById('cart-items');
@@ -1564,6 +1690,9 @@ function _doCheckout(){
   const subtotalBeforeDiscount=cart.reduce((s,c)=>s+c.price*c.qty,0);
   const disc=Math.min(discountAmount,subtotalBeforeDiscount);
   const finalTotal=Math.max(0,subtotalBeforeDiscount-disc);
+  /* [BOARD-1] orderNo採番: イベント内最大値+1（101始まり） */
+  const evtOrders=(state.orders||[]).filter(function(o){return o.eventId===state.currentEventId;});
+  const maxNo=evtOrders.reduce(function(m,o){return Math.max(m,o.orderNo||0);},100);
   const order={
     id:Date.now(),eventId:state.currentEventId,
     time:new Date().toISOString(),payMethod,
@@ -1572,7 +1701,11 @@ function _doCheckout(){
     subtotalBeforeDiscount,
     discountAmount:disc,
     discountType:disc>0?discountType:'',
-    total:finalTotal
+    total:finalTotal,
+    orderNo:maxNo+1,
+    fulfillmentStatus:'paid',
+    servedAt:null,
+    servedBy:''
   };if(!state.orders)state.orders=[];state.orders.push(order);cart.forEach(c=>{if(!state.inventory[c.id])state.inventory[c.id]={stocked:0,wasted:0,sold:0};state.inventory[c.id].sold=(state.inventory[c.id].sold||0)+c.qty;});saveState();const recv=payMethod==='cash'&&order.receivedAmount?order.receivedAmount:0;const changeMsg=recv>0?` おつり ¥${(recv-finalTotal).toLocaleString()}`:'';showToast(`✅ 決済完了 ¥${finalTotal.toLocaleString()}（${PAY_LABELS[payMethod]}）${changeMsg}`);showUndoBar(order);cart=[];discountAmount=0;discountType='set';receivedStr='';tenkeyOpen=false;/* [DISC-1] 値引きリセット */document.getElementById('tenkey-wrap').style.display='none';updateReceivedDisp();renderMenuGrid();renderCart();calcChange();renderCashPresets();}
 function getInventory(itemId){const inv=state.inventory[itemId]||{};return{stocked:inv.stocked||0,wasted:inv.wasted||0,sold:inv.sold||0};}
 function renderInventory(){/* [P2] 在庫画面: メニュー未登録時のガイド */
@@ -2338,6 +2471,7 @@ function undoLastCheckout(){
       document.getElementById('undo-bar').classList.remove('show');
       _lastOrder=null;
       showToast('↩️ 会計を取り消しました');
+      renderBoard();/* [BOARD-1] */
       renderMenuGrid();
     }
   );
@@ -3618,6 +3752,177 @@ function clearDiscount(){
   calcChange();
   renderCashPresets();
 }
+
+
+/* =====================================================
+   提供待ちボード [BOARD-1]
+   ===================================================== */
+
+const BOARD_MAX_VISIBLE = 10;  /* 最大表示件数 */
+let _lastServedOrderId = null; /* 直前提供済みのundo用 */
+let _boardUndoTimer   = null;
+
+/**
+ * renderBoard()
+ * 提供待ち一覧を描画する
+ * 対象: 現在イベント・取消なし・fulfillmentStatus==='paid'
+ */
+function renderBoard(){
+  const listEl  = document.getElementById('board-list');
+  const badgeEl = document.getElementById('board-count-badge');
+  if(!listEl) return;
+
+  const pending = (state.orders||[]).filter(function(o){
+    return o.eventId === state.currentEventId
+      && !o.cancelledAt
+      && o.fulfillmentStatus !== 'served';
+  }).sort(function(a,b){ return new Date(b.time)-new Date(a.time); }); /* 新しい順 */
+
+  if(badgeEl) badgeEl.textContent = pending.length;
+
+  if(!pending.length){
+    listEl.innerHTML = '<div class="board-empty">📭 提供待ちはありません</div>';
+    return;
+  }
+
+  const visible  = pending.slice(0, BOARD_MAX_VISIBLE);
+  const overflow = pending.length - BOARD_MAX_VISIBLE;
+
+  listEl.innerHTML = visible.map(function(o){
+    return buildBoardCard(o);
+  }).join('') + (overflow > 0
+    ? ('<button class="board-more-btn" onclick="showToast(&quot;⚠️ '+overflow+'件の提供待ちがあります。先に提供済み処理をしてください&quot;)">さらに '+overflow+'件の提供待ちがあります</button>')
+    : '');
+}
+
+/**
+ * buildBoardCard(order) → HTML文字列
+ */
+function buildBoardCard(o){
+  const now     = Date.now();
+  const paidAt  = new Date(o.time).getTime();
+  const elapsedMs = now - paidAt;
+  const elapsedMin= Math.floor(elapsedMs / 60000);
+  const urgentClass = elapsedMin >= 10 ? 'very-urgent' : elapsedMin >= 5 ? 'urgent' : '';
+  const elapsedLabel = elapsedMin >= 60
+    ? Math.floor(elapsedMin/60)+'時間'+elapsedMin%60+'分経過'
+    : elapsedMin+'分経過';
+  const badgeCls = elapsedMin >= 10 ? 'very-urgent' : elapsedMin >= 5 ? 'urgent' : '';
+
+  /* 商品サマリー（最大20文字） */
+  const items = (o.items||[]);
+  const summary = items.map(function(i){return i.name+'×'+i.qty;}).join(' / ');
+  const summaryShort = summary.length > 20 ? summary.slice(0,20)+'…' : summary;
+  const totalItems = items.reduce(function(s,i){return s+i.qty;},0);
+
+  const timeStr = new Date(o.time).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  const payLabel = PAY_LABELS[o.payMethod] || o.payMethod;
+
+  return '<div class="board-card '+urgentClass+'" id="board-card-'+o.id+'">'
+    + '<div class="board-card-top">'
+    +   '<div class="board-order-no">No.'+(o.orderNo||'—')+'</div>'
+    +   '<div class="board-elapsed '+badgeCls+'">⏱ '+elapsedLabel+'</div>'
+    + '</div>'
+    + '<div class="board-card-mid">'
+    +   '<div class="board-items-summary">'+summaryShort+'</div>'
+    +   '<div class="board-total">¥'+o.total.toLocaleString()+'</div>'
+    +   '<div class="board-pay-label">'+payLabel+'</div>'
+    + '</div>'
+    + '<div class="board-card-bottom">'
+    +   '<div class="board-time-label">'
+    +     '<div class="board-time-text">会計 '+timeStr+' / '+totalItems+'品</div>'
+    +   '</div>'
+    +   '<button class="board-serve-btn" id="serve-btn-'+o.id+'"'
+    +     ' onclick="markServed('+o.id+')" ontouchstart="">✅ 提供済み</button>'
+    + '</div>'
+    + '</div>';
+}
+
+/**
+ * markServed(orderId)
+ * 注文を提供済みにする
+ */
+function markServed(orderId){
+  const btn = document.getElementById('serve-btn-'+orderId);
+  if(btn && btn.disabled) return; /* 二重タップ防止 */
+  if(btn) btn.disabled = true;
+
+  const order = (state.orders||[]).find(function(o){ return o.id === orderId; });
+  if(!order) return;
+  if(order.fulfillmentStatus === 'served') return; /* 冪等 */
+
+  order.fulfillmentStatus = 'served';
+  order.servedAt = new Date().toISOString();
+  saveState();
+
+  /* 直前undo用 */
+  _lastServedOrderId = orderId;
+  showBoardUndoBar(order.orderNo);
+
+  /* カードをフェードで消す */
+  const card = document.getElementById('board-card-'+orderId);
+  if(card){
+    card.style.transition = 'opacity .3s, max-height .3s';
+    card.style.opacity = '0';
+    setTimeout(function(){
+      renderBoard();
+      showToast('✅ No.'+(order.orderNo||'—')+' 提供済みにしました');
+    }, 300);
+  } else {
+    renderBoard();
+    showToast('✅ No.'+(order.orderNo||'—')+' 提供済みにしました');
+  }
+}
+
+/**
+ * undoLastServed() — 直前の提供済みを取り消す
+ */
+function undoLastServed(){
+  if(!_lastServedOrderId) return;
+  const order = (state.orders||[]).find(function(o){ return o.id === _lastServedOrderId; });
+  if(order){
+    order.fulfillmentStatus = 'paid';
+    order.servedAt = null;
+    saveState();
+    renderBoard();
+    showToast('↩️ No.'+(order.orderNo||'—')+' 提供済みを取り消しました');
+  }
+  hideBoardUndoBar();
+  _lastServedOrderId = null;
+}
+
+function showBoardUndoBar(orderNo){
+  const bar = document.getElementById('board-undo-bar');
+  const msg = document.getElementById('board-undo-msg');
+  if(!bar) return;
+  if(msg) msg.textContent = 'No.'+(orderNo||'—')+' 提供済みを取り消せます';
+  bar.classList.add('show');
+  if(_boardUndoTimer) clearTimeout(_boardUndoTimer);
+  _boardUndoTimer = setTimeout(function(){ hideBoardUndoBar(); }, 10000);
+}
+
+function hideBoardUndoBar(){
+  const bar = document.getElementById('board-undo-bar');
+  if(bar) bar.classList.remove('show');
+  if(_boardUndoTimer){ clearTimeout(_boardUndoTimer); _boardUndoTimer=null; }
+}
+
+/**
+ * 経過時間の自動更新（10秒ごとにボードを再描画）
+ * レジページが表示中のみ実行
+ */
+let _boardTimerInterval = null;
+function startBoardTimer(){
+  if(_boardTimerInterval) return;
+  _boardTimerInterval = setInterval(function(){
+    const reg = document.getElementById('page-register');
+    if(reg && reg.classList.contains('active')){
+      renderBoard();
+    }
+  }, 10000);
+}
+/* ページ読み込み時に自動開始 */
+startBoardTimer();
 
 </script>
 </body>
