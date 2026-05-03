@@ -699,6 +699,36 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   box-shadow:0 3px 12px rgba(183,28,28,.35);
 }
 .end-of-day-btn:active{background:#7F0000;transform:scale(.98);}
+
+/* =====================================================
+   材料費UX改善 [UX]
+   ===================================================== */
+
+/* 余り入力アコーディオン */
+.remainder-toggle-btn{
+  width:100%;padding:8px 10px;margin-bottom:0;
+  background:var(--surface2);border:1.5px solid #FFE082;border-radius:6px;
+  font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:700;
+  color:#E65100;cursor:pointer;text-align:left;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.remainder-toggle-btn:active{background:#FFF3E0;}
+.remainder-body{overflow:hidden;}
+.remainder-body.closed{display:none;}
+
+/* 品目追加フローティングボタン */
+.mat-fab{
+  position:fixed;bottom:80px;right:18px;
+  width:54px;height:54px;border-radius:50%;
+  background:var(--primary);color:#fff;border:none;
+  font-size:26px;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 16px rgba(232,101,10,.45);
+  display:none;align-items:center;justify-content:center;
+  z-index:900;
+  -webkit-tap-highlight-color:transparent;
+}
+.mat-fab.show{display:flex;}
+.mat-fab:active{background:var(--primary-dark);transform:scale(.93);}
 </style>
 </head>
 <body>
@@ -986,21 +1016,47 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 
   <div class="settings-section"><div class="settings-section-header"><span>📅 イベント設定</span></div><div style="padding:14px;"><div class="form-row"><div class="form-group"><label class="form-label">イベント名</label><input class="form-input" id="evt-name" placeholder="例：春祭り2025"></div><div class="form-group"><label class="form-label">開催日</label><input class="form-input" type="date" id="evt-date"></div></div><div class="form-group" style="margin-bottom:10px;"><label class="form-label">場所</label><input class="form-input" id="evt-place" placeholder="例：〇〇公園"></div><button class="add-btn" onclick="saveEvent()">✓ イベントを保存</button>
       <div id="register-close-area" style="margin-top:10px;"></div>
-      <!-- [WEATHER-1] 天気情報セクション -->
+      <!-- [UX] 天気情報セクション（手動入力） -->
       <div class="weather-section" id="weather-settings-section">
         <div class="weather-section-title">
-          <span>🌤️ 当日天気情報</span>
-          <button class="weather-update-btn" id="weather-update-btn" onclick="updateCurrentEventWeather()">
-            🔄 天気を更新
-          </button>
+          <span>🌤️ 当日天気情報（手動入力）</span>
         </div>
-        <div class="weather-info-grid" id="weather-info-grid">
-          <div style="grid-column:1/-1;font-size:12px;color:var(--text3);text-align:center;padding:8px;">
-            イベントの場所・日付を設定して「天気を更新」を押してください
+        <div class="form-row" style="margin-bottom:8px;">
+          <div class="form-group">
+            <label class="form-label">天気</label>
+            <select class="form-select" id="wx-status-select" onchange="saveWeatherManual()">
+              <option value="">-- 選択 --</option>
+              <option value="快晴">☀️ 快晴</option>
+              <option value="晴れ">🌤️ 晴れ</option>
+              <option value="晴れ時々曇り">⛅ 晴れ時々曇り</option>
+              <option value="曇り">☁️ 曇り</option>
+              <option value="小雨">🌦️ 小雨</option>
+              <option value="雨">🌧️ 雨</option>
+              <option value="大雨">🌧️ 大雨</option>
+              <option value="雷雨">⛈️ 雷雨</option>
+              <option value="雪">🌨️ 雪</option>
+              <option value="霧">🌫️ 霧</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">降水確率 (%)</label>
+            <input class="form-input" type="number" id="wx-rain-input" min="0" max="100" placeholder="例：30"
+              oninput="saveWeatherManual()">
           </div>
         </div>
-        <div class="weather-fetched-at" id="weather-fetched-at"></div>
-        <div style="margin-top:8px;">
+        <div class="form-row" style="margin-bottom:8px;">
+          <div class="form-group">
+            <label class="form-label">最低気温 (℃)</label>
+            <input class="form-input" type="number" id="wx-tempmin-input" placeholder="例：18"
+              oninput="saveWeatherManual()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">最高気温 (℃)</label>
+            <input class="form-input" type="number" id="wx-tempmax-input" placeholder="例：28"
+              oninput="saveWeatherManual()">
+          </div>
+        </div>
+        <div style="margin-bottom:8px;">
           <label class="form-label" style="font-size:11px;color:#1565C0;">📝 天気メモ（当日の状況など）</label>
           <textarea class="weather-note-input" id="weather-note-input" rows="2"
             placeholder="例：風が強く体感寒い、小雨で客足鈍め、真夏日で飲み物売れた など"
@@ -1125,6 +1181,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   <span id="undo-msg">決済を取り消せます</span>
   <button class="undo-btn" onclick="undoLastCheckout()">取消</button>
 </div>
+<!-- [UX] 材料費 品目追加フローティングボタン -->
+<button class="mat-fab" id="mat-fab" onclick="addMaterialItem()" title="品目追加">＋</button>
 <div class="toast" id="toast"></div>
 <script>
 const DB_KEY='karaage_v6';
@@ -1221,7 +1279,22 @@ function migrateState(){
 }
 
 function seedDefaultData(){if(!state.menuItems||!state.menuItems.length){state.menuItems=[{id:1,emoji:'🍗',name:'唐揚げ 3個',cat:'唐揚げ',price:400,cost:110,isSet:false},{id:2,emoji:'🍗',name:'唐揚げ 5個',cat:'唐揚げ',price:600,cost:170,isSet:false},{id:3,emoji:'🍱',name:'唐揚げ弁当',cat:'セット',price:800,cost:260,isSet:true},{id:4,emoji:'🍺',name:'ビール',cat:'ドリンク',price:500,cost:200,isSet:false},{id:5,emoji:'🥤',name:'ソフトドリンク',cat:'ドリンク',price:200,cost:60,isSet:false},{id:6,emoji:'🍟',name:'ポテト S',cat:'サイド',price:300,cost:80,isSet:false},{id:7,emoji:'🌶️',name:'激辛唐揚げ 3個',cat:'唐揚げ',price:450,cost:120,isSet:false}];}if(!state.events||!state.events.length){state.events=[{id:1,name:'春まつり2025',date:new Date().toISOString().slice(0,10),place:'サンプル公園'}];state.currentEventId=1;}if(!Array.isArray(state.expenses))state.expenses=[];if(!state.inventory)state.inventory={};if(!state.staffMembers)state.staffMembers=[];if(!state.materialItems)state.materialItems={};saveState();}
-function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');btn.classList.add('active');document.querySelector('.page-wrap').scrollTop=0;if(name==='register')renderRegister();if(name==='inventory')renderInventory();if(name==='material')renderMaterial();if(name==='expense')renderExpenses();if(name==='report')renderReport();if(name==='settings')renderSettings();}
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  document.querySelector('.page-wrap').scrollTop=0;
+  /* [UX] 材料ページのみFABを表示 */
+  const fab=document.getElementById('mat-fab');
+  if(fab)fab.classList.toggle('show',name==='material');
+  if(name==='register')renderRegister();
+  if(name==='inventory')renderInventory();
+  if(name==='material')renderMaterial();
+  if(name==='expense')renderExpenses();
+  if(name==='report')renderReport();
+  if(name==='settings')renderSettings();
+}
 let currentCat='全て';
 function renderRegister(){renderCatFilter();renderMenuGrid();renderCart();updateChangeArea();}
 function renderCatFilter(){const cats=['全て',...state.categories];document.getElementById('cat-filter').innerHTML=cats.map(c=>`<div class="cat-chip${c===currentCat?' active':''}" onclick="filterCat('${c}')">${c}</div>`).join('');}
@@ -1488,8 +1561,12 @@ function renderMaterial(){
         </span>
       </div>
       <div class="remainder-area">
-        <div class="remainder-title">📦 余り入力</div>
-        <div class="remainder-fields">
+        <button class="remainder-toggle-btn" onclick="toggleRemainder(${item.id},this)">
+          <span>📦 余り入力（営業終了後）</span>
+          <span class="detail-toggle-chevron" id="rem-chev-${item.id}">▼</span>
+        </button>
+        <div class="remainder-body closed" id="rem-body-${item.id}">
+        <div class="remainder-fields" style="margin-top:8px;">
           <div class="remainder-field">
             <label class="mat-label" style="color:#E65100;">🗑️ 廃棄(<span class="mat-unit-label">${item.unit}</span>)</label>
             <input class="remainder-input" style="border-color:#FFCC80;" type="number"
@@ -1505,6 +1582,7 @@ function renderMaterial(){
               ${isAdminPinRequired()?"disabled style=\"opacity:.55;cursor:not-allowed;\"":""}>
           </div>
         </div>
+        </div><!-- /remainder-body -->
         <div class="mat-used-box" style="margin-bottom:8px;">
           <span class="mat-used-label">✅ 実使用量</span>
           <span class="mat-used-val-text">${c.used.toFixed(2)}${item.unit}</span>
@@ -2906,45 +2984,22 @@ function saveWeatherNote(val){
   saveState();
 }
 
-/** 設定画面の天気UI更新（状態別表示） */
+/** 設定画面の天気UI更新（手動入力版） [UX] */
 function renderWeatherSettingsUI(){
-  const grid      = document.getElementById('weather-info-grid');
-  const fetchedEl = document.getElementById('weather-fetched-at');
-  const noteInput = document.getElementById('weather-note-input');
-  if(!grid) return;
-
   const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
   const w   = evt && evt.weather;
 
-  if(!w || !w.status){
-    grid.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text3);text-align:center;padding:8px;">場所・日付を設定して「天気を更新」を押してください</div>';
-    if(fetchedEl) fetchedEl.textContent = '';
-    if(noteInput) noteInput.value = '';
-    return;
-  }
+  const statusSel = document.getElementById('wx-status-select');
+  const rainInp   = document.getElementById('wx-rain-input');
+  const tminInp   = document.getElementById('wx-tempmin-input');
+  const tmaxInp   = document.getElementById('wx-tempmax-input');
+  const noteInp   = document.getElementById('weather-note-input');
 
-  const staleBanner = w._stale
-    ? '<div style="grid-column:1/-1;background:#FFF3E0;border:1px solid #FFB74D;border-radius:6px;padding:7px 10px;font-size:11px;color:#E65100;margin-bottom:6px;">⚠️ 場所または日付が変更されました。「天気を更新」で再取得してください。</div>'
-    : '';
-  const items = [
-    {label:'天気',    val: (w.icon||'') + ' ' + (w.status||'')},
-    {label:'最高気温', val: w.tempMax != null ? (w.tempMax + '℃') : '—'},
-    {label:'最低気温', val: w.tempMin != null ? (w.tempMin + '℃') : '—'},
-    {label:'降水確率', val: w.rainProb != null ? (w.rainProb + '%') : '—'}
-  ];
-  grid.innerHTML = staleBanner + items.map(function(x){
-    return '<div class="weather-info-item">'
-      + '<div class="weather-info-label">' + x.label + '</div>'
-      + '<div class="weather-info-val">' + x.val + '</div>'
-      + '</div>';
-  }).join('');
-
-  if(fetchedEl){
-    const fa  = w.fetchedAt ? new Date(w.fetchedAt).toLocaleString('ja-JP') : '';
-    const src2 = w.source || '';
-    fetchedEl.textContent = fa ? ('最終更新: ' + fa + (src2 ? ' (' + src2 + ')' : '')) : '';
-  }
-  if(noteInput) noteInput.value = w.note || '';
+  if(statusSel) statusSel.value = (w && w.status) || '';
+  if(rainInp)   rainInp.value   = (w && w.rainProb != null) ? w.rainProb : '';
+  if(tminInp)   tminInp.value   = (w && w.tempMin != null)  ? w.tempMin  : '';
+  if(tmaxInp)   tmaxInp.value   = (w && w.tempMax != null)  ? w.tempMax  : '';
+  if(noteInp)   noteInp.value   = (w && w.note)             ? w.note     : '';
 }
 
 /** レポート画面の天気カード（補助分析文言付き） */
@@ -3175,6 +3230,54 @@ function endOfDay(){
   );
 }
 
+
+/** 天気フォームの値を event.weather に保存 [UX] */
+function saveWeatherManual(){
+  const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
+  if(!evt) return;
+  if(!evt.weather) evt.weather = {status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'',note:'',_stale:false};
+
+  const statusSel = document.getElementById('wx-status-select');
+  const rainInp   = document.getElementById('wx-rain-input');
+  const tminInp   = document.getElementById('wx-tempmin-input');
+  const tmaxInp   = document.getElementById('wx-tempmax-input');
+
+  /* 天気アイコンマッピング（手動版） */
+  const STATUS_ICON = {
+    '快晴':'☀️','晴れ':'🌤️','晴れ時々曇り':'⛅','曇り':'☁️',
+    '小雨':'🌦️','雨':'🌧️','大雨':'🌧️','雷雨':'⛈️','雪':'🌨️','霧':'🌫️'
+  };
+  const status = statusSel ? statusSel.value : '';
+  evt.weather.status   = status;
+  evt.weather.icon     = STATUS_ICON[status] || '';
+  evt.weather.rainProb = rainInp && rainInp.value !== '' ? parseInt(rainInp.value) : null;
+  evt.weather.tempMin  = tminInp && tminInp.value !== '' ? parseInt(tminInp.value) : null;
+  evt.weather.tempMax  = tmaxInp && tmaxInp.value !== '' ? parseInt(tmaxInp.value) : null;
+  evt.weather.source   = '手動入力';
+  evt.weather.fetchedAt= new Date().toISOString();
+  evt.weather._stale   = false;
+  saveState();
+  updateEventName(); /* ヘッダーバッジを即時更新 */
+}
+
+/** 余り入力エリアの開閉 [UX] */
+function toggleRemainder(id, btn){
+  var body  = document.getElementById('rem-body-' + id);
+  var chev  = document.getElementById('rem-chev-' + id);
+  if(!body) return;
+  var closed = body.classList.contains('closed');
+  if(closed){
+    body.classList.remove('closed');
+    if(chev) chev.classList.add('open');
+    if(btn)  btn.style.borderBottomLeftRadius = '0';
+    if(btn)  btn.style.borderBottomRightRadius = '0';
+  } else {
+    body.classList.add('closed');
+    if(chev) chev.classList.remove('open');
+    if(btn)  btn.style.borderBottomLeftRadius = '';
+    if(btn)  btn.style.borderBottomRightRadius = '';
+  }
+}
 </script>
 </body>
 </html>
