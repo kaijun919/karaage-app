@@ -1065,8 +1065,7 @@ function renderMaterial(){
       if(matList&&matList.parentElement)matList.parentElement.insertBefore(lockNotice,matList);
       else if(matPage)matPage.insertBefore(lockNotice,matPage.firstChild);
     }
-    lockNotice.innerHTML='🔒 管理ロック中 — 材料の編集・追加・削除にはPIN解除が必要です。'+
-      '<button class="mat-lock-notice-btn" onclick="requireAdminPin('材料を編集','材料を編集するには管理PINが必要です。',function(){renderMaterial();})">🔓 解除</button>';
+    lockNotice.innerHTML=`🔒 管理ロック中 — 材料の編集・追加・削除にはPIN解除が必要です。<button class="mat-lock-notice-btn" onclick="requireAdminPin(&quot;材料を編集&quot;,&quot;材料を編集するには管理PINが必要です。&quot;,function(){renderMaterial();})">🔓 解除</button>`;
   } else {
     if(lockNotice)lockNotice.remove();
   }
