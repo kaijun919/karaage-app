@@ -1316,6 +1316,38 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 <!-- [PIN-1] 管理PIN認証モーダル -->
 
 
+<!-- 会計取消理由選択モーダル -->
+<div class="modal-overlay" id="cancel-reason-modal">
+  <div class="modal" style="max-width:400px;margin:auto;border-radius:var(--radius);">
+    <div class="modal-title">↩️ 取消理由を選択</div>
+    <div id="reason-options">
+      <div class="reason-option selected" onclick="selectReason('打ち間違い',this)">
+        <div class="reason-radio checked" id="rr0"></div>
+        <div class="reason-label">打ち間違い</div>
+      </div>
+      <div class="reason-option" onclick="selectReason('返品',this)">
+        <div class="reason-radio" id="rr1"></div>
+        <div class="reason-label">返品</div>
+      </div>
+      <div class="reason-option" onclick="selectReason('重複入力',this)">
+        <div class="reason-radio" id="rr2"></div>
+        <div class="reason-label">重複入力</div>
+      </div>
+      <div class="reason-option" onclick="selectReason('other',this)">
+        <div class="reason-radio" id="rr3"></div>
+        <div class="reason-label">その他</div>
+      </div>
+    </div>
+    <div id="reason-other-wrap" style="display:none;margin-top:8px;">
+      <input class="form-input" id="reason-other-text" placeholder="理由を入力してください">
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" onclick="closeModal('cancel-reason-modal')">キャンセル</button>
+      <button class="modal-btn primary" onclick="confirmCancelReason()">次へ→</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <script>
 const DB_KEY='karaage_v6';
@@ -3944,6 +3976,69 @@ function renderRegisterCloseArea(){
     el.innerHTML = '<button class="add-btn" style="background:#B71C1C;box-shadow:none;margin-top:0;"'
       + ' onclick="openRegisterCloseModal()">🏁 レジ締めを行う</button>';
   }
+}
+
+
+/* =====================================================
+   会計取消フロー（復元）
+   ===================================================== */
+var _selectedReason = '打ち間違い';
+
+function startUndoFlow(){
+  if(!_lastOrder){ showToast('⚠️ 取り消せる会計がありません'); return; }
+  _selectedReason = '打ち間違い';
+  /* 選択肢をリセット */
+  document.querySelectorAll('.reason-option').forEach(function(el,i){
+    el.classList.toggle('selected', i===0);
+    el.querySelector('.reason-radio').className = 'reason-radio' + (i===0?' checked':'');
+  });
+  var otherWrap = document.getElementById('reason-other-wrap');
+  var otherText = document.getElementById('reason-other-text');
+  if(otherWrap) otherWrap.style.display = 'none';
+  if(otherText) otherText.value = '';
+  document.getElementById('cancel-reason-modal').classList.add('open');
+}
+
+function selectReason(val, el){
+  _selectedReason = val;
+  document.querySelectorAll('.reason-option').forEach(function(o){
+    o.classList.remove('selected');
+    o.querySelector('.reason-radio').className = 'reason-radio';
+  });
+  el.classList.add('selected');
+  el.querySelector('.reason-radio').className = 'reason-radio checked';
+  var wrap = document.getElementById('reason-other-wrap');
+  if(wrap) wrap.style.display = val==='other' ? 'block' : 'none';
+}
+
+function confirmCancelReason(){
+  var reason = _selectedReason;
+  if(reason === 'other'){
+    var txt = document.getElementById('reason-other-text');
+    reason = txt ? txt.value.trim() : '';
+    if(!reason){ showToast('⚠️ 理由を入力してください'); return; }
+  }
+  closeModal('cancel-reason-modal');
+  /* PIN確認→取消実行 */
+  requireAdminPin('会計取消', '会計を取り消すには管理PINが必要です。', function(){
+    if(!_lastOrder) return;
+    var order = _lastOrder;
+    state.orders = state.orders.filter(function(o){ return o.id !== order.id; });
+    order.items.forEach(function(i){
+      if(state.inventory[i.id]){
+        state.inventory[i.id].sold = Math.max(0, (state.inventory[i.id].sold||0) - i.qty);
+      }
+    });
+    saveState();
+    clearTimeout(_undoTimer);
+    document.getElementById('undo-bar').classList.remove('show');
+    _lastOrder = null;
+    var undoBtn = document.getElementById('undo-checkout-btn');
+    if(undoBtn){ undoBtn.style.display='none'; undoBtn.textContent='↩️ 直前取消'; }
+    showToast('↩️ 会計を取り消しました');
+    renderBoard();
+    renderMenuGrid();
+  });
 }
 
 </script>
