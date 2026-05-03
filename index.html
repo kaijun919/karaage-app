@@ -6,224 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="屋外販売管理">
 <title>🍗 屋外販売管理</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
-/* =====================================================
-   管理PIN helper 関数群 [PIN-1]
-   ===================================================== */
-
-/**
- * PIN保護が必要かどうか判定
- * @returns {boolean} true=PIN入力が必要
- */
-function isAdminPinRequired(){
-  if(!state.adminPinEnabled||!state.adminPin)return false; /* PIN未設定は保護なし */
-  if(adminSessionUnlocked)return false;                    /* セッション解除中は通過 */
-  return true;
-}
-
-/**
- * PIN入力検証
- * @param {string} inputPin - ユーザーが入力したPIN
- * @returns {boolean} 一致するかどうか
- * 注: 現在は平文比較。将来はサーバーサイドハッシュ化 or Web Crypto APIを推奨。
- */
-function verifyAdminPin(inputPin){
-  return String(inputPin)===String(state.adminPin);
-}
-
-/**
- * 管理PINを要求し、成功したら onSuccess を実行する
- * PIN未設定 or セッション解除済みなら即実行
- * @param {string} title   - モーダルタイトル
- * @param {string} message - モーダル説明文
- * @param {Function} onSuccess - 認証成功後に実行するコールバック
- * @param {Function} [onCancel] - キャンセル時のコールバック（省略可）
- */
-function requireAdminPin(title, message, onSuccess, onCancel){
-  if(!isAdminPinRequired()){
-    onSuccess();
-    return;
-  }
-  openAdminPinModal(title, message, onSuccess, onCancel);
-}
-
-/**
- * 管理PINモーダルを開く
- */
-function openAdminPinModal(title, message, onSuccess, onCancel){
-  _adminPinCallback={onSuccess, onCancel:onCancel||null};
-  document.getElementById('admin-pin-modal-title').textContent=title||'🔐 管理PIN確認';
-  document.getElementById('admin-pin-modal-msg').textContent=message||'この操作には管理PINが必要です。';
-  document.getElementById('admin-pin-modal-input').value='';
-  document.getElementById('admin-pin-modal-err').textContent='';
-  document.getElementById('admin-pin-modal').classList.add('open');
-  setTimeout(()=>{
-    const inp=document.getElementById('admin-pin-modal-input');
-    if(inp)inp.focus();
-  },150);
-}
-
-function adminPinModalOk(){
-  const inp=document.getElementById('admin-pin-modal-input');
-  const errEl=document.getElementById('admin-pin-modal-err');
-  const val=(inp.value||'').trim();
-  if(!val){errEl.textContent='PINを入力してください';return;}
-  if(verifyAdminPin(val)){
-    /* 認証成功 */
-    adminSessionUnlocked=true;
-    document.getElementById('admin-pin-modal').classList.remove('open');
-    inp.value='';
-    errEl.textContent='';
-    renderPinSettingsUI(); /* セッションバー更新 */
-    if(_adminPinCallback&&_adminPinCallback.onSuccess){
-      _adminPinCallback.onSuccess();
-    }
-    _adminPinCallback=null;
-  } else {
-    /* 認証失敗 */
-    errEl.textContent='PINが違います。もう一度入力してください。';
-    inp.value='';
-    inp.focus();
-  }
-}
-
-function adminPinModalCancel(){
-  document.getElementById('admin-pin-modal').classList.remove('open');
-  document.getElementById('admin-pin-modal-input').value='';
-  document.getElementById('admin-pin-modal-err').textContent='';
-  if(_adminPinCallback&&_adminPinCallback.onCancel){
-    _adminPinCallback.onCancel();
-  }
-  _adminPinCallback=null;
-}
-
-/* セッションを再ロックする */
-function relockAdminSession(){
-  adminSessionUnlocked=false;
-  renderPinSettingsUI();
-  showToast('🔒 管理ロックを再設定しました');
-}
-
-/* =====================================================
-   管理PIN設定UI [PIN-1]
-   ===================================================== */
-
-/** 設定画面のPIN UIを現在のstateに合わせて更新 [PIN-2] 状態詳細表示対応 */
-function renderPinSettingsUI(){
-  const pinSet=!!(state.adminPinEnabled&&state.adminPin);
-  const sessionOk=adminSessionUnlocked;
-
-  /* バッジ更新 */
-  const badge=document.getElementById('admin-pin-status-badge');
-  if(badge){
-    badge.textContent=pinSet?'設定済み':'未設定';
-    badge.style.background=pinSet?'rgba(255,255,255,.3)':'rgba(255,255,255,.15)';
-  }
-
-  /* チェックボックス */
-  const toggle=document.getElementById('pin-enabled-toggle');
-  if(toggle)toggle.checked=pinSet;
-
-  /* PIN入力エリアのラベル切替 */
-  const area=document.getElementById('pin-input-area');
-  if(area){
-    const labelEls=area.querySelectorAll('.form-label');
-    if(labelEls[0])labelEls[0].textContent=pinSet?'新しいPIN（変更する場合のみ入力）':'新しいPIN（4〜6桁の数字）';
-  }
-
-  /* セッションバー: 詳細ステータス表示 */
-  const bar=document.getElementById('admin-pin-session-bar');
-  if(bar){
-    if(pinSet){
-      if(sessionOk){
-        bar.innerHTML=`<div class="pin-session-bar">
-          <div>
-            <div style="font-size:12px;font-weight:700;">管理PIN：有効 ／ 管理ロック：<span style="color:#1B5E20;">🔓 解除中</span></div>
-            <div style="font-size:10px;font-weight:400;margin-top:2px;color:#388E3C;">設定変更・編集・削除が可能な状態です</div>
-          </div>
-          <button class="pin-relock-btn" onclick="relockAdminSession()">再ロック</button>
-        </div>`;
-      } else {
-        bar.innerHTML=`<div class="pin-session-bar" style="background:#FFF3E0;border-color:#FFCC80;">
-          <div>
-            <div style="font-size:12px;font-weight:700;color:#BF360C;">管理PIN：有効 ／ 管理ロック：🔒 ロック中</div>
-            <div style="font-size:10px;font-weight:400;margin-top:2px;color:#E65100;">管理操作にはPINの入力が必要です</div>
-          </div>
-          <button class="pin-relock-btn" style="border-color:#FFCC80;color:#E65100;"
-            onclick="requireAdminPin('管理ロックを解除','管理PINを入力してください。',()=>renderPinSettingsUI())">解除する</button>
-        </div>`;
-      }
-    } else {
-      bar.innerHTML=`<div style="padding:8px 14px;font-size:11px;color:var(--text3);">管理PIN：未設定（全操作がPINなしで実行されます）</div>`;
-    }
-  }
-}
-
-/** トグル変更時の処理 */
-function onPinToggleChange(checked){
-  if(!checked){
-    /* 無効化: PIN設定済みなら現在のPINで認証してから無効化 */
-    if(state.adminPinEnabled&&state.adminPin){
-      requireAdminPin(
-        '管理PIN保護を無効にする',
-        '現在のPINを入力して保護を解除してください。',
-        ()=>{
-          state.adminPinEnabled=false;
-          state.adminPin='';
-          adminSessionUnlocked=false;
-          saveState();
-          renderPinSettingsUI();
-          showToast('🔓 管理PIN保護を無効にしました');
-        },
-        ()=>{
-          /* キャンセル: チェックボックスを元に戻す */
-          const tog=document.getElementById('pin-enabled-toggle');
-          if(tog)tog.checked=true;
-        }
-      );
-    } else {
-      /* 未設定状態なら何もしない */
-      const tog=document.getElementById('pin-enabled-toggle');
-      if(tog)tog.checked=false;
-    }
-  }
-  /* checkedになった場合は savePinSettings() で保存する */
-}
-
-/** PIN保存ボタン押下 */
-function savePinSettings(){
-  const newPin=(document.getElementById('pin-new-input').value||'').trim();
-  const confirmPin=(document.getElementById('pin-confirm-input').value||'').trim();
-
-  /* バリデーション */
-  if(!newPin){showToast('⚠️ PINを入力してください');return;}
-  if(!/^\d{4,6}$/.test(newPin)){showToast('⚠️ PINは4〜6桁の数字で入力してください');return;}
-  if(newPin!==confirmPin){showToast('⚠️ PINが一致しません。確認入力を確認してください');return;}
-
-  /* 既存PINがある場合は変更前にPIN認証 */
-  if(state.adminPinEnabled&&state.adminPin){
-    requireAdminPin(
-      '管理PIN変更の確認',
-      '現在のPINを入力してから新しいPINを保存します。',
-      ()=>_doSavePin(newPin)
-    );
-  } else {
-    _doSavePin(newPin);
-  }
-}
-
-function _doSavePin(newPin){
-  state.adminPin=newPin;
-  state.adminPinEnabled=true;
-  adminSessionUnlocked=true; /* 設定直後はセッション解除状態にする */
-  saveState();
-  document.getElementById('pin-new-input').value='';
-  document.getElementById('pin-confirm-input').value='';
-  renderPinSettingsUI();
-  showToast('✅ 管理PINを保存しました');
-}
-
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Dela+Gothic+One&display=swap');
 :root{
@@ -912,7 +695,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
     </div>
     <div id="admin-pin-session-bar"></div>
     <div class="pin-settings-body">
-      <div class="pin-desc">設定変更・編集・削除・バックアップ復元などの管理操作をPINで保護します。<br>PINは4〜6桁の数字で設定してください。</div>
+      <div class="pin-desc">メニュー・スタッフ・カテゴリの編集/削除、バックアップ復元などをPINで保護します。<br>PINは<strong>4〜6桁の数字</strong>で設定してください。販売レジ画面・閲覧操作には影響しません。</div>
       <div class="pin-toggle-row">
         <label class="pin-toggle-label" for="pin-enabled-toggle">管理PIN保護を使う</label>
         <input type="checkbox" class="pin-toggle-switch" id="pin-enabled-toggle" onchange="onPinToggleChange(this.checked)">
@@ -1068,7 +851,8 @@ let state={
 /* [PIN-1] セッション変数: 永続保存しない・ページ再読み込みでリセット */
 let adminSessionUnlocked=false;
 let _adminPinCallback=null; /* PIN認証成功後のコールバック退避 */
-function loadState(){try{const s=localStorage.getItem(DB_KEY);if(s){const p=JSON.parse(s);state={...state,...p};if(!state.categories||!state.categories.length)state.categories=[...DEFAULT_CATS];if(!state.accountItems||!state.accountItems.length)state.accountItems=[...DEFAULT_ACCOUNTS];if(!state.staffMembers)state.staffMembers=[];if(!state.materialItems)state.materialItems={};}}catch(e){}}
+/* [PIN-3] データ破損フォールバック強化 */
+function loadState(){try{const s=localStorage.getItem(DB_KEY);if(s){let p;try{p=JSON.parse(s);}catch(je){console.error('JSON破損',je);showToast('⚠️ 保存データ破損。初期状態で起動します。');return;}if(typeof p==='object'&&p!==null){state={...state,...p};}if(!state.categories||!state.categories.length)state.categories=[...DEFAULT_CATS];if(!state.accountItems||!state.accountItems.length)state.accountItems=[...DEFAULT_ACCOUNTS];if(!state.staffMembers)state.staffMembers=[];if(!state.materialItems)state.materialItems={};}}catch(e){}}
 function saveState(){try{localStorage.setItem(DB_KEY,JSON.stringify(state));}catch(e){}}
 let cart=[],payMethod='cash',receivedStr='',tenkeyOpen=false,rentType='fixed';
 /* [P1] データマイグレーション: imageData フィールド補完 */
@@ -1132,7 +916,12 @@ function checkout(){if(!cart.length)return;
     ()=>_doCheckout()
   );
 }
-function _doCheckout(){if(!cart.length)return;/* [P1] checkout本体（変更なし） */const total=cart.reduce((s,c)=>s+c.price*c.qty,0);if(payMethod==='cash'){const received=parseInt(receivedStr)||0;if(received>0&&received<total){showToast('⚠️ 預かり金額が不足しています');return;}}const order={id:Date.now(),eventId:state.currentEventId,time:new Date().toISOString(),payMethod,receivedAmount:payMethod==='cash'?(parseInt(receivedStr)||0):null,items:cart.map(c=>({...c})),total};if(!state.orders)state.orders=[];state.orders.push(order);cart.forEach(c=>{if(!state.inventory[c.id])state.inventory[c.id]={stocked:0,wasted:0,sold:0};state.inventory[c.id].sold=(state.inventory[c.id].sold||0)+c.qty;});saveState();const recv=payMethod==='cash'&&order.receivedAmount?order.receivedAmount:0;const changeMsg=recv>0?` おつり ¥${(recv-total).toLocaleString()}`:'';showToast(`✅ 決済完了 ¥${total.toLocaleString()}（${PAY_LABELS[payMethod]}）${changeMsg}`);showUndoBar(order);cart=[];receivedStr='';tenkeyOpen=false;document.getElementById('tenkey-wrap').style.display='none';updateReceivedDisp();renderMenuGrid();renderCart();calcChange();renderCashPresets();}
+let _checkoutInProgress=false;
+function _doCheckout(){
+  if(!cart.length)return;
+  if(_checkoutInProgress)return; /* [PIN-3] 連打防止 */
+  _checkoutInProgress=true;
+  setTimeout(()=>{_checkoutInProgress=false;},1500);const total=cart.reduce((s,c)=>s+c.price*c.qty,0);if(payMethod==='cash'){const received=parseInt(receivedStr)||0;if(received>0&&received<total){showToast('⚠️ 預かり金額が不足しています');return;}}const order={id:Date.now(),eventId:state.currentEventId,time:new Date().toISOString(),payMethod,receivedAmount:payMethod==='cash'?(parseInt(receivedStr)||0):null,items:cart.map(c=>({...c})),total};if(!state.orders)state.orders=[];state.orders.push(order);cart.forEach(c=>{if(!state.inventory[c.id])state.inventory[c.id]={stocked:0,wasted:0,sold:0};state.inventory[c.id].sold=(state.inventory[c.id].sold||0)+c.qty;});saveState();const recv=payMethod==='cash'&&order.receivedAmount?order.receivedAmount:0;const changeMsg=recv>0?` おつり ¥${(recv-total).toLocaleString()}`:'';showToast(`✅ 決済完了 ¥${total.toLocaleString()}（${PAY_LABELS[payMethod]}）${changeMsg}`);showUndoBar(order);cart=[];receivedStr='';tenkeyOpen=false;document.getElementById('tenkey-wrap').style.display='none';updateReceivedDisp();renderMenuGrid();renderCart();calcChange();renderCashPresets();}
 function getInventory(itemId){const inv=state.inventory[itemId]||{};return{stocked:inv.stocked||0,wasted:inv.wasted||0,sold:inv.sold||0};}
 function renderInventory(){/* [P2] 在庫画面: メニュー未登録時のガイド */
   if(!state.menuItems||!state.menuItems.length){
@@ -1214,7 +1003,7 @@ function renderMaterial(){
       if(addBtn)matPage.insertBefore(lockNotice,addBtn.parentElement);
     }
     lockNotice.innerHTML='🔒 管理ロック中です。材料の編集・追加・削除にはPIN解除が必要です。'+
-      '<button class="mat-lock-notice-btn" onclick="requireAdminPin('材料を編集','材料を編集するには管理PINが必要です。',()=>renderMaterial())">🔓 解除する</button>';
+      '<button class="mat-lock-notice-btn" onclick="requireAdminPin('材料を編集','材料を編集するには管理PINが必要です。',function(){renderMaterial();})">🔓 解除する</button>';
   } else {
     if(lockNotice)lockNotice.remove();
   }
@@ -1765,6 +1554,7 @@ function selectEvent(id){
     else if(pageId==='page-inventory')renderInventory();
     else if(pageId==='page-expense')renderExpenses();
     else if(pageId==='page-register')renderRegister();
+    if(pageId==='page-settings')renderPinSettingsUI();/* [PIN-3] */
   }
 }
 /* [PIN-2] saveEvent: PIN保護 */
@@ -1967,6 +1757,8 @@ function restoreData(input){
           renderRegister();
           updateBackupLastInfo();
           updateChecklist();
+          adminSessionUnlocked=false;/* [PIN-3] 復元後は必ずロック */
+          renderPinSettingsUI();/* [PIN-3] PIN状態更新 */
           showToast('📥 復元しました');
         }catch(err){
           showToast('⚠️ ファイルの読み込みに失敗しました: '+err.message);
@@ -2287,6 +2079,243 @@ function getMatAllocPreview(item, orders, menuItems){
   };
 }
 
+
+
+/* =====================================================
+   管理PIN 完全版 [PIN-3 FIX]
+   ===================================================== */
+
+/* セッション変数（ページ読み込みでリセット） */
+/* adminSessionUnlocked / _adminPinCallback は state定義直後で初期化済み */
+
+/**
+ * PIN保護が必要か判定
+ * adminPinEnabled=false または adminPin未設定 → 常に false（保護なし）
+ */
+function isAdminPinRequired(){
+  if(!state.adminPinEnabled || !state.adminPin) return false;
+  if(adminSessionUnlocked) return false;
+  return true;
+}
+
+/**
+ * PIN照合（平文比較。将来: Web Crypto API で SHA-256 ハッシュ化推奨）
+ */
+function verifyAdminPin(inputPin){
+  return String(inputPin).trim() === String(state.adminPin).trim();
+}
+
+/**
+ * requireAdminPin: PIN未設定/解除済みなら即 onSuccess、
+ * そうでなければモーダル表示
+ */
+function requireAdminPin(title, message, onSuccess, onCancel){
+  if(typeof onSuccess !== 'function') return; /* 安全ガード */
+  if(!isAdminPinRequired()){
+    onSuccess();
+    return;
+  }
+  openAdminPinModal(title || '管理PIN確認', message || 'この操作には管理PINが必要です。', onSuccess, onCancel);
+}
+
+/**
+ * 管理PINモーダルを開く
+ */
+function openAdminPinModal(title, message, onSuccess, onCancel){
+  _adminPinCallback = { onSuccess: onSuccess, onCancel: onCancel || null };
+  const titleEl = document.getElementById('admin-pin-modal-title');
+  const msgEl   = document.getElementById('admin-pin-modal-msg');
+  const inp     = document.getElementById('admin-pin-modal-input');
+  const errEl   = document.getElementById('admin-pin-modal-err');
+  if(titleEl) titleEl.textContent = title;
+  if(msgEl)   msgEl.textContent   = message;
+  if(inp)     { inp.value = ''; }
+  if(errEl)   errEl.textContent   = '';
+  document.getElementById('admin-pin-modal').classList.add('open');
+  setTimeout(() => { const i = document.getElementById('admin-pin-modal-input'); if(i) i.focus(); }, 180);
+}
+
+/**
+ * モーダルのOKボタン処理
+ */
+function adminPinModalOk(){
+  const inp   = document.getElementById('admin-pin-modal-input');
+  const errEl = document.getElementById('admin-pin-modal-err');
+  const val   = (inp ? inp.value : '').trim();
+
+  /* バリデーション */
+  if(!val){          errEl.textContent = 'PINを入力してください'; return; }
+  if(!/^\d+$/.test(val)){ errEl.textContent = '数字のみ入力してください'; inp.value=''; inp.focus(); return; }
+  if(val.length < 4){ errEl.textContent = '4桁以上で入力してください'; inp.value=''; inp.focus(); return; }
+  if(val.length > 6){ errEl.textContent = '6桁以下で入力してください'; inp.value=''; inp.focus(); return; }
+
+  if(verifyAdminPin(val)){
+    /* 認証成功 */
+    adminSessionUnlocked = true;
+    document.getElementById('admin-pin-modal').classList.remove('open');
+    if(inp)   inp.value = '';
+    if(errEl) errEl.textContent = '';
+    showToast('🔓 管理ロックを解除しました');
+    /* renderSettings が開いていれば更新 */
+    const activePage = document.querySelector('.page.active');
+    if(activePage && activePage.id === 'page-settings') renderPinSettingsUI();
+    /* コールバック実行 */
+    const cb = _adminPinCallback;
+    _adminPinCallback = null;
+    if(cb && typeof cb.onSuccess === 'function') cb.onSuccess();
+  } else {
+    /* 認証失敗 */
+    errEl.textContent = 'PINが違います。もう一度入力してください。';
+    if(inp){ inp.value = ''; inp.focus(); }
+  }
+}
+
+/**
+ * モーダルのキャンセルボタン処理
+ */
+function adminPinModalCancel(){
+  document.getElementById('admin-pin-modal').classList.remove('open');
+  const inp   = document.getElementById('admin-pin-modal-input');
+  const errEl = document.getElementById('admin-pin-modal-err');
+  if(inp)   inp.value = '';
+  if(errEl) errEl.textContent = '';
+  const cb = _adminPinCallback;
+  _adminPinCallback = null;
+  if(cb && typeof cb.onCancel === 'function') cb.onCancel();
+}
+
+/**
+ * 手動再ロック
+ */
+function relockAdminSession(){
+  adminSessionUnlocked = false;
+  /* 材料ページが開いていれば再描画してdisabledを反映 */
+  const activePage = document.querySelector('.page.active');
+  if(activePage && activePage.id === 'page-material') renderMaterial();
+  if(activePage && activePage.id === 'page-settings') renderPinSettingsUI();
+  showToast('🔒 管理ロックを再設定しました');
+}
+
+/* =====================================================
+   管理PIN 設定UI [PIN-3 FIX]
+   ===================================================== */
+
+/**
+ * 設定画面のPIN状態を現在のstateに合わせて更新
+ */
+function renderPinSettingsUI(){
+  const pinSet    = !!(state.adminPinEnabled && state.adminPin);
+  const sessionOk = adminSessionUnlocked;
+
+  /* バッジ */
+  const badge = document.getElementById('admin-pin-status-badge');
+  if(badge){
+    badge.textContent = pinSet ? '設定済み' : '未設定';
+    badge.style.background = pinSet ? 'rgba(255,255,255,.3)' : 'rgba(255,255,255,.15)';
+  }
+
+  /* チェックボックス */
+  const toggle = document.getElementById('pin-enabled-toggle');
+  if(toggle) toggle.checked = pinSet;
+
+  /* PIN入力エリアのラベル */
+  const area = document.getElementById('pin-input-area');
+  if(area){
+    const labels = area.querySelectorAll('.form-label');
+    if(labels[0]) labels[0].textContent = pinSet
+      ? '新しいPIN（変更する場合のみ入力）'
+      : '新しいPIN（4〜6桁の数字）';
+  }
+
+  /* セッションバー */
+  const bar = document.getElementById('admin-pin-session-bar');
+  if(!bar) return;
+  if(!pinSet){
+    bar.innerHTML = '<div style="padding:8px 14px;font-size:11px;color:var(--text3);">管理PIN：未設定（全操作がPINなしで実行されます）</div>';
+    return;
+  }
+  if(sessionOk){
+    bar.innerHTML =
+      '<div class="pin-session-bar">' +
+        '<div>' +
+          '<div style="font-size:12px;font-weight:700;">管理PIN：有効 ／ 管理ロック：<span style="color:#1B5E20;">🔓 解除中</span></div>' +
+          '<div style="font-size:10px;font-weight:400;margin-top:2px;color:#388E3C;">設定変更・編集・削除が可能な状態です</div>' +
+        '</div>' +
+        '<button class="pin-relock-btn" onclick="relockAdminSession()">再ロック</button>' +
+      '</div>';
+  } else {
+    bar.innerHTML =
+      '<div class="pin-session-bar" style="background:#FFF3E0;border-color:#FFCC80;">' +
+        '<div>' +
+          '<div style="font-size:12px;font-weight:700;color:#BF360C;">管理PIN：有効 ／ 管理ロック：🔒 ロック中</div>' +
+          '<div style="font-size:10px;font-weight:400;margin-top:2px;color:#E65100;">管理操作にはPINの入力が必要です</div>' +
+        '</div>' +
+        '<button class="pin-relock-btn" style="border-color:#FFCC80;color:#E65100;"' +
+          ' onclick="requireAdminPin(\'管理ロックを解除\',\'管理PINを入力してください。\',function(){renderPinSettingsUI();})">解除する</button>' +
+      '</div>';
+  }
+}
+
+/**
+ * トグル変更時
+ */
+function onPinToggleChange(checked){
+  if(!checked){
+    if(state.adminPinEnabled && state.adminPin){
+      requireAdminPin(
+        '管理PIN保護を無効にする',
+        '現在のPINを入力して保護を解除してください。',
+        function(){
+          state.adminPinEnabled = false;
+          state.adminPin = '';
+          adminSessionUnlocked = false;
+          saveState();
+          renderPinSettingsUI();
+          showToast('🔓 管理PIN保護を無効にしました');
+        },
+        function(){
+          /* キャンセル: チェックを元に戻す */
+          var tog = document.getElementById('pin-enabled-toggle');
+          if(tog) tog.checked = true;
+        }
+      );
+    }
+  }
+}
+
+/**
+ * PIN保存ボタン
+ */
+function savePinSettings(){
+  const newPin     = (document.getElementById('pin-new-input').value     || '').trim();
+  const confirmPin = (document.getElementById('pin-confirm-input').value || '').trim();
+
+  /* バリデーション */
+  if(!newPin){                     showToast('⚠️ PINを入力してください'); return; }
+  if(!/^\d+$/.test(newPin)){       showToast('⚠️ PINは数字のみで入力してください'); return; }
+  if(newPin.length < 4){           showToast('⚠️ PINは4桁以上で入力してください'); return; }
+  if(newPin.length > 6){           showToast('⚠️ PINは6桁以下で入力してください'); return; }
+  if(newPin !== confirmPin){       showToast('⚠️ PIN確認が一致しません'); return; }
+
+  if(state.adminPinEnabled && state.adminPin){
+    /* 既存PIN変更: 現在のPINで認証してから保存 */
+    requireAdminPin('管理PIN変更の確認', '現在のPINを入力してから新しいPINを保存します。',
+      function(){ _doSavePin(newPin); });
+  } else {
+    _doSavePin(newPin);
+  }
+}
+
+function _doSavePin(newPin){
+  state.adminPin        = newPin;
+  state.adminPinEnabled = true;
+  adminSessionUnlocked  = true; /* 設定直後はセッション解除状態 */
+  saveState();
+  document.getElementById('pin-new-input').value     = '';
+  document.getElementById('pin-confirm-input').value = '';
+  renderPinSettingsUI();
+  showToast('✅ 管理PINを保存しました');
+}
 
 </script>
 </body>
