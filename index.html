@@ -1652,6 +1652,9 @@ body{font-size:15px !important;}
 <script>
 const DB_KEY='karaage_v6';
 const PAY_LABELS={cash:'現金',paypay:'PayPay',aupay:'auPay',dpay:'d払い',rakuten:'楽天Pay',other:'その他'};
+/* [UI-1] 決済方法アイコン・クラス名 */
+const PAY_ICONS={cash:'💴',paypay:'🔴',aupay:'🟠',dpay:'🔵',rakuten:'🔶',other:'💳'};
+const PAY_CLASS={cash:'cash-btn',paypay:'paypay-btn',aupay:'aupay-btn',dpay:'dpay-btn',rakuten:'rakuten-btn',other:'other-btn'};
 const DEFAULT_CATS=['唐揚げ','セット','ドリンク','サイド','その他'];
 const DEFAULT_ACCOUNTS=['交通費','出店料','消耗品','外注費','広告費','その他'];
 const MATERIAL_UNITS=['kg','g','個','本','袋','缶','セット','その他'];
@@ -1750,9 +1753,9 @@ function migrateState(){
   if(!state.activePayMethods||!state.activePayMethods.length){
     state.activePayMethods=['cash','paypay','aupay','dpay','rakuten','other'];
   }
-  /* [UI-1] enabledPayMethods補完 */
-  if(!state.enabledPayMethods||!state.enabledPayMethods.length){
-    state.enabledPayMethods=['cash','paypay','aupay','dpay','rakuten','other'];
+  /* [UI-1] activePayMethods補完 */
+  if(!state.activePayMethods||!state.activePayMethods.length){
+    state.activePayMethods=['cash','paypay','aupay','dpay','rakuten','other'];
   }
   if(state.events){
     state.events=state.events.map(function(e){
@@ -1796,7 +1799,7 @@ function showPage(name,btn){
   if(name==='settings')renderSettings();
 }
 let currentCat='全て';
-function renderRegister(){renderCatFilter();renderMenuGrid();renderCart();updateChangeArea();renderBoard();renderPayMethodBtns();/* [UI-1] */}
+function renderRegister(){renderCatFilter();renderMenuGrid();renderCart();updateChangeArea();renderBoard();renderPayMethodGrid();/* [UI-1] */}
 
 /** [UI-1] 使用する決済方法だけ表示 */
 function renderPayMethodBtns(){
@@ -1810,7 +1813,7 @@ function renderPayMethodBtns(){
     {key:'rakuten', label:'楽天Pay', icon:'🅡', cls:'rakuten-btn'},
     {key:'other',   label:'その他',  icon:'💳', cls:'other-btn'},
   ];
-  const enabled = state.enabledPayMethods || ['cash','paypay','aupay','dpay','rakuten','other'];
+  const enabled = state.activePayMethods || ['cash','paypay','aupay','dpay','rakuten','other'];
   const visible = ALL_PAY.filter(p => enabled.indexOf(p.key) >= 0);
   /* 列数: 2以下なら1列、3なら3列、4以上なら2列 */
   const cols = visible.length <= 2 ? visible.length : visible.length === 3 ? 3 : 2;
@@ -2628,7 +2631,7 @@ function deleteStaff(id){
   });
 }
 let dragSrcIdx=null;
-function renderSettings(){renderCatTags();renderAccountTags();renderStaffList();renderMenuCatSelect();updateChecklist();updateBackupLastInfo();renderPinSettingsUI();renderWeatherSettingsUI();renderRegisterCloseArea();renderGroupSettingsUI();renderPayEnableGrid();/* [UI-1] */document.getElementById('menu-settings-list').innerHTML=state.menuItems.map((item,idx)=>`<div class="menu-sort-item" draggable="true" data-idx="${idx}" ondragstart="onDragStart(event,${idx})" ondragover="onDragOver(event,${idx})" ondrop="onDrop(event,${idx})" ondragend="onDragEnd()"><span class="drag-handle">⠿⠿</span><span style="font-size:20px;flex-shrink:0;">${item.emoji}</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">SET</span>':''}</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">${item.cat}</div></div><span style="font-size:14px;font-weight:900;color:var(--primary);min-width:55px;text-align:right;flex-shrink:0;">¥${item.price.toLocaleString()}</span><button class="icon-btn" onclick="openEditMenuModal(${item.id})">編集</button><button class="icon-btn" style="border-color:#F0A0A0;color:var(--danger);" onclick="deleteMenuItem(${item.id})">削除</button></div>`).join('');const evt=state.events.find(e=>e.id===state.currentEventId);if(evt){document.getElementById('evt-name').value=evt.name||'';document.getElementById('evt-date').value=evt.date||'';document.getElementById('evt-place').value=evt.place||'';}}
+function renderSettings(){renderCatTags();renderAccountTags();renderStaffList();renderMenuCatSelect();updateChecklist();updateBackupLastInfo();renderPinSettingsUI();renderWeatherSettingsUI();renderRegisterCloseArea();renderGroupSettingsUI();renderPaySelGrid();/* [UI-1] */document.getElementById('menu-settings-list').innerHTML=state.menuItems.map((item,idx)=>`<div class="menu-sort-item" draggable="true" data-idx="${idx}" ondragstart="onDragStart(event,${idx})" ondragover="onDragOver(event,${idx})" ondrop="onDrop(event,${idx})" ondragend="onDragEnd()"><span class="drag-handle">⠿⠿</span><span style="font-size:20px;flex-shrink:0;">${item.emoji}</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">SET</span>':''}</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">${item.cat}</div></div><span style="font-size:14px;font-weight:900;color:var(--primary);min-width:55px;text-align:right;flex-shrink:0;">¥${item.price.toLocaleString()}</span><button class="icon-btn" onclick="openEditMenuModal(${item.id})">編集</button><button class="icon-btn" style="border-color:#F0A0A0;color:var(--danger);" onclick="deleteMenuItem(${item.id})">削除</button></div>`).join('');const evt=state.events.find(e=>e.id===state.currentEventId);if(evt){document.getElementById('evt-name').value=evt.name||'';document.getElementById('evt-date').value=evt.date||'';document.getElementById('evt-place').value=evt.place||'';}}
 function onDragStart(e,idx){dragSrcIdx=idx;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(idx));setTimeout(()=>e.currentTarget.classList.add('dragging'),0);}
 function onDragOver(e,idx){e.preventDefault();e.dataTransfer.dropEffect='move';document.querySelectorAll('.menu-sort-item').forEach(el=>el.classList.remove('drag-over'));if(idx!==dragSrcIdx)e.currentTarget.classList.add('drag-over');}
 function onDrop(e,idx){e.preventDefault();if(dragSrcIdx===null||dragSrcIdx===idx){onDragEnd();return;}const items=[...state.menuItems];const[moved]=items.splice(dragSrcIdx,1);items.splice(idx,0,moved);state.menuItems=items;dragSrcIdx=null;saveState();renderSettings();showToast('↕️ 並び順を変更しました');}
@@ -4660,32 +4663,12 @@ const ALL_PAY_DEF = [
 ];
 
 /** 設定画面: 決済方法チェックUI描画 */
-function renderPayEnableGrid(){
-  var grid = document.getElementById('pay-enable-grid');
-  if(!grid) return;
-  var enabled = state.enabledPayMethods || ['cash','paypay','aupay','dpay','rakuten','other'];
-  grid.innerHTML = ALL_PAY_DEF.map(function(p){
-    var on = enabled.indexOf(p.key) >= 0;
-    return '<button class="pay-enable-btn'+(on?' enabled':'')+'"'
-      + ' data-paykey="'+p.key+'"'
-      + ' onclick="togglePayEnable(this.dataset.paykey,this)">'
-      + p.icon + '<br>' + p.label
-      + '</button>';
-  }).join('');
-}
+
 
 /** 決済方法のON/OFF切替 */
 
 /** 決済方法設定を保存 */
-function saveEnabledPay(){
-  /* 現在の選択状態はtogglePayEnableで既にstateに反映済み */
-  /* payMethodが無効になった場合はcashにリセット */
-  var enabled = state.enabledPayMethods || ['cash'];
-  if(enabled.indexOf(payMethod) < 0){ payMethod = enabled[0] || 'cash'; }
-  saveState();
-  renderPayMethodBtns();
-  showToast('✅ 決済方法の設定を保存しました');
-}
+
 
 /** 提供待ち: 注文詳細モーダルを開く */
 function openOrderDetail(orderId){
@@ -4770,6 +4753,26 @@ function renderPaySelGrid(){
   renderPaySelGrid();
   renderPayMethodGrid();
   showToast('✅ 決済方法を更新しました');
+}
+
+function renderPayMethodGrid(){
+  var grid=document.getElementById('pay-method-grid');
+  if(!grid)return;
+  var methods=state.activePayMethods||['cash','paypay','aupay','dpay','rakuten','other'];
+  var cols=methods.length<=2?2:methods.length<=4?2:3;
+  grid.style.gridTemplateColumns='repeat('+cols+',1fr)';
+  var html='';
+  for(var i=0;i<methods.length;i++){
+    var m=methods[i];
+    var isSelected=payMethod===m;
+    var cls='pay-btn '+(PAY_CLASS[m]||'')+' '+(isSelected?'selected':'');
+    html+='<button class="'+cls+'" onclick="selectPay(this,&quot;'+m+'&quot;)">'
+      +'<span class="pay-icon">'+(PAY_ICONS[m]||'💳')+'</span>'
+      +(PAY_LABELS[m]||m)
+      +'<span class="pay-check">✓</span>'
+      +'</button>';
+  }
+  grid.innerHTML=html;
 }
 </script>
 
@@ -4927,25 +4930,7 @@ function renderPaySelGrid(){
 </div>
 </body>
 </html>/** レジ画面の決済ボタンを activePayMethods に基づいて描画 */
-function renderPayMethodGrid(){
-  var grid=document.getElementById('pay-method-grid');
-  if(!grid)return;
-  var methods=state.activePayMethods||['cash','paypay','aupay','dpay','rakuten','other'];
-  var cols=methods.length<=2?2:methods.length<=4?2:3;
-  grid.style.gridTemplateColumns='repeat('+cols+',1fr)';
-  var html='';
-  for(var i=0;i<methods.length;i++){
-    var m=methods[i];
-    var isSelected=payMethod===m;
-    var cls='pay-btn '+(PAY_CLASS[m]||'')+' '+(isSelected?'selected':'');
-    html+='<button class="'+cls+'" onclick="selectPay(this,&quot;'+m+'&quot;)">'
-      +'<span class="pay-icon">'+(PAY_ICONS[m]||'💳')+'</span>'
-      +(PAY_LABELS[m]||m)
-      +'<span class="pay-check">✓</span>'
-      +'</button>';
-  }
-  grid.innerHTML=html;
-}!DOCTYPE html>
+!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
