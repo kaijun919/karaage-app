@@ -927,6 +927,78 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   background:none;border:none;color:#A5D6A7;font-weight:700;
   font-size:12px;cursor:pointer;text-decoration:underline;
 }
+
+/* =====================================================
+   催事グループ機能 + スマホ最適化 [GROUP-1]
+   ===================================================== */
+
+/* 催事グループ設定UI */
+.group-mode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;}
+.group-mode-btn{padding:10px 4px;border:1.5px solid var(--border);border-radius:8px;
+  background:var(--surface);font-family:'Noto Sans JP',sans-serif;font-size:11px;
+  font-weight:700;color:var(--text2);cursor:pointer;text-align:center;line-height:1.4;}
+.group-mode-btn.selected{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);}
+.group-mode-btn:active{background:var(--primary-light);}
+.group-info-box{background:#EEF2FF;border:1px solid #B0C4F8;border-radius:var(--radius-sm);
+  padding:9px 12px;margin-bottom:10px;font-size:12px;color:#1A3A8A;}
+.group-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;
+  font-weight:700;background:#E8EAF6;color:#283593;margin-left:6px;}
+.group-badge.solo{background:#E8F5E9;color:#2E7D32;}
+
+/* レポート集計モード切替 */
+.report-mode-bar{display:flex;gap:6px;margin-bottom:12px;background:var(--surface2);
+  padding:6px;border-radius:var(--radius-sm);}
+.report-mode-btn{flex:1;padding:8px 4px;border:none;border-radius:6px;
+  background:none;font-family:'Noto Sans JP',sans-serif;font-size:12px;
+  font-weight:700;color:var(--text2);cursor:pointer;text-align:center;}
+.report-mode-btn.active{background:#fff;color:var(--primary);
+  box-shadow:0 1px 4px rgba(0,0,0,.12);}
+.report-context-label{background:var(--surface2);border-radius:var(--radius-sm);
+  padding:8px 12px;font-size:12px;font-weight:700;color:var(--text2);
+  margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.report-range-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+.report-range-input{padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;
+  font-size:13px;background:var(--surface2);color:var(--text);outline:none;flex:1;min-width:120px;}
+.report-range-input:focus{border-color:var(--primary);}
+
+/* スマホ最適化: 390px以下 */
+@media(max-width:430px){
+  /* ナビゲーション */
+  .nav-btn{font-size:10px;min-height:48px;padding:4px 2px;}
+  /* カートパネル */
+  .cart-panel{max-height:none;}
+  /* 商品グリッド: 2列に */
+  .menu-grid{grid-template-columns:repeat(2,1fr) !important;}
+  .menu-card{padding:8px 6px;}
+  .menu-card-emoji-large{font-size:30px;}
+  .menu-card-name{font-size:11px;}
+  .menu-card-price{font-size:12px;}
+  /* 決済方法: 3列 */
+  .pay-method-grid{grid-template-columns:repeat(3,1fr);}
+  /* KPIグリッド */
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .fl-grid{grid-template-columns:repeat(2,1fr);}
+  .summary-kpi-grid{grid-template-columns:repeat(2,1fr);}
+  /* モーダル */
+  .modal{margin:8px !important;padding:16px 14px !important;max-height:88vh;overflow-y:auto;}
+  .disc-modal, .hour-detail-modal{padding:16px 14px 28px !important;}
+  /* フォーム行 */
+  .form-row{grid-template-columns:1fr !important;}
+  /* テーブル横スクロール */
+  .report-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .report-table{min-width:420px;}
+  /* 提供待ちカード */
+  .board-card-mid{flex-wrap:wrap;}
+  /* 在庫グリッド */
+  .inv-grid{grid-template-columns:repeat(2,1fr) !important;}
+  /* 材料カード */
+  .mat-fields{grid-template-columns:1fr !important;}
+  /* グループモードボタン */
+  .group-mode-grid{grid-template-columns:1fr !important;}
+  /* レポートモード */
+  .report-mode-bar{flex-wrap:wrap;}
+  .report-mode-btn{flex:none;width:calc(33% - 4px);}
+}
 </style>
 </head>
 <body>
@@ -1088,6 +1160,31 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 </div>
 <div class="page" id="page-report">
 
+  <!-- [GROUP-1] 集計モード切替 -->
+  <div class="report-mode-bar">
+    <button class="report-mode-btn active" id="rm-single" onclick="setReportMode('single')">📅 当日</button>
+    <button class="report-mode-btn" id="rm-group" onclick="setReportMode('group')">📎 催事累計</button>
+    <button class="report-mode-btn" id="rm-range" onclick="setReportMode('range')">📆 期間指定</button>
+  </div>
+  <div class="report-context-label" id="report-context-label">
+    <span id="report-context-text">集計対象を読み込み中...</span>
+  </div>
+  <div id="report-range-ui" style="display:none;">
+    <div class="report-range-row">
+      <input type="date" class="report-range-input" id="report-range-from" oninput="onRangeChange()">
+      <span style="font-size:13px;color:var(--text2);">〜</span>
+      <input type="date" class="report-range-input" id="report-range-to" oninput="onRangeChange()">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:12px;font-weight:700;color:var(--text2);margin-right:12px;">
+        <input type="radio" name="range-scope" value="all" checked onchange="onRangeChange()"> 全イベント
+      </label>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);">
+        <input type="radio" name="range-scope" value="group" onchange="onRangeChange()"> 現在の催事グループのみ
+      </label>
+    </div>
+  </div>
+
   <!-- [REPORT-1] 天気カード（常時表示） -->
   <div id="weather-report-card-wrap"></div>
 
@@ -1248,7 +1345,36 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
     </div>
   </div>
 
-  <div class="settings-section"><div class="settings-section-header"><span>📅 イベント設定</span></div><div style="padding:14px;"><div class="form-row"><div class="form-group"><label class="form-label">イベント名</label><input class="form-input" id="evt-name" placeholder="例：春祭り2025"></div><div class="form-group"><label class="form-label">開催日</label><input class="form-input" type="date" id="evt-date"></div></div><div class="form-group" style="margin-bottom:10px;"><label class="form-label">場所</label><input class="form-input" id="evt-place" placeholder="例：〇〇公園"></div><button class="add-btn" onclick="saveEvent()">✓ イベントを保存</button>
+  <div class="settings-section"><div class="settings-section-header"><span>📅 イベント設定</span></div><div style="padding:14px;"><div class="form-row"><div class="form-group"><label class="form-label">イベント名</label><input class="form-input" id="evt-name" placeholder="例：春祭り1日目"></div><div class="form-group"><label class="form-label">開催日</label><input class="form-input" type="date" id="evt-date"></div></div><div class="form-group" style="margin-bottom:12px;"><label class="form-label">場所</label><input class="form-input" id="evt-place" placeholder="例：〇〇公園"></div>
+      <!-- [GROUP-1] 催事グループ設定 -->
+      <div class="form-label" style="margin-bottom:8px;">催事グループ設定</div>
+      <div class="group-mode-grid">
+        <button class="group-mode-btn selected" id="gm-solo" onclick="selectGroupMode('solo')">📅 単独イベント</button>
+        <button class="group-mode-btn" id="gm-join" onclick="selectGroupMode('join')">📎 既存グループに追加</button>
+        <button class="group-mode-btn" id="gm-new" onclick="selectGroupMode('new')">✨ 新規グループ作成</button>
+      </div>
+      <div id="group-join-area" style="display:none;">
+        <div class="form-group" style="margin-bottom:8px;">
+          <label class="form-label">催事グループ選択</label>
+          <select class="form-select" id="evt-group-select" onchange="onGroupSelectChange()"></select>
+        </div>
+        <div class="group-info-box" id="group-info-box" style="display:none;"></div>
+      </div>
+      <div id="group-new-area" style="display:none;">
+        <div class="form-group" style="margin-bottom:8px;">
+          <label class="form-label">催事グループ名 <span style="color:var(--danger);">*</span></label>
+          <input class="form-input" id="new-group-name" placeholder="例：春まつり2026">
+        </div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label class="form-label">会場（任意）</label>
+          <input class="form-input" id="new-group-place" placeholder="例：〇〇公園">
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label">メモ（任意）</label>
+          <input class="form-input" id="new-group-note" placeholder="例：3日間開催">
+        </div>
+      </div>
+      <button class="add-btn" onclick="saveEvent()">✓ イベントを保存</button>
       <div id="register-close-area" style="margin-top:10px;"></div>
       <!-- [UX] 天気情報セクション（手動入力） -->
       <div class="weather-section" id="weather-settings-section">
@@ -1360,10 +1486,16 @@ let state={
   menuItems:[],orders:[],inventory:{},expenses:[],
   categories:[...DEFAULT_CATS],accountItems:[...DEFAULT_ACCOUNTS],
   staffMembers:[],materialItems:{},
+  eventGroups:[],    /* [GROUP-1] 催事グループ */
   /* [PIN-1] 管理PIN設定 */
-  adminPinEnabled:false, /* PIN保護機能の有効/無効 */
-  adminPin:''            /* 保存されるPIN（平文。将来はハッシュ化を推奨） */
+  adminPinEnabled:false,
+  adminPin:''
 };
+/* [GROUP-1] レポート集計モード（セッション変数） */
+var reportMode='single';      /* 'single'|'group'|'range' */
+var reportRangeFrom='';
+var reportRangeTo='';
+var reportRangeScope='all';   /* 'all'|'group' */
 /* [PIN-1] セッション変数: 永続保存しない・ページ再読み込みでリセット */
 let adminSessionUnlocked=false;
 let _adminPinCallback=null; /* PIN認証成功後のコールバック退避 */
@@ -1438,6 +1570,13 @@ function migrateState(){
   /* [PIN-1] 管理PIN フィールド補完 (undefined/null 両対応) */
   if(state.adminPinEnabled===undefined||state.adminPinEnabled===null)state.adminPinEnabled=false;
   if(state.adminPin===undefined||state.adminPin===null)state.adminPin='';
+  /* [GROUP-1] 催事グループ後方互換補完 */
+  if(!state.eventGroups)state.eventGroups=[];
+  if(state.events){
+    state.events=state.events.map(function(e){
+      return Object.assign({groupId:null},e);
+    });
+  }
   /* [PIN-3] 復元データに adminSessionUnlocked が混入していても無視 */
   delete state.adminSessionUnlocked;
   /* [WEATHER-1] events に weather フィールド補完 */
@@ -1954,10 +2093,12 @@ function addStaffExpense(){const sel=document.getElementById('staff-select');con
 function renderReport(){
   /* [WEATHER-1] 天気カード描画 */
   renderWeatherReportCard();
-  /* [ALLOC-3] eventId + cancelledAt 除外を最初に確定 */
-  const allEvtOrders=(state.orders||[]).filter(o=>o.eventId===state.currentEventId);
-  const activeOrders=allEvtOrders.filter(o=>!o.cancelledAt); /* 取消済除外 */
-  const expenses=getEvtExpenses();const matItems=getMatItems();
+  /* [GROUP-1] 集計モードに応じた対象を取得 */
+  updateReportContextLabel();
+  const _tgtIds=getTargetEventIdsByReportMode();
+  const activeOrders=getOrdersByEventIds(_tgtIds);
+  const expenses=getExpensesByEventIds(_tgtIds);
+  const matItems=getMaterialItemsByEventIds(_tgtIds);
   const totalSales=activeOrders.reduce((s,o)=>s+o.total,0);
   const totalExpenses=expenses.reduce((s,e)=>s+e.amount,0);
   let totalCOGS=0;activeOrders.forEach(o=>o.items.forEach(i=>{const m=state.menuItems.find(m=>m.id===i.id);if(m)totalCOGS+=m.cost*i.qty;}));
@@ -2079,12 +2220,13 @@ function renderReport(){
   document.getElementById('pay-report-body').innerHTML=Object.keys(PAY_LABELS).filter(k=>payM[k]).map(k=>`<tr><td>${PAY_LABELS[k]}</td><td class="num">${payM[k].count}件</td><td class="num" style="color:var(--primary)">¥${payM[k].total.toLocaleString()}</td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--text3)">データがありません</td></tr>';
 }
 function buildExportData(){
-  /* [ALLOC-3] eventId 絞り込み + cancelledAt 除外 */
-  const allOrders=(state.orders||[]).filter(o=>o.eventId===state.currentEventId);
-  const orders=allOrders.filter(o=>!o.cancelledAt); /* 取消済を売上から除外 */
-  const expenses=getEvtExpenses();
-  const evt=state.events.find(e=>e.id===state.currentEventId);
-  const matItems=getMatItems();
+  /* [GROUP-1] 集計モードに応じた対象 */
+  const _tgtIds=getTargetEventIdsByReportMode();
+  const orders=getOrdersByEventIds(_tgtIds);
+  const expenses=getExpensesByEventIds(_tgtIds);
+  const matItems=getMaterialItemsByEventIds(_tgtIds);
+  const evt=state.events&&state.events.find(function(e){return e.id===state.currentEventId;})||{name:'',date:''};
+  const grp=getCurrentGroup();
   const salesRows=[];
   orders.forEach(o=>o.items.forEach(i=>{const m=state.menuItems.find(m=>m.id===i.id);salesRows.push({'日時':new Date(o.time).toLocaleString('ja-JP'),'イベント':evt?evt.name:'','商品名':i.name,'数量':i.qty,'単価':i.price,'小計':i.price*i.qty,'原価単価':m?m.cost:0,'原価小計':m?m.cost*i.qty:0,'決済方法':PAY_LABELS[o.payMethod]||o.payMethod,'預かり金額':o.receivedAmount||'','値引き額':o.discountAmount||0,'値引き理由':o.discountType||''});/* [DISC-1] */}));const expenseRows=expenses.map(e=>({'日時':new Date(e.time).toLocaleString('ja-JP'),'勘定科目':e.cat,'メモ':e.memo,'金額':e.amount}));/* [ALLOC-3] 材料CSV: 按分情報列を追加 */
   const matRows=matItems.map(item=>{
@@ -2174,7 +2316,8 @@ function exportCSV(){
   const blob=new Blob(['\uFEFF'+content],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download=`sales_${new Date().toISOString().slice(0,10)}.csv`;
+  var _suffix=reportMode==='group'?(getCurrentGroup()?'_'+getCurrentGroup().name:'_group'):reportMode==='range'?'_range':'_single';
+  a.download='sales_'+new Date().toISOString().slice(0,10)+_suffix+'.csv';
   a.click();
   showToast('📄 CSVをダウンロードしました（4シート）');
 }
@@ -2205,7 +2348,8 @@ function exportXLSX(){
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(matRows.length?matRows:noData),'材料費');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(invRows.length?invRows:noData),'在庫');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(productRows.length?productRows:noData),'商品別利益(参考)');
-  XLSX.writeFile(wb,`sales_${new Date().toISOString().slice(0,10)}.xlsx`);
+  var _sfx=reportMode==='group'?(getCurrentGroup()?'_'+getCurrentGroup().name:'_group'):reportMode==='range'?'_range':'_single';
+  XLSX.writeFile(wb,'sales_'+new Date().toISOString().slice(0,10)+_sfx+'.xlsx');
   showToast('📊 Excelをダウンロードしました（5シート）');
 }
 function renderCatTags(){document.getElementById('cat-tag-list').innerHTML=state.categories.map((c,i)=>`<span class="cat-tag">${c}<button class="cat-tag-del" onclick="deleteCat(${i})">✕</button></span>`).join('');}
@@ -2278,7 +2422,7 @@ function deleteStaff(id){
   });
 }
 let dragSrcIdx=null;
-function renderSettings(){renderCatTags();renderAccountTags();renderStaffList();renderMenuCatSelect();updateChecklist();updateBackupLastInfo();renderPinSettingsUI();renderWeatherSettingsUI();renderRegisterCloseArea();/* [PA-RESTORE] */document.getElementById('menu-settings-list').innerHTML=state.menuItems.map((item,idx)=>`<div class="menu-sort-item" draggable="true" data-idx="${idx}" ondragstart="onDragStart(event,${idx})" ondragover="onDragOver(event,${idx})" ondrop="onDrop(event,${idx})" ondragend="onDragEnd()"><span class="drag-handle">⠿⠿</span><span style="font-size:20px;flex-shrink:0;">${item.emoji}</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">SET</span>':''}</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">${item.cat}</div></div><span style="font-size:14px;font-weight:900;color:var(--primary);min-width:55px;text-align:right;flex-shrink:0;">¥${item.price.toLocaleString()}</span><button class="icon-btn" onclick="openEditMenuModal(${item.id})">編集</button><button class="icon-btn" style="border-color:#F0A0A0;color:var(--danger);" onclick="deleteMenuItem(${item.id})">削除</button></div>`).join('');const evt=state.events.find(e=>e.id===state.currentEventId);if(evt){document.getElementById('evt-name').value=evt.name||'';document.getElementById('evt-date').value=evt.date||'';document.getElementById('evt-place').value=evt.place||'';}}
+function renderSettings(){renderCatTags();renderAccountTags();renderStaffList();renderMenuCatSelect();updateChecklist();updateBackupLastInfo();renderPinSettingsUI();renderWeatherSettingsUI();renderRegisterCloseArea();renderGroupSettingsUI();/* [GROUP-1] */document.getElementById('menu-settings-list').innerHTML=state.menuItems.map((item,idx)=>`<div class="menu-sort-item" draggable="true" data-idx="${idx}" ondragstart="onDragStart(event,${idx})" ondragover="onDragOver(event,${idx})" ondrop="onDrop(event,${idx})" ondragend="onDragEnd()"><span class="drag-handle">⠿⠿</span><span style="font-size:20px;flex-shrink:0;">${item.emoji}</span><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">${item.name}${item.isSet?'<span style="font-size:9px;background:var(--gold-dark);color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;">SET</span>':''}</div><div style="font-size:11px;color:var(--text3);margin-top:1px;">${item.cat}</div></div><span style="font-size:14px;font-weight:900;color:var(--primary);min-width:55px;text-align:right;flex-shrink:0;">¥${item.price.toLocaleString()}</span><button class="icon-btn" onclick="openEditMenuModal(${item.id})">編集</button><button class="icon-btn" style="border-color:#F0A0A0;color:var(--danger);" onclick="deleteMenuItem(${item.id})">削除</button></div>`).join('');const evt=state.events.find(e=>e.id===state.currentEventId);if(evt){document.getElementById('evt-name').value=evt.name||'';document.getElementById('evt-date').value=evt.date||'';document.getElementById('evt-place').value=evt.place||'';}}
 function onDragStart(e,idx){dragSrcIdx=idx;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(idx));setTimeout(()=>e.currentTarget.classList.add('dragging'),0);}
 function onDragOver(e,idx){e.preventDefault();e.dataTransfer.dropEffect='move';document.querySelectorAll('.menu-sort-item').forEach(el=>el.classList.remove('drag-over'));if(idx!==dragSrcIdx)e.currentTarget.classList.add('drag-over');}
 function onDrop(e,idx){e.preventDefault();if(dragSrcIdx===null||dragSrcIdx===idx){onDragEnd();return;}const items=[...state.menuItems];const[moved]=items.splice(dragSrcIdx,1);items.splice(idx,0,moved);state.menuItems=items;dragSrcIdx=null;saveState();renderSettings();showToast('↕️ 並び順を変更しました');}
@@ -2310,7 +2454,26 @@ function deleteMenuItem(id){
     });
   });
 }
-function openEventModal(){const el=document.getElementById('event-list-modal');el.innerHTML=(!state.events||!state.events.length)?'<div class="empty-state">イベントがありません</div>':state.events.map(e=>`<div class="menu-sort-item" style="cursor:pointer;" onclick="selectEvent(${e.id})"><span style="font-size:20px;">📅</span><div style="flex:1;"><div style="font-size:13px;font-weight:700;">${e.name}</div><div style="font-size:11px;color:var(--text3);">${e.date||'日付未設定'}${e.place?' / '+e.place:''}</div></div>${e.id===state.currentEventId?'<span style="color:var(--primary);font-size:18px;">✓</span>':''}</div>`).join('');document.getElementById('event-modal').classList.add('open');}
+function openEventModal(){
+  const el=document.getElementById('event-list-modal');
+  if(!state.events||!state.events.length){
+    el.innerHTML='<div class="empty-state">イベントがありません</div>';
+  } else {
+    el.innerHTML=state.events.map(function(e){
+      const grp=e.groupId?state.eventGroups.find(function(g){return g.id===e.groupId;}):null;
+      const grpBadge=grp?('<span class="group-badge">'+grp.name+'</span>'):'<span class="group-badge solo">単独</span>';
+      return '<div class="menu-sort-item" style="cursor:pointer;" onclick="selectEvent('+e.id+')">'
+        +'<span style="font-size:20px;">📅</span>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:13px;font-weight:700;">'+e.name+grpBadge+'</div>'
+        +'<div style="font-size:11px;color:var(--text3);">'+(e.date||'日付未設定')+(e.place?' / '+e.place:'')+'</div>'
+        +'</div>'
+        +(e.id===state.currentEventId?'<span style="color:var(--primary);font-size:18px;">✓</span>':'')
+        +'</div>';
+    }).join('');
+  }
+  document.getElementById('event-modal').classList.add('open');
+}
 /* [ALLOC-3] イベント切替: 現在ページを再描画して残表示を防ぐ */
 function selectEvent(id){
   state.currentEventId=id;
@@ -2336,20 +2499,40 @@ function selectEvent(id){
 function saveEvent(){
   const name=document.getElementById('evt-name').value.trim();
   if(!name){showToast('⚠️ イベント名を入力してください');return;}
-  requireAdminPin('イベント設定を保存','イベント情報を保存するには管理PINが必要です。',()=>{
-    const idx=state.events.findIndex(e=>e.id===state.currentEventId);
-    const newDate=document.getElementById('evt-date').value;
-    const newPlace=document.getElementById('evt-place').value;
-    const evtData={name,date:newDate,place:newPlace};
-    if(idx>=0){
-      const old=state.events[idx];
-      if(old.place!==newPlace||old.date!==newDate){markWeatherStale(old);}/* [WEATHER-2] */
-      state.events[idx]={...state.events[idx],...evtData};
-    }else{
-      const newEvt={id:Date.now(),...evtData};
-      state.events.push(newEvt);state.currentEventId=newEvt.id;
+  requireAdminPin('イベント設定を保存','イベント情報を保存するには管理PINが必要です。',function(){
+    var idx2=state.events.findIndex(function(e){return e.id===state.currentEventId;});
+    var newDate=document.getElementById('evt-date').value;
+    var newPlace=document.getElementById('evt-place').value;
+    /* [GROUP-1] 催事グループ処理 */
+    var gmBtn=document.querySelector('.group-mode-btn.selected');
+    var gm=gmBtn?gmBtn.id.replace('gm-',''):'solo';
+    var newGroupId=null;
+    if(gm==='join'){
+      var gsel=document.getElementById('evt-group-select');
+      newGroupId=gsel&&gsel.value?parseInt(gsel.value):null;
+    } else if(gm==='new'){
+      var gname=(document.getElementById('new-group-name').value||'').trim();
+      if(!gname){showToast('⚠️ 催事グループ名を入力してください');return;}
+      var newGrp={id:Date.now(),name:gname,
+        place:(document.getElementById('new-group-place').value||'').trim(),
+        note:(document.getElementById('new-group-note').value||'').trim(),
+        startDate:newDate,endDate:newDate,createdAt:new Date().toISOString()};
+      state.eventGroups.push(newGrp);
+      newGroupId=newGrp.id;
     }
-    saveState();updateEventName();renderWeatherSettingsUI();/* [WEATHER-2] */
+    var evtData={name:name,date:newDate,place:newPlace,groupId:newGroupId};
+    if(idx2>=0){
+      var oldEvt=state.events[idx2];
+      if(oldEvt.place!==newPlace||oldEvt.date!==newDate){markWeatherStale(oldEvt);}
+      state.events[idx2]=Object.assign({},state.events[idx2],evtData);
+      if(newGroupId)updateGroupDateRange(newGroupId);
+    }else{
+      var newEvt=Object.assign({id:Date.now()},evtData);
+      state.events.push(newEvt);state.currentEventId=newEvt.id;
+      if(newGroupId)updateGroupDateRange(newGroupId);
+    }
+    saveState();updateEventName();renderWeatherSettingsUI();
+    renderGroupSettingsUI();
     showToast('✅ イベントを保存しました');
   });
 }
@@ -4039,6 +4222,221 @@ function confirmCancelReason(){
     renderBoard();
     renderMenuGrid();
   });
+}
+
+
+/* =====================================================
+   催事グループ機能 [GROUP-1]
+   ===================================================== */
+
+/** 現在イベントを返す */
+function getCurrentEvent(){
+  return state.events&&state.events.find(function(e){return e.id===state.currentEventId;})||null;
+}
+
+/** 現在イベントが属する催事グループを返す */
+function getCurrentGroup(){
+  var evt=getCurrentEvent();
+  if(!evt||!evt.groupId)return null;
+  return state.eventGroups&&state.eventGroups.find(function(g){return g.id===evt.groupId;})||null;
+}
+
+/** レポートモードに応じた対象eventIdの配列を返す */
+function getTargetEventIdsByReportMode(){
+  var evt=getCurrentEvent();
+  if(!evt)return state.currentEventId?[state.currentEventId]:[];
+  if(reportMode==='single'){
+    return [state.currentEventId];
+  } else if(reportMode==='group'){
+    if(!evt.groupId)return [state.currentEventId];
+    return (state.events||[]).filter(function(e){return e.groupId===evt.groupId;}).map(function(e){return e.id;});
+  } else { /* range */
+    var from=reportRangeFrom;
+    var to=reportRangeTo;
+    if(!from&&!to)return [state.currentEventId];
+    return (state.events||[]).filter(function(e){
+      if(!e.date)return false;
+      if(from&&e.date<from)return false;
+      if(to&&e.date>to)return false;
+      if(reportRangeScope==='group'&&evt.groupId&&e.groupId!==evt.groupId)return false;
+      return true;
+    }).map(function(e){return e.id;});
+  }
+}
+
+/** 対象eventIds の注文（取消除外）を返す */
+function getOrdersByEventIds(eventIds){
+  return (state.orders||[]).filter(function(o){
+    return eventIds.indexOf(o.eventId)>=0&&!o.cancelledAt;
+  });
+}
+
+/** 対象eventIds の経費を返す */
+function getExpensesByEventIds(eventIds){
+  return (state.expenses||[]).filter(function(e){
+    return eventIds.indexOf(e.eventId)>=0;
+  });
+}
+
+/** 対象eventIds の材料品目を返す */
+function getMaterialItemsByEventIds(eventIds){
+  var result=[];
+  eventIds.forEach(function(eid){
+    var key=String(eid);
+    if(state.materialItems&&state.materialItems[key]){
+      result=result.concat(state.materialItems[key]);
+    }
+  });
+  return result;
+}
+
+/** レポートのコンテキストラベルを返す */
+function getReportContextLabel(){
+  var evt=getCurrentEvent();
+  var grp=getCurrentGroup();
+  if(reportMode==='single'){
+    return '📅 当日: '+(evt?evt.name:'未選択');
+  } else if(reportMode==='group'){
+    if(grp){
+      var evtIds=getTargetEventIdsByReportMode();
+      return '📎 催事累計: '+grp.name+' ('+evtIds.length+'日分)';
+    }
+    return '📎 催事累計: '+(evt?evt.name:'未選択')+'（単独）';
+  } else {
+    var label='📆 期間指定';
+    if(reportRangeFrom||reportRangeTo){
+      label+': '+(reportRangeFrom||'開始未設定')+' 〜 '+(reportRangeTo||'終了未設定');
+    }
+    return label;
+  }
+}
+
+/** レポートモードを変更して再描画 */
+function setReportMode(mode){
+  reportMode=mode;
+  /* UI更新 */
+  ['single','group','range'].forEach(function(m){
+    var btn=document.getElementById('rm-'+m);
+    if(btn)btn.classList.toggle('active',m===mode);
+  });
+  var rangeUi=document.getElementById('report-range-ui');
+  if(rangeUi)rangeUi.style.display=mode==='range'?'block':'none';
+  /* 期間の初期値 */
+  if(mode==='range'){
+    var evt=getCurrentEvent();
+    var grp=getCurrentGroup();
+    if(!reportRangeFrom&&evt){
+      var fromEl=document.getElementById('report-range-from');
+      var toEl=document.getElementById('report-range-to');
+      if(grp){
+        if(fromEl)fromEl.value=grp.startDate||evt.date||'';
+        if(toEl)toEl.value=grp.endDate||evt.date||'';
+        reportRangeFrom=grp.startDate||evt.date||'';
+        reportRangeTo=grp.endDate||evt.date||'';
+      } else if(evt&&evt.date){
+        if(fromEl)fromEl.value=evt.date;
+        if(toEl)toEl.value=evt.date;
+        reportRangeFrom=evt.date;
+        reportRangeTo=evt.date;
+      }
+    }
+  }
+  updateReportContextLabel();
+  renderReport();
+}
+
+/** 期間入力変更時 */
+function onRangeChange(){
+  var fromEl=document.getElementById('report-range-from');
+  var toEl=document.getElementById('report-range-to');
+  var scopeEl=document.querySelector('input[name="range-scope"]:checked');
+  reportRangeFrom=fromEl?fromEl.value:'';
+  reportRangeTo=toEl?toEl.value:'';
+  reportRangeScope=scopeEl?scopeEl.value:'all';
+  updateReportContextLabel();
+  renderReport();
+}
+
+/** コンテキストラベルを更新 */
+function updateReportContextLabel(){
+  var el=document.getElementById('report-context-text');
+  if(el)el.textContent=getReportContextLabel();
+}
+
+/** 催事グループの日付範囲を更新 */
+function updateGroupDateRange(groupId){
+  var grp=state.eventGroups&&state.eventGroups.find(function(g){return g.id===groupId;});
+  if(!grp)return;
+  var evts=(state.events||[]).filter(function(e){return e.groupId===groupId&&e.date;});
+  if(!evts.length)return;
+  var dates=evts.map(function(e){return e.date;}).sort();
+  grp.startDate=dates[0];
+  grp.endDate=dates[dates.length-1];
+}
+
+/* =====================================================
+   催事グループ設定UI [GROUP-1]
+   ===================================================== */
+
+var _groupMode='solo';
+
+function selectGroupMode(mode){
+  _groupMode=mode;
+  ['solo','join','new'].forEach(function(m){
+    var btn=document.getElementById('gm-'+m);
+    if(btn)btn.classList.toggle('selected',m===mode);
+  });
+  var joinArea=document.getElementById('group-join-area');
+  var newArea=document.getElementById('group-new-area');
+  if(joinArea)joinArea.style.display=mode==='join'?'block':'none';
+  if(newArea)newArea.style.display=mode==='new'?'block':'none';
+  if(mode==='join')renderGroupSelectOptions();
+}
+
+function renderGroupSelectOptions(){
+  var sel=document.getElementById('evt-group-select');
+  if(!sel)return;
+  if(!state.eventGroups||!state.eventGroups.length){
+    sel.innerHTML='<option value="">-- 催事グループがありません --</option>';
+    return;
+  }
+  sel.innerHTML=state.eventGroups.map(function(g){
+    return '<option value="'+g.id+'">'+g.name+(g.startDate?' ('+g.startDate+'〜'+g.endDate+')':'')+'</option>';
+  }).join('');
+  onGroupSelectChange();
+}
+
+function onGroupSelectChange(){
+  var sel=document.getElementById('evt-group-select');
+  var box=document.getElementById('group-info-box');
+  if(!sel||!box)return;
+  var gid=sel.value?parseInt(sel.value):null;
+  var grp=gid?state.eventGroups.find(function(g){return g.id===gid;}):null;
+  if(grp){
+    var evtCount=(state.events||[]).filter(function(e){return e.groupId===grp.id;}).length;
+    box.style.display='block';
+    box.innerHTML='<strong>'+grp.name+'</strong>'
+      +(grp.place?' / '+grp.place:'')
+      +(grp.startDate?'<br>'+grp.startDate+'〜'+grp.endDate:'')
+      +'<br>登録日数: '+evtCount+'日';
+  } else {
+    box.style.display='none';
+  }
+}
+
+function renderGroupSettingsUI(){
+  /* 設定画面のイベント情報を表示する際にグループ状態を復元 */
+  var evt=getCurrentEvent();
+  if(!evt){selectGroupMode('solo');return;}
+  if(!evt.groupId){
+    selectGroupMode('solo');
+  } else {
+    selectGroupMode('join');
+    renderGroupSelectOptions();
+    var sel=document.getElementById('evt-group-select');
+    if(sel)sel.value=String(evt.groupId);
+    onGroupSelectChange();
+  }
 }
 
 </script>
