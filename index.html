@@ -883,7 +883,28 @@ let state={
 let adminSessionUnlocked=false;
 let _adminPinCallback=null; /* PIN認証成功後のコールバック退避 */
 /* [PIN-3] データ破損フォールバック強化 */
-function loadState(){try{const s=localStorage.getItem(DB_KEY);if(s){let p;try{p=JSON.parse(s);}catch(je){console.error('JSON破損',je);showToast('⚠️ 保存データ破損。初期状態で起動します。');return;}if(typeof p==='object'&&p!==null){state={...state,...p};}if(!state.categories||!state.categories.length)state.categories=[...DEFAULT_CATS];if(!state.accountItems||!state.accountItems.length)state.accountItems=[...DEFAULT_ACCOUNTS];if(!state.staffMembers)state.staffMembers=[];if(!state.materialItems)state.materialItems={};}}catch(e){}}
+function loadState(){
+  try{
+    const s=localStorage.getItem(DB_KEY);
+    if(s){
+      let p;
+      try{
+        p=JSON.parse(s);
+      }catch(je){
+        console.error('JSON破損',je);
+        showToast('⚠️ 保存データ破損。初期状態で起動します。');
+        return;
+      }
+      if(typeof p==='object'&&p!==null){
+        state={...state,...p};
+      }
+      if(!state.categories||!state.categories.length)state.categories=[...DEFAULT_CATS];
+      if(!state.accountItems||!state.accountItems.length)state.accountItems=[...DEFAULT_ACCOUNTS];
+      if(!state.staffMembers)state.staffMembers=[];
+      if(!state.materialItems)state.materialItems={};
+    }
+  }catch(e){console.error('loadState error',e);}
+}
 function saveState(){
   try{
     /* [PIN-3] adminSessionUnlocked がstateに混入していても保存しない */
