@@ -1001,6 +1001,14 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
   .mat-fields{grid-template-columns:1fr !important;}
   /* グループモードボタン */
   .group-mode-grid{grid-template-columns:1fr !important;}
+  /* 人件費フォーム: 時刻入力を2列に */
+  .staff-time-row{grid-template-columns:1fr 1fr !important;}
+  /* カテゴリ・科目追加行 */
+  .settings-input-row{flex-wrap:wrap !important;}
+  .settings-input-row input{min-width:0 !important;}
+  /* 経費スタッフ選択行 */
+  .staff-select-row{flex-wrap:wrap !important;}
+  .staff-select-row .form-group{min-width:120px !important;}
   /* レポートモード */
   .report-mode-bar{flex-wrap:wrap;}
   .report-mode-btn{flex:none;width:calc(33% - 4px);}
@@ -1281,9 +1289,9 @@ body{font-size:15px !important;}
     </div>
     <div class="staff-section">
       <div class="staff-section-title">👤 人件費</div>
-      <div class="staff-select-row">
-        <div class="form-group" style="flex:1;"><label class="form-label">スタッフ</label><select class="form-select" id="staff-select" onchange="onStaffChange()"></select></div>
-        <div class="form-group" style="width:90px;"><label class="form-label">種別</label><select class="form-select" id="staff-pay-type" onchange="onStaffTypeChange()"><option value="hourly">時給</option><option value="daily">日給</option></select></div>
+      <div class="staff-select-row" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="form-group" style="flex:2;min-width:140px;"><label class="form-label">スタッフ</label><select class="form-select" id="staff-select" onchange="onStaffChange()"></select></div>
+        <div class="form-group" style="flex:1;min-width:90px;max-width:120px;"><label class="form-label">種別</label><select class="form-select" id="staff-pay-type" onchange="onStaffTypeChange()"><option value="hourly">時給</option><option value="daily">日給</option></select></div>
       </div>
       <div class="staff-time-row" id="staff-time-row">
         <div class="form-group"><label class="form-label">開始時刻</label><input class="form-input" type="time" id="staff-start" oninput="calcStaffWage()"></div>
@@ -1408,8 +1416,8 @@ body{font-size:15px !important;}
 </div>
 <div class="page" id="page-settings">
   <div class="settings-section"><div class="settings-section-header"><span>🍗 メニュー管理</span><button class="icon-btn" style="background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4);color:#fff;" onclick="openAddMenuModal()">＋ 追加</button></div><div id="menu-settings-list"></div></div>
-  <div class="settings-section"><div class="settings-section-header"><span>🏷️ カテゴリ管理</span></div><div style="padding:12px 14px;"><div id="cat-tag-list" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;"></div><div style="display:flex;gap:8px;margin-top:6px;"><input class="form-input" id="new-cat-input" placeholder="新しいカテゴリ名" style="flex:1;padding:8px 10px;"><button class="add-btn" style="width:auto;padding:8px 16px;font-size:13px;" onclick="addCategory()">＋ 追加</button></div></div></div>
-  <div class="settings-section"><div class="settings-section-header"><span>📒 勘定科目管理</span></div><div style="padding:12px 14px;"><div id="account-tag-list" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;"></div><div style="display:flex;gap:8px;margin-top:6px;"><input class="form-input" id="new-account-input" placeholder="新しい勘定科目名" style="flex:1;padding:8px 10px;"><button class="add-btn" style="width:auto;padding:8px 16px;font-size:13px;" onclick="addAccountItem()">＋ 追加</button></div></div></div>
+  <div class="settings-section"><div class="settings-section-header"><span>🏷️ カテゴリ管理</span></div><div style="padding:12px 14px;"><div id="cat-tag-list" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;"></div><div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;"><input class="form-input" id="new-cat-input" placeholder="新しいカテゴリ名" style="flex:1;min-width:160px;padding:8px 10px;"><button class="add-btn" style="width:auto;padding:8px 16px;font-size:13px;white-space:nowrap;" onclick="addCategory()">＋ 追加</button></div></div></div>
+  <div class="settings-section"><div class="settings-section-header"><span>📒 勘定科目管理</span></div><div style="padding:12px 14px;"><div id="account-tag-list" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;"></div><div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;"><input class="form-input" id="new-account-input" placeholder="新しい勘定科目名" style="flex:1;min-width:160px;padding:8px 10px;"><button class="add-btn" style="width:auto;padding:8px 16px;font-size:13px;white-space:nowrap;" onclick="addAccountItem()">＋ 追加</button></div></div></div>
   <div class="settings-section"><div class="settings-section-header"><span>👤 スタッフ管理（最大10名）</span><button class="icon-btn" style="background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4);color:#fff;" onclick="openAddStaffModal()">＋ 追加</button></div><div id="staff-list"></div></div>
   <!-- [P2] セットアップチェックリスト -->
   <div class="checklist-section" id="checklist-section">
