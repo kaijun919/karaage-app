@@ -589,6 +589,106 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 
 /* 時間帯チャート wrapper */
 .hour-chart-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:14px;box-shadow:var(--shadow);}
+
+/* =====================================================
+   時間帯タップ詳細 [HOUR-1]
+   ===================================================== */
+
+/* バーをタップしやすく */
+.hour-bar{
+  cursor:pointer;
+  transition:opacity .15s, filter .15s;
+  -webkit-tap-highlight-color:transparent;
+  /* タップ領域を広げるためpaddingを使う */
+  padding:0 1px;
+  box-sizing:border-box;
+}
+.hour-bar:active, .hour-bar.selected{
+  opacity:.7;
+  filter:brightness(1.25);
+}
+
+/* 時間帯詳細モーダル */
+.hour-detail-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+  z-index:1100;
+  align-items:flex-end;
+  justify-content:center;
+}
+.hour-detail-overlay.open{display:flex;}
+.hour-detail-modal{
+  background:#fff;
+  border-radius:18px 18px 0 0;
+  width:100%;
+  max-width:540px;
+  max-height:75vh;
+  overflow-y:auto;
+  padding:20px 18px 32px;
+  box-shadow:0 -4px 24px rgba(0,0,0,.15);
+}
+.hour-detail-handle{
+  width:40px;height:4px;background:#ddd;border-radius:2px;
+  margin:0 auto 16px;
+}
+.hour-detail-title{
+  font-family:'Dela Gothic One',sans-serif;
+  font-size:18px;
+  color:var(--brown);
+  margin-bottom:4px;
+}
+.hour-detail-subtitle{
+  font-size:12px;color:var(--text3);margin-bottom:16px;
+}
+.hour-detail-kpi{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;
+  margin-bottom:16px;
+}
+.hour-detail-kpi-card{
+  background:var(--surface2);
+  border-radius:var(--radius-sm);
+  padding:10px 12px;
+  text-align:center;
+}
+.hour-detail-kpi-label{font-size:10px;color:var(--text3);font-weight:700;margin-bottom:4px;}
+.hour-detail-kpi-val{font-size:18px;font-weight:900;font-family:'Dela Gothic One',sans-serif;}
+.hour-detail-kpi-val.orange{color:var(--primary);}
+.hour-detail-kpi-val.blue{color:#1565C0;}
+.hour-detail-section-label{
+  font-size:12px;font-weight:700;color:var(--text2);
+  border-bottom:1px solid var(--border);
+  padding-bottom:5px;margin-bottom:8px;margin-top:12px;
+}
+.hour-detail-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 0;border-bottom:1px solid var(--border);
+  font-size:13px;
+}
+.hour-detail-row:last-child{border-bottom:none;}
+.hour-detail-row-name{flex:1;color:var(--text);font-weight:700;}
+.hour-detail-row-sub{font-size:11px;color:var(--text3);margin-left:4px;}
+.hour-detail-row-val{color:var(--primary);font-weight:900;font-family:'Dela Gothic One',sans-serif;}
+.hour-detail-empty{
+  text-align:center;padding:24px 0;
+  font-size:13px;color:var(--text3);
+}
+.hour-detail-close-btn{
+  width:100%;padding:12px;margin-top:18px;
+  background:var(--surface2);border:none;border-radius:var(--radius-sm);
+  font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;
+  color:var(--text2);cursor:pointer;
+}
+.hour-detail-close-btn:active{background:var(--border);}
+
+/* グラフの案内文 */
+.hour-chart-hint{
+  font-size:11px;color:var(--text3);text-align:center;
+  margin-top:4px;
+}
 </style>
 </head>
 <body>
@@ -743,7 +843,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
 
     <!-- 時間帯チャート -->
     <div class="section-title" style="margin-bottom:8px;">🕐 時間帯別売上</div>
-    <div class="hour-chart-wrap"><div class="hour-chart" id="hour-chart"></div><div class="hour-labels" id="hour-labels"></div></div>
+    <div class="hour-chart-wrap"><div class="hour-chart" id="hour-chart"></div><div class="hour-labels" id="hour-labels"></div><div class="hour-chart-hint" id="hour-chart-hint">📌 棒グラフをタップすると時間帯の詳細が確認できます</div></div>
 
     <!-- 材料費配賦サマリー -->
     <div class="section-title" style="margin-bottom:8px;">📊 材料費配賦サマリー</div>
@@ -978,6 +1078,17 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--t
       <button class="modal-btn cancel" style="flex:1;" onclick="adminPinModalCancel()">キャンセル</button>
       <button class="modal-btn primary" style="flex:1;" onclick="adminPinModalOk()">確認</button>
     </div>
+  </div>
+</div>
+
+<!-- [HOUR-1] 時間帯タップ詳細モーダル -->
+<div class="hour-detail-overlay" id="hour-detail-overlay" onclick="if(event.target===this)closeHourDetail()">
+  <div class="hour-detail-modal" id="hour-detail-modal">
+    <div class="hour-detail-handle"></div>
+    <div class="hour-detail-title" id="hour-detail-title">00:00〜00:59</div>
+    <div class="hour-detail-subtitle" id="hour-detail-subtitle"></div>
+    <div id="hour-detail-body"></div>
+    <button class="hour-detail-close-btn" onclick="closeHourDetail()">閉じる</button>
   </div>
 </div>
 
@@ -1476,8 +1587,12 @@ function renderReport(){
   const flrClass=flrRate<=60?'ok':flrRate<=70?'warn':'ng';
   document.getElementById('fl-grid').innerHTML=`<div class="fl-card ${costClass}"><div class="fl-card-label">原価率（F Rate）</div><div class="fl-card-val">${costRate.toFixed(1)}%</div><div class="fl-card-sub">目安：30%以下◎ 40%以下○</div></div><div class="fl-card ${flClass}"><div class="fl-card-label">FL率（F＋L）</div><div class="fl-card-val">${flRate.toFixed(1)}%</div><div class="fl-card-sub">目安：55%以下◎ 60%以下○</div></div><div class="fl-card purple"><div class="fl-card-label">FL値（絶対額）</div><div class="fl-card-val">¥${flValue.toLocaleString()}</div><div class="fl-card-sub">F:¥${foodCost.toLocaleString(undefined,{maximumFractionDigits:0})} L:¥${laborCost.toLocaleString()}</div></div><div class="fl-card ${flrClass}"><div class="fl-card-label">FLR率（出店料控除後）</div><div class="fl-card-val">${flrRate.toFixed(1)}%</div><div class="fl-card-sub">目安：60%以下◎ 70%以下○</div></div>`;
   /* [ALLOC-3] 時間帯はactiveOrders */ const hd={};for(let h=9;h<=20;h++)hd[h]=0;activeOrders.forEach(o=>{const h=new Date(o.time).getHours();hd[h]=(hd[h]||0)+o.total;});const mx=Math.max(1,...Object.values(hd));const hrs=Object.keys(hd).map(Number).sort((a,b)=>a-b);
-  document.getElementById('hour-chart').innerHTML=hrs.map(h=>`<div class="hour-bar" style="height:${Math.round((hd[h]||0)/mx*55)+3}px;background:${hd[h]>0?'var(--primary)':'var(--border)'};" title="${h}時"></div>`).join('');
-  document.getElementById('hour-labels').innerHTML=hrs.map(h=>`<div class="hour-label">${h}</div>`).join('');
+  /* [HOUR-1] バーにonclick追加 */
+  document.getElementById('hour-chart').innerHTML=hrs.map(h=>`<div class="hour-bar" style="height:${Math.round((hd[h]||0)/mx*55)+3}px;background:${hd[h]>0?'var(--primary)':'var(--border)'};" title="${h}時 ¥${(hd[h]||0).toLocaleString()}" onclick="openHourDetail(${h})"></div>`).join('');
+  document.getElementById('hour-labels').innerHTML=hrs.map(h=>`<div class="hour-label" style="cursor:pointer;" onclick="openHourDetail(${h})">${h}</div>`).join('');
+  /* 案内文 */
+  const hintEl=document.getElementById('hour-chart-hint');
+  if(hintEl)hintEl.style.display=Object.values(hd).some(v=>v>0)?'':'none';
   /* [ALLOC-2] 商品別集計（按分原価込み）activeOrdersは上部で定義済み */
   const pm={};
   activeOrders.forEach(o=>o.items.forEach(i=>{
@@ -2883,6 +2998,132 @@ function toggleReportDetail(){
     if(textSpan) textSpan.textContent = '📊 詳細指標を閉じる';
   }
 }
+
+/* =====================================================
+   時間帯タップ詳細 [HOUR-1]
+   ===================================================== */
+
+/**
+ * buildHourDetailData(hour)
+ * 指定時間帯の詳細集計を返す
+ * - 現在イベント / cancelledAt除外 を確実に適用
+ */
+function buildHourDetailData(hour){
+  /* 現在イベント・取消済除外 */
+  const orders = (state.orders||[]).filter(function(o){
+    return o.eventId === state.currentEventId && !o.cancelledAt;
+  });
+  /* 対象時間帯の注文を抽出 */
+  const hourOrders = orders.filter(function(o){
+    return new Date(o.time).getHours() === hour;
+  });
+
+  if(!hourOrders.length){
+    return {empty:true, hour:hour};
+  }
+
+  /* 基本KPI */
+  const totalSales  = hourOrders.reduce(function(s,o){return s+o.total;},0);
+  const count       = hourOrders.length;
+  const avgOrder    = count>0 ? Math.round(totalSales/count) : 0;
+  const totalItems  = hourOrders.reduce(function(s,o){
+    return s+(o.items||[]).reduce(function(ss,i){return ss+i.qty;},0);
+  },0);
+
+  /* 商品別内訳 */
+  const itemMap = {};
+  hourOrders.forEach(function(o){
+    (o.items||[]).forEach(function(i){
+      if(!itemMap[i.id]) itemMap[i.id]={name:i.name,qty:0,sales:0};
+      itemMap[i.id].qty   += i.qty;
+      itemMap[i.id].sales += i.price * i.qty;
+    });
+  });
+  const itemRows = Object.values(itemMap).sort(function(a,b){return b.sales-a.sales;});
+
+  /* 決済別内訳 */
+  const payMap = {};
+  hourOrders.forEach(function(o){
+    if(!payMap[o.payMethod]) payMap[o.payMethod]={count:0,total:0};
+    payMap[o.payMethod].count++;
+    payMap[o.payMethod].total+=o.total;
+  });
+
+  return {empty:false, hour:hour, totalSales:totalSales, count:count,
+          avgOrder:avgOrder, totalItems:totalItems, itemRows:itemRows, payMap:payMap};
+}
+
+/**
+ * openHourDetail(hour)
+ * 時間帯詳細モーダルを開く
+ */
+function openHourDetail(hour){
+  var data = buildHourDetailData(hour);
+  var titleEl = document.getElementById('hour-detail-title');
+  var subEl   = document.getElementById('hour-detail-subtitle');
+  var bodyEl  = document.getElementById('hour-detail-body');
+  if(!titleEl||!bodyEl) return;
+
+  titleEl.textContent = hour + ':00 〜 ' + hour + ':59';
+
+  if(data.empty){
+    subEl.textContent = '';
+    bodyEl.innerHTML  = '<div class="hour-detail-empty">📭 この時間帯の販売はありません</div>';
+  } else {
+    subEl.textContent = '集計対象: ' + data.count + '件 / 現在イベントのみ';
+
+    /* KPIカード */
+    var kpiHtml = '<div class="hour-detail-kpi">'
+      + '<div class="hour-detail-kpi-card"><div class="hour-detail-kpi-label">売上</div><div class="hour-detail-kpi-val orange">¥'+data.totalSales.toLocaleString()+'</div></div>'
+      + '<div class="hour-detail-kpi-card"><div class="hour-detail-kpi-label">会計件数</div><div class="hour-detail-kpi-val blue">'+data.count+'件</div></div>'
+      + '<div class="hour-detail-kpi-card"><div class="hour-detail-kpi-label">客単価</div><div class="hour-detail-kpi-val orange">¥'+data.avgOrder.toLocaleString()+'</div></div>'
+      + '<div class="hour-detail-kpi-card"><div class="hour-detail-kpi-label">販売点数</div><div class="hour-detail-kpi-val blue">'+data.totalItems+'点</div></div>'
+      + '</div>';
+
+    /* 商品別内訳 */
+    var itemsHtml = '<div class="hour-detail-section-label">🍗 商品別（売上順）</div>';
+    if(data.itemRows.length){
+      itemsHtml += data.itemRows.map(function(r){
+        return '<div class="hour-detail-row">'
+          + '<span class="hour-detail-row-name">'+r.name+'</span>'
+          + '<span class="hour-detail-row-sub">×'+r.qty+'</span>'
+          + '<span class="hour-detail-row-val">¥'+r.sales.toLocaleString()+'</span>'
+          + '</div>';
+      }).join('');
+    } else {
+      itemsHtml += '<div class="hour-detail-empty" style="padding:12px 0;">データなし</div>';
+    }
+
+    /* 決済別内訳 */
+    var payHtml = '<div class="hour-detail-section-label">💳 決済別</div>';
+    var payKeys = Object.keys(PAY_LABELS).filter(function(k){return data.payMap[k];});
+    if(payKeys.length){
+      payHtml += payKeys.map(function(k){
+        var p = data.payMap[k];
+        return '<div class="hour-detail-row">'
+          + '<span class="hour-detail-row-name">'+PAY_LABELS[k]+'</span>'
+          + '<span class="hour-detail-row-sub">'+p.count+'件</span>'
+          + '<span class="hour-detail-row-val">¥'+p.total.toLocaleString()+'</span>'
+          + '</div>';
+      }).join('');
+    } else {
+      payHtml += '<div class="hour-detail-empty" style="padding:12px 0;">データなし</div>';
+    }
+
+    bodyEl.innerHTML = kpiHtml + itemsHtml + payHtml;
+  }
+
+  document.getElementById('hour-detail-overlay').classList.add('open');
+}
+
+/**
+ * closeHourDetail()
+ */
+function closeHourDetail(){
+  var overlay = document.getElementById('hour-detail-overlay');
+  if(overlay) overlay.classList.remove('open');
+}
+
 </script>
 </body>
 </html>
