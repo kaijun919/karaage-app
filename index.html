@@ -1355,6 +1355,8 @@ body{font-size:15px !important;}
               ↩️ 直前取消
             </button>
           </div>
+          <button class="clear-btn" onclick="openOrderHistory()" style="width:100%;margin-top:6px;background:#E3F2FD;border-color:#90CAF9;color:#1565C0;">📋 購入履歴</button>
+          <button class="clear-btn" id="demo-close-btn" onclick="demoAfterClose()" style="width:100%;margin-top:6px;background:#F3E5F5;border-color:#CE93D8;color:#6A1B9A;font-size:11px;">🧪 デモ：レジ締め後フローを試す</button>
         </div>
       </div>
     </div>
@@ -1996,6 +1998,29 @@ body{font-size:15px !important;}
     <div class="order-detail-meta" id="order-detail-meta"></div>
     <div id="order-detail-items"></div>
     <button class="order-detail-close-btn" onclick="closeOrderDetail()">✕ 閉じる</button>
+  </div>
+</div>
+
+<!-- 📋 購入履歴モーダル -->
+<div class="modal-overlay" id="order-history-modal">
+  <div class="modal" style="max-width:480px;width:100%;padding:0;overflow:hidden;">
+    <div style="padding:16px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-family:'Dela Gothic One',sans-serif;font-size:16px;color:var(--brown);">📋 購入履歴</span>
+      <button onclick="closeModal('order-history-modal')" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);">✕</button>
+    </div>
+    <div id="order-history-list" style="overflow-y:auto;max-height:65vh;padding:10px 12px;"></div>
+  </div>
+</div>
+
+<!-- 📋 購入履歴 詳細モーダル -->
+<div class="modal-overlay" id="order-hist-detail-modal">
+  <div class="modal" style="max-width:420px;width:100%;">
+    <div class="modal-title">🧾 注文詳細</div>
+    <div id="order-hist-detail-content" style="margin-bottom:16px;"></div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" onclick="closeModal('order-hist-detail-modal')">閉じる</button>
+      <button class="modal-btn" id="order-hist-delete-btn" style="background:#FFEBEE;border:1.5px solid #EF9A9A;color:#B71C1C;" onclick="deleteOrderFromHistory()">🗑️ 削除</button>
+    </div>
   </div>
 </div>
 
@@ -3786,6 +3811,95 @@ function selectEvent(id){
     if(pageId==='page-report'){renderWeatherReportCard();}/* [WEATHER-2] */
   }
 }
+
+/* ============================================================
+   📋 購入履歴機能
+   ============================================================ */
+let _historyTargetOrderId = null;
+
+function openOrderHistory(){
+  renderOrderHistoryList();
+  document.getElementById('order-history-modal').classList.add('open');
+}
+
+function renderOrderHistoryList(){
+  const list = document.getElementById('order-history-list');
+  const orders = (state.orders||[])
+    .filter(function(o){ return o.eventId === state.currentEventId; })
+    .slice().reverse();
+
+  if(!orders.length){
+    list.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:14px;">まだ購入履歴がありません</div>';
+    return;
+  }
+
+  const PAY_ICON = {cash:'💴',paypay:'🟠',aupay:'🟡',dpay:'🔴',rakuten:'🛍️',other:'💳'};
+
+  list.innerHTML = orders.map(function(o){
+    const t = new Date(o.time);
+    const hhmm = (t.getHours()<10?'0':'')+t.getHours()+':'+(t.getMinutes()<10?'0':'')+t.getMinutes();
+    const summary = o.items.slice(0,2).map(function(i){ return i.name+'×'+i.qty; }).join('・')
+      + (o.items.length > 2 ? ' 他'+(o.items.length-2)+'品' : '');
+    const icon = PAY_ICON[o.payMethod]||'💳';
+    return '<div onclick="openOrderHistDetail('+o.id+')" style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid var(--border);cursor:pointer;">'
+      + '<div style="min-width:42px;text-align:center;font-family:\'Dela Gothic One\',sans-serif;font-size:18px;color:var(--primary);">#'+o.orderNo+'</div>'
+      + '<div style="flex:1;min-width:0;">'
+      +   '<div style="font-size:12px;color:var(--text3);margin-bottom:2px;">'+hhmm+' '+icon+' '+(PAY_LABELS[o.payMethod]||o.payMethod)+'</div>'
+      +   '<div style="font-size:13px;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+summary+'</div>'
+      + '</div>'
+      + '<div style="font-weight:700;font-size:15px;color:var(--brown);white-space:nowrap;">¥'+o.total.toLocaleString()+'</div>'
+      + '<div style="color:var(--text3);font-size:16px;">›</div>'
+      + '</div>';
+  }).join('');
+}
+
+function openOrderHistDetail(orderId){
+  const o = (state.orders||[]).find(function(x){ return x.id === orderId; });
+  if(!o) return;
+  _historyTargetOrderId = orderId;
+
+  const t = new Date(o.time);
+  const datetime = t.getFullYear()+'/'+(t.getMonth()+1)+'/'+t.getDate()+' '
+    +(t.getHours()<10?'0':'')+t.getHours()+':'+(t.getMinutes()<10?'0':'')+t.getMinutes();
+
+  const itemsHTML = o.items.map(function(i){
+    return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:14px;">'
+      +'<span>'+(i.emoji||'🍗')+' '+i.name+' × '+i.qty+'</span>'
+      +'<span style="font-weight:700;">¥'+(i.price*i.qty).toLocaleString()+'</span>'
+      +'</div>';
+  }).join('');
+
+  const discRow = o.discountAmount > 0
+    ? '<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:14px;color:#E65100;"><span>✂️ 値引き</span><span>−¥'+o.discountAmount.toLocaleString()+'</span></div>'
+    : '';
+
+  const recvRow = o.payMethod==='cash' && o.receivedAmount
+    ? '<div style="font-size:12px;color:var(--text3);margin-top:6px;">預かり ¥'+o.receivedAmount.toLocaleString()+' → おつり ¥'+(o.receivedAmount-o.total).toLocaleString()+'</div>'
+    : '';
+
+  document.getElementById('order-hist-detail-content').innerHTML =
+    '<div style="font-size:12px;color:var(--text3);margin-bottom:10px;">#'+o.orderNo+' ｜ '+datetime+' ｜ '+(PAY_LABELS[o.payMethod]||o.payMethod)+'</div>'
+    + itemsHTML + discRow
+    + '<div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:700;font-size:16px;"><span>合計</span><span style="color:var(--brown);">¥'+o.total.toLocaleString()+'</span></div>'
+    + recvRow;
+
+  document.getElementById('order-hist-detail-modal').classList.add('open');
+}
+
+function deleteOrderFromHistory(){
+  if(!_historyTargetOrderId) return;
+  requireAdminPin('注文削除','注文を削除するには管理PINが必要です。', function(){
+    showConfirm('この注文を削除しますか？','削除したデータは復元できません。', function(){
+      state.orders = (state.orders||[]).filter(function(o){ return o.id !== _historyTargetOrderId; });
+      saveState();
+      closeModal('order-hist-detail-modal');
+      renderOrderHistoryList();
+      showToast('🗑️ 注文を削除しました');
+      _historyTargetOrderId = null;
+    });
+  });
+}
+
 /* [UX] 新規イベントフォームに切り替え */
 function newEventForm(){
   state.currentEventId=null;
@@ -4003,6 +4117,81 @@ function backupData(){
     showToast('📤 バックアップしました（画像データ含む）');
   });
 }
+
+/** 🧪 デモ：レジ締め後フローをリセットして表示 */
+function demoAfterClose(){
+  /* ステップ表示をリセット */
+  ['1','2','3'].forEach(function(n){
+    var icon=document.getElementById('acs-icon'+n);
+    var step=document.getElementById('acs-step'+n);
+    if(icon) icon.textContent='⬜';
+    if(step){
+      step.style.opacity= n==='1'?'1':'0.5';
+      step.style.background= n==='1'?'#E8F5E9':'#F5F5F5';
+      step.style.borderColor= n==='1'?'#A5D6A7':'var(--border)';
+    }
+  });
+  document.getElementById('acs-btn-area').innerHTML=
+    '<button class="checkout-btn" style="margin-bottom:8px;" onclick="acsStep1()">① JSONを書き出す</button>'
+    +'<button class="modal-btn cancel" style="width:100%;" onclick="closeModal(\'after-close-modal\')">後で（スキップ）</button>';
+  document.getElementById('after-close-modal').classList.add('open');
+}
+
+/** レジ締め後フロー：ステップ① JSONバックアップ */
+function acsStep1(){
+  requireAdminPin('バックアップを書き出し','バックアップファイルを書き出すには管理PINが必要です。',function(){
+    const json=JSON.stringify(state,null,2);
+    const blob=new Blob([json],{type:'application/json'});
+    const a=document.createElement('a');
+    const dt=new Date().toISOString().slice(0,16).replace('T','_').replace(':','h')+'m';
+    a.href=URL.createObjectURL(blob);
+    a.download='karaage_backup_'+dt+'.json';
+    a.click();
+    localStorage.setItem('karaage_last_backup',new Date().toISOString());
+    updateBackupLastInfo();
+    showToast('📤 ダウンロード開始！ノートへ保存してください');
+    /* ①完了 → ②をアクティブに */
+    document.getElementById('acs-icon1').textContent='✅';
+    document.getElementById('acs-step1').style.background='#C8E6C9';
+    var s2=document.getElementById('acs-step2');
+    s2.style.opacity='1';
+    s2.style.background='#E3F2FD';
+    s2.style.borderColor='#90CAF9';
+    document.getElementById('acs-icon2').textContent='👉';
+    document.getElementById('acs-btn-area').innerHTML=
+      '<button class="checkout-btn" style="margin-bottom:8px;background:#1565C0;" onclick="acsStep2()">② ノートに保存したら次へ</button>'
+      +'<button class="modal-btn cancel" style="width:100%;" onclick="closeModal(\'after-close-modal\')">後で（スキップ）</button>';
+  });
+}
+
+/** レジ締め後フロー：ステップ② ノート保存確認 → ③新規イベント作成 */
+function acsStep2(){
+  /* ②完了 → ③をアクティブに */
+  document.getElementById('acs-icon2').textContent='✅';
+  document.getElementById('acs-step2').style.background='#C8E6C9';
+  var s3=document.getElementById('acs-step3');
+  s3.style.opacity='1';
+  s3.style.background='#FFF3E0';
+  s3.style.borderColor='#FFCC80';
+  document.getElementById('acs-icon3').textContent='👉';
+  document.getElementById('acs-btn-area').innerHTML=
+    '<button class="checkout-btn" style="margin-bottom:8px;background:#E65100;" onclick="acsStep3()">③ 次のイベントを作成する</button>'
+    +'<button class="modal-btn cancel" style="width:100%;" onclick="closeModal(\'after-close-modal\')">後で（スキップ）</button>';
+}
+
+/** レジ締め後フロー：ステップ③ 新規イベント作成 */
+function acsStep3(){
+  document.getElementById('acs-icon3').textContent='✅';
+  closeModal('after-close-modal');
+  showToast('✨ 新しいイベントを入力してください');
+  setTimeout(function(){
+    showPage('page-settings');
+    setTimeout(function(){ newEventForm(); },400);
+  },600);
+}
+
+/** exportBackupThenGuide: 後方互換のため残す */
+function exportBackupThenGuide(){ acsStep1(); }
 
 /* [P2] 最終バックアップ日時表示 */
 function updateBackupLastInfo(){
@@ -5459,6 +5648,10 @@ function confirmRegisterClose(){
     saveState();
     renderRegisterCloseArea();
     showToast('🏁 レジ締めを完了しました');
+    /* レジ締め後アクション促進 */
+    setTimeout(function(){
+      document.getElementById('after-close-modal').classList.add('open');
+    }, 800);
   });
 }
 
@@ -6079,6 +6272,45 @@ function renderPayMethodGrid(){
     </div>
   </div>
 </div>
+<!-- レジ締め後アクション促進モーダル -->
+<div class="modal-overlay" id="after-close-modal">
+  <div class="modal" style="max-width:420px;width:100%;text-align:center;">
+    <div style="font-size:44px;margin-bottom:6px;">🏁</div>
+    <div class="modal-title" style="margin-bottom:4px;">レジ締め完了！</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:18px;">お疲れ様でした。</div>
+
+    <!-- ステップ進捗 -->
+    <div id="after-close-steps" style="text-align:left;margin-bottom:18px;">
+      <div id="acs-step1" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:8px;background:#E8F5E9;border:1.5px solid #A5D6A7;">
+        <div style="font-size:20px;" id="acs-icon1">⬜</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:14px;color:#2E7D32;">① JSONバックアップを書き出す</div>
+          <div style="font-size:11px;color:var(--text3);">端末にファイルをダウンロード</div>
+        </div>
+      </div>
+      <div id="acs-step2" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:8px;background:#F5F5F5;border:1.5px solid var(--border);opacity:.5;">
+        <div style="font-size:20px;" id="acs-icon2">⬜</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:14px;color:var(--text2);">② ノートのフォルダに保存</div>
+          <div style="font-size:11px;color:var(--text3);">「イベント売上アプリ JSON保存用」へ</div>
+        </div>
+      </div>
+      <div id="acs-step3" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#F5F5F5;border:1.5px solid var(--border);opacity:.5;">
+        <div style="font-size:20px;" id="acs-icon3">⬜</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:14px;color:var(--text2);">③ 次のイベントを作成</div>
+          <div style="font-size:11px;color:var(--text3);">作成後、日報は自動でリセット</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="acs-btn-area">
+      <button class="checkout-btn" style="margin-bottom:8px;" onclick="acsStep1()">① JSONを書き出す</button>
+      <button class="modal-btn cancel" style="width:100%;" onclick="closeModal('after-close-modal')">後で（スキップ）</button>
+    </div>
+  </div>
+</div>
+
 <!-- レジ締めモーダル -->
 <div class="modal-overlay" id="register-close-modal">
   <div class="modal" style="max-width:400px;">
