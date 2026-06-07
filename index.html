@@ -1356,8 +1356,7 @@ body{font-size:15px !important;}
             </button>
           </div>
           <button class="clear-btn" onclick="openOrderHistory()" style="width:100%;margin-top:6px;background:#E3F2FD;border-color:#90CAF9;color:#1565C0;">📋 購入履歴</button>
-          <button class="clear-btn" id="demo-close-btn" onclick="demoAfterClose()" style="width:100%;margin-top:6px;background:#F3E5F5;border-color:#CE93D8;color:#6A1B9A;font-size:11px;">🧪 デモ：レジ締め後フローを試す</button>
-        </div>
+</div>
       </div>
     </div>
   </div>
@@ -2177,8 +2176,11 @@ function seedDefaultData(){if(!state.menuItems||!state.menuItems.length){state.m
 function showPage(name,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('page-'+name).classList.add('active');
-  btn.classList.add('active');
+  const pageEl=document.getElementById('page-'+name);
+  if(!pageEl)return;
+  pageEl.classList.add('active');
+  if(!btn){btn=document.querySelector('.nav-btn[onclick*="showPage(\''+name+'\'"]');}
+  if(btn)btn.classList.add('active');
   document.querySelector('.page-wrap').scrollTop=0;
   /* [UX] 材料ページのみFABを表示 */
   const fab=document.getElementById('mat-fab');
@@ -2375,7 +2377,6 @@ function _doCheckout(){
   state.orders.push(order);
   cart.forEach(function(c){
     if(!state.inventory[c.id])state.inventory[c.id]={stocked:0,wasted:0,sold:0};
-    state.inventory[c.id].sold=(state.inventory[c.id].sold||0)+c.qty;
   });
   saveState();
 
@@ -2626,7 +2627,17 @@ function dismissInvAlert(){
   _invAlertDismissed = true;
 }
 
-function getInventory(itemId){const inv=state.inventory[itemId]||{};return{stocked:inv.stocked||0,wasted:inv.wasted||0,sold:inv.sold||0,alertThreshold:inv.alertThreshold!==undefined?inv.alertThreshold:5};}
+function getSoldQtyForEvent(itemId,eventId){
+  return (state.orders||[])
+    .filter(function(o){return o.eventId===eventId&&!o.cancelledAt;})
+    .reduce(function(sum,o){
+      return sum+(o.items||[]).filter(function(i){return i.id===itemId;}).reduce(function(s,i){return s+i.qty;},0);
+    },0);
+}
+function getInventory(itemId){
+  const inv=state.inventory[itemId]||{};
+  return{stocked:inv.stocked||0,wasted:inv.wasted||0,sold:getSoldQtyForEvent(itemId,state.currentEventId),alertThreshold:inv.alertThreshold!==undefined?inv.alertThreshold:5};
+}
 function renderInventory(){/* [P2] 在庫画面: メニュー未登録時のガイド */
   if(!state.menuItems||!state.menuItems.length){
     document.getElementById('inv-grid').innerHTML=`<div class="empty-guide" style="grid-column:1/-1">
@@ -4022,15 +4033,7 @@ function undoLastCheckout(){
   showConfirm('直前の会計を取り消しますか？',
     `¥${_lastOrder.total.toLocaleString()}（${PAY_LABELS[_lastOrder.payMethod]}）の会計を取り消します。`,
     ()=>{
-      // ordersから削除
-      state.orders=state.orders.filter(o=>o.id!==_lastOrder.id);
-      // inventory の sold を戻す
-      _lastOrder.items.forEach(i=>{
-        if(state.inventory[i.id]){
-          state.inventory[i.id].sold=Math.max(0,(state.inventory[i.id].sold||0)-i.qty);
-        }
-      });
-      saveState();
+      cancelOrderPreservingHistory(_lastOrder, 'undo');
       clearTimeout(_undoTimer);
       document.getElementById('undo-bar').classList.remove('show');
       _lastOrder=null;
@@ -4141,12 +4144,6 @@ function resetAfterCloseModal(){
     +'<button class="modal-btn cancel" style="width:100%;" onclick="closeModal(\'after-close-modal\')">後で（スキップ）</button>';
 }
 
-/** 🧪 デモ：レジ締め後フローをリセットして表示 */
-function demoAfterClose(){
-  resetAfterCloseModal();
-  document.getElementById('after-close-modal').classList.add('open');
-}
-
 /** レジ締め後フロー：ステップ① JSONバックアップ */
 function acsStep1(){
   requireAdminPin('バックアップを書き出し','バックアップファイルを書き出すには管理PINが必要です。',function(){
@@ -4195,7 +4192,7 @@ function acsStep3(){
   closeModal('after-close-modal');
   showToast('✨ 新しいイベントを入力してください');
   setTimeout(function(){
-    showPage('page-settings');
+    goSetup('settings');
     setTimeout(function(){ newEventForm(); },400);
   },600);
 }
@@ -5702,6 +5699,15 @@ function renderRegisterCloseArea(){
    ===================================================== */
 var _selectedReason = '打ち間違い';
 
+function cancelOrderPreservingHistory(order,reason){
+  if(!order||order.cancelledAt)return false;
+  order.cancelledAt=new Date().toISOString();
+  order.cancelReason=reason||'';
+  order.fulfillmentStatus='cancelled';
+  order.servedAt=null;
+  saveState();
+  return true;
+}
 function startUndoFlow(){
   if(!_lastOrder){ showToast('⚠️ 取り消せる会計がありません'); return; }
   _selectedReason = '打ち間違い';
@@ -5741,13 +5747,7 @@ function confirmCancelReason(){
   requireAdminPin('会計取消', '会計を取り消すには管理PINが必要です。', function(){
     if(!_lastOrder) return;
     var order = _lastOrder;
-    state.orders = state.orders.filter(function(o){ return o.id !== order.id; });
-    order.items.forEach(function(i){
-      if(state.inventory[i.id]){
-        state.inventory[i.id].sold = Math.max(0, (state.inventory[i.id].sold||0) - i.qty);
-      }
-    });
-    saveState();
+    cancelOrderPreservingHistory(order, reason);
     clearTimeout(_undoTimer);
     document.getElementById('undo-bar').classList.remove('show');
     _lastOrder = null;
