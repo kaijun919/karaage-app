@@ -4118,22 +4118,32 @@ function backupData(){
   });
 }
 
-/** 🧪 デモ：レジ締め後フローをリセットして表示 */
-function demoAfterClose(){
-  /* ステップ表示をリセット */
-  ['1','2','3'].forEach(function(n){
-    var icon=document.getElementById('acs-icon'+n);
-    var step=document.getElementById('acs-step'+n);
-    if(icon) icon.textContent='⬜';
+/** after-close-modalのステップ表示をリセット */
+function resetAfterCloseModal(){
+  var configs = [
+    {n:'1', bg:'#E8F5E9', border:'#A5D6A7', opacity:'1', icon:'⬜'},
+    {n:'2', bg:'#F5F5F5', border:'var(--border)', opacity:'0.5', icon:'⬜'},
+    {n:'3', bg:'#F5F5F5', border:'var(--border)', opacity:'0.5', icon:'⬜'},
+  ];
+  configs.forEach(function(c){
+    var icon = document.getElementById('acs-icon'+c.n);
+    var step = document.getElementById('acs-step'+c.n);
+    if(icon) icon.textContent = c.icon;
     if(step){
-      step.style.opacity= n==='1'?'1':'0.5';
-      step.style.background= n==='1'?'#E8F5E9':'#F5F5F5';
-      step.style.borderColor= n==='1'?'#A5D6A7':'var(--border)';
+      step.style.opacity = c.opacity;
+      step.style.background = c.bg;
+      step.style.borderColor = c.border;
     }
   });
-  document.getElementById('acs-btn-area').innerHTML=
+  var btnArea = document.getElementById('acs-btn-area');
+  if(btnArea) btnArea.innerHTML =
     '<button class="checkout-btn" style="margin-bottom:8px;" onclick="acsStep1()">① JSONを書き出す</button>'
     +'<button class="modal-btn cancel" style="width:100%;" onclick="closeModal(\'after-close-modal\')">後で（スキップ）</button>';
+}
+
+/** 🧪 デモ：レジ締め後フローをリセットして表示 */
+function demoAfterClose(){
+  resetAfterCloseModal();
   document.getElementById('after-close-modal').classList.add('open');
 }
 
@@ -5650,6 +5660,7 @@ function confirmRegisterClose(){
     showToast('🏁 レジ締めを完了しました');
     /* レジ締め後アクション促進 */
     setTimeout(function(){
+      resetAfterCloseModal();
       document.getElementById('after-close-modal').classList.add('open');
     }, 800);
   });
