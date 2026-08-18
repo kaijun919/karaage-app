@@ -1446,6 +1446,25 @@ body{font-size:15px !important;}
 #page-register .received-value,
 #page-register .change-result-amount{font-size:22px !important;font-weight:700 !important;line-height:1.1;}
 #page-register .received-value.empty{font-size:12px !important;font-weight:600 !important;}
+#page-register .cart-panel{position:relative;}
+#page-register .change-area.tenkey-active{
+  position:absolute;
+  left:7px;
+  right:7px;
+  bottom:58px;
+  z-index:30;
+  background:#F8FBF8;
+  border:2px solid #4CAF50;
+  border-radius:9px;
+  padding:7px !important;
+  box-shadow:0 10px 30px rgba(0,0,0,.24);
+}
+#page-register .change-area.tenkey-active .tenkey-wrap{margin-bottom:0;}
+#page-register .change-area.tenkey-active .tkey{min-height:46px !important;padding:9px 4px !important;font-size:21px !important;}
+#page-register .change-area.tenkey-active .tkey.del{min-height:46px !important;padding:9px 4px !important;font-size:22px !important;}
+#page-register .change-area.tenkey-active .tkey.clear-key{font-size:12px !important;}
+#page-register .tenkey-actions{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:5px;margin-top:5px;}
+#page-register .tenkey-done{background:#2E7D32 !important;color:#fff !important;border-color:#1B5E20 !important;font-weight:700 !important;}
 @media(min-width:641px){
   #page-register.active{
     display:grid;
@@ -1546,6 +1565,7 @@ body{font-size:15px !important;}
             <div class="change-area-title">💴 預かり金額・おつり計算</div>
             <div class="cash-presets" id="cash-presets"></div>
             <div class="received-display" onclick="toggleTenkey()"><span class="received-label">預かり金額</span><span class="received-value empty" id="received-value-disp">タップして入力</span></div>
+            <div class="change-result"><span class="change-result-label">おつり</span><span class="change-result-amount" id="change-amount">—</span></div>
             <div class="tenkey-wrap" id="tenkey-wrap" style="display:none;">
               <div class="tenkey-grid">
                 <button class="tkey" onclick="tkeyPress('7')">7</button><button class="tkey" onclick="tkeyPress('8')">8</button><button class="tkey" onclick="tkeyPress('9')">9</button>
@@ -1553,12 +1573,12 @@ body{font-size:15px !important;}
                 <button class="tkey" onclick="tkeyPress('1')">1</button><button class="tkey" onclick="tkeyPress('2')">2</button><button class="tkey" onclick="tkeyPress('3')">3</button>
                 <button class="tkey zero" onclick="tkeyPress('0')">0</button><button class="tkey del" onclick="tkeyPress('del')">⌫</button>
               </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px;">
+              <div class="tenkey-actions">
                 <button class="tkey clear-key" onclick="tkeyPress('clear')">クリア</button>
                 <button class="tkey clear-key" onclick="tkeyPress('00')" style="background:var(--surface2);">00</button>
+                <button class="tkey clear-key tenkey-done" onclick="setTenkeyOpen(false)">入力完了</button>
               </div>
             </div>
-            <div class="change-result"><span class="change-result-label">おつり</span><span class="change-result-amount" id="change-amount">—</span></div>
           </div>
           <button class="checkout-btn" id="checkout-btn" onclick="checkout()" disabled>決　済</button>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:4px;">
@@ -2658,8 +2678,7 @@ function removeFromCart(id){cart=cart.filter(c=>c.id!==id);renderMenuGrid();rend
 /* [DISC-1] clearCart: 値引きもリセット */
 function clearCart(){
   cart=[];discountAmount=0;discountType='set';voucherAmount=0;voucherPanelOpen=false;
-  receivedStr='';tenkeyOpen=false;
-  document.getElementById('tenkey-wrap').style.display='none';
+  receivedStr='';setTenkeyOpen(false);
   const vp=document.getElementById('voucher-panel');if(vp)vp.classList.remove('open');
   const vi=document.getElementById('voucher-amount-input');if(vi)vi.value='';
   updateReceivedDisp();renderMenuGrid();renderCart();calcChange();renderCashPresets();
@@ -2670,8 +2689,9 @@ function selectPay(btn,method){
   renderPayMethodGrid(); /* selected状態をpayMethod変数から再描画 */
   updateChangeArea();
 }
-function updateChangeArea(){const area=document.getElementById('change-area');if(payMethod==='cash'){area.classList.remove('hidden');renderCashPresets();calcChange();}else area.classList.add('hidden');}
-function toggleTenkey(){tenkeyOpen=!tenkeyOpen;document.getElementById('tenkey-wrap').style.display=tenkeyOpen?'block':'none';}
+function updateChangeArea(){const area=document.getElementById('change-area');if(payMethod==='cash'){area.classList.remove('hidden');renderCashPresets();calcChange();}else{area.classList.add('hidden');setTenkeyOpen(false);}}
+function setTenkeyOpen(open){tenkeyOpen=!!open;const wrap=document.getElementById('tenkey-wrap');const area=document.getElementById('change-area');if(wrap)wrap.style.display=tenkeyOpen?'block':'none';if(area)area.classList.toggle('tenkey-active',tenkeyOpen);}
+function toggleTenkey(){setTenkeyOpen(!tenkeyOpen);}
 function tkeyPress(v){if(v==='del')receivedStr=receivedStr.slice(0,-1);else if(v==='clear')receivedStr='';else if(v==='00'){if(receivedStr.length>0)receivedStr+='00';}else{if(receivedStr.length<7)receivedStr+=v;}receivedStr=receivedStr.replace(/^0+/,'');updateReceivedDisp();calcChange();const val=parseInt(receivedStr)||0;document.querySelectorAll('.cash-preset-btn').forEach(b=>{b.classList.toggle('active',parseInt(b.dataset.amount)===val&&val>0);});}
 function updateReceivedDisp(){const el=document.getElementById('received-value-disp');if(!receivedStr){el.textContent='タップして入力';el.className='received-value empty';}else{el.textContent='¥'+parseInt(receivedStr).toLocaleString();el.className='received-value';}}
 /* [DISC-1] renderCashPresets: 値引き後合計ベース */
@@ -2789,8 +2809,7 @@ function _doCheckout(){
   discountType='set';
   voucherAmount=0;voucherPanelOpen=false;
   receivedStr='';
-  tenkeyOpen=false;
-  document.getElementById('tenkey-wrap').style.display='none';
+  setTenkeyOpen(false);
   const vp=document.getElementById('voucher-panel');if(vp)vp.classList.remove('open');
   const vi=document.getElementById('voucher-amount-input');if(vi)vi.value='';
   updateReceivedDisp();
