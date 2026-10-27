@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Gocchi Reserve">
@@ -27,7 +27,7 @@
 
 <title>Gocchi Reserve | Event Profit Manager</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Dela+Gothic+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;900&family=Dela+Gothic+One&display=swap');
 :root{
   --primary:#E8650A;--primary-dark:#C4520A;--primary-light:#FFF0E6;
   --gold:#F5A623;--gold-dark:#D4881A;--brown:#6B3A2A;
@@ -1816,14 +1816,253 @@ body{font-size:15px !important;}
 .change-area.hidden{display:none !important;}
 #page-register .change-area.hidden .tenkey-wrap,
 #page-register .change-area.hidden .cash-presets{display:none !important;}
+
+/* [REGISTER-20261026] 縦向きタブレット・現場の読みやすさ */
+.app{max-width:1280px;}
+.header-sub{font-size:14px;}
+.event-badge{min-height:48px;padding:10px 14px;font-size:17px;display:flex;align-items:center;}
+.nav{overflow-x:auto;}
+.nav-btn{flex:1 0 auto;min-height:54px;font-size:17px;padding:10px 12px;justify-content:center;color:#6B4C3B;}
+button:focus-visible,[role="button"]:focus-visible,input:focus-visible{outline:3px solid #1565C0;outline-offset:3px;}
+#page-register{--board-height:330px;}
+#page-register.active{
+  height:100%;min-height:0;display:grid!important;overflow:hidden!important;padding:12px!important;
+  grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto minmax(0,1fr) var(--board-height)!important;
+  gap:10px!important;
+}
+#page-register .cat-filter{grid-column:1!important;grid-row:1!important;flex-wrap:nowrap!important;overflow-x:auto;margin:0!important;padding:0 0 2px;gap:8px;}
+#page-register .cat-chip{flex:none;min-height:48px!important;display:flex;align-items:center;padding:8px 16px!important;font-size:18px!important;}
+#page-register .register-layout{
+  grid-column:1!important;grid-row:2!important;display:grid!important;grid-template-columns:minmax(0,.85fr) minmax(360px,1.15fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;min-height:0;overflow:hidden;gap:12px!important;
+}
+#page-register .register-layout>div{grid-column:auto!important;grid-row:auto!important;min-width:0;min-height:0;overflow:hidden!important;}
+#page-register .register-layout>div:first-child{overflow-y:auto!important;padding:4px;}
+#page-register .menu-grid{
+  height:auto!important;grid-auto-flow:row!important;grid-auto-columns:auto!important;grid-template-rows:none!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;overflow:visible!important;gap:10px!important;
+}
+#page-register .menu-card{height:auto!important;min-height:120px!important;padding:12px 8px!important;}
+#page-register .menu-card-name,#page-register .menu-card.text-only .menu-card-name{font-size:20px!important;font-weight:500!important;line-height:1.45!important;}
+#page-register .menu-card-price{font-size:19px!important;}
+#page-register .menu-card-badge{font-size:16px!important;width:30px!important;height:30px!important;}
+#page-register .cart-panel{height:100%!important;min-height:0;max-height:none!important;position:static!important;overflow:hidden;}
+#page-register .cart-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;}
+#page-register .cart-header{padding:10px!important;font-size:18px!important;}
+#page-register #cart-count{font-size:16px!important;color:#6B4C3B!important;}
+#page-register .cart-items{flex:none!important;min-height:84px!important;max-height:230px!important;padding:8px!important;overflow-y:auto!important;}
+#page-register .cart-item{display:grid;grid-template-columns:24px minmax(0,1fr) 48px;gap:6px!important;padding:8px!important;margin-bottom:8px!important;}
+#page-register .cart-item-name{grid-column:2;grid-row:1;font-size:18px!important;font-weight:500!important;line-height:1.45;overflow-wrap:anywhere;}
+#page-register .cart-item>span:first-child{grid-column:1;grid-row:1;}
+#page-register .cart-item>div{grid-column:1 / span 2;grid-row:2;}
+#page-register .cart-item-subtotal{grid-column:2;grid-row:2;justify-self:end;font-size:17px!important;pointer-events:none;}
+#page-register .cart-item-qty{font-size:20px!important;width:30px!important;}
+#page-register .qty-btn,#page-register .cart-remove{width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;font-size:24px!important;padding:4px!important;flex-shrink:0;}
+#page-register .cart-remove{grid-column:3;grid-row:1 / span 2;font-size:20px!important;color:#7A3527;}
+#page-register .cart-footer{padding:10px!important;}
+#page-register .discount-row,#page-register .voucher-row{display:flex!important;width:100%!important;margin:0 0 8px!important;vertical-align:baseline;gap:8px;flex-wrap:wrap;}
+#page-register .discount-btn,#page-register .voucher-method-btn{min-height:50px!important;padding:10px 12px!important;font-size:18px!important;font-weight:500!important;}
+#page-register .discount-btn{width:100%;}
+#page-register .voucher-method-buttons{gap:8px;}
+#page-register .voucher-method-btn{flex:1;}
+#page-register .voucher-display{flex:1 0 100%;font-size:16px;text-align:left;}
+#page-register .voucher-display:empty{display:none;}
+#page-register .voucher-panel .form-label,#page-register .voucher-due-label{font-size:16px!important;}
+#page-register .voucher-panel input{font-size:20px;min-height:50px;min-width:0;width:100%;}
+#page-register .voucher-timing-note{font-size:15px;}
+#page-register .payment-method-label{display:block!important;font-size:16px!important;font-weight:500!important;color:#6B4C3B!important;margin:4px 0 8px!important;}
+#page-register .pay-method-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin-bottom:12px!important;}
+#page-register .pay-btn{min-height:66px!important;padding:10px 8px!important;font-size:20px!important;line-height:1.4!important;font-weight:500!important;flex-direction:row;justify-content:center;gap:8px!important;border-radius:10px!important;}
+#page-register .pay-btn .pay-icon{font-size:22px!important;}
+#page-register .pay-btn.aupay-btn:not(.selected){color:#974500;}
+#page-register .change-area{position:static!important;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px!important;padding:10px!important;margin-bottom:8px!important;}
+#page-register .change-area-title{display:block!important;font-size:16px!important;font-weight:500!important;color:#6B4C3B;}
+#page-register .cash-presets{flex-wrap:wrap!important;gap:8px!important;overflow:visible;}
+#page-register .cash-preset-btn{min-width:90px!important;min-height:50px!important;padding:8px 10px!important;font-size:18px!important;font-weight:600!important;}
+#page-register .received-display,#page-register .change-result{min-height:82px!important;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:6px;padding:10px!important;min-width:0;}
+#page-register .received-label,#page-register .change-result-label{font-size:16px!important;font-weight:500!important;}
+#page-register .received-value,#page-register .change-result-amount{font-size:25px!important;font-weight:600!important;overflow-wrap:anywhere;line-height:1.2!important;}
+#page-register .received-value.empty{font-size:16px!important;font-weight:400!important;color:#6B4C3B!important;}
+#page-register .change-area.tenkey-active{position:static!important;box-shadow:none;}
+#page-register .tkey,#page-register .change-area.tenkey-active .tkey{min-height:54px!important;font-size:24px!important;padding:10px 4px!important;}
+#page-register .tkey.clear-key,#page-register .change-area.tenkey-active .tkey.clear-key{font-size:17px!important;}
+#page-register .checkout-actions{flex:0 0 auto;padding:8px 10px;background:#fff;border-top:2px solid var(--border);box-shadow:0 -3px 10px rgba(0,0,0,.07);}
+#page-register .cart-total-row{padding:6px 10px!important;margin-bottom:6px!important;}
+#page-register .cart-total-label{font-size:17px!important;font-weight:500!important;}
+#page-register .cart-total-amount{font-size:30px!important;font-weight:700!important;}
+#page-register .checkout-btn{min-height:56px!important;font-size:22px!important;font-weight:600!important;padding:10px!important;margin:0!important;}
+#page-register .checkout-secondary{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+#page-register .clear-btn{min-height:48px!important;padding:8px!important;font-size:17px!important;font-weight:500!important;margin:0!important;color:#6B4C3B;}
+#page-register .checkout-secondary .clear-btn{flex:1 1 95px;width:auto;}
+#page-register .cart-discount-row{flex-wrap:wrap;gap:6px;}
+#page-register .cart-discount-label,#page-register .cart-subtotal-label{font-size:16px!important;}
+#page-register .cart-discount-del{min-width:48px;min-height:48px;font-size:20px;}
+#page-register .board-section{grid-column:1!important;grid-row:3!important;width:100%;height:var(--board-height)!important;max-height:none!important;min-height:0;display:flex;flex-direction:column;margin:0!important;overflow:hidden!important;}
+#page-register .board-header{padding:9px 14px!important;flex-shrink:0;}
+#page-register .board-header-title{font-family:'Noto Sans JP','Yu Gothic',sans-serif!important;font-weight:400!important;font-size:21px!important;line-height:1.5;gap:12px;}
+#page-register .board-badge{font-family:'Noto Sans JP',sans-serif;font-size:17px;font-weight:500;padding:2px 10px;}
+#page-register .board-size-controls{display:flex;align-items:center;gap:10px;flex:none;min-height:54px;padding:0 14px;background:#F0F2FC;font-size:16px;color:#242E68;}
+#page-register .board-size-controls label{white-space:nowrap;}
+#board-size-control{flex:1;min-width:60px;height:48px;accent-color:#3949AB;cursor:ew-resize;touch-action:pan-x;appearance:none;background:transparent;}
+#board-size-control::-webkit-slider-runnable-track{height:8px;background:#B8BFDF;border-radius:8px;}
+#board-size-control::-webkit-slider-thumb{appearance:none;width:32px;height:32px;margin-top:-12px;background:#3949AB;border:3px solid #fff;border-radius:50%;box-shadow:0 1px 4px #3949AB;}
+#board-size-control::-moz-range-track{height:8px;background:#B8BFDF;border-radius:8px;}
+#board-size-control::-moz-range-thumb{width:28px;height:28px;background:#3949AB;border:3px solid #fff;border-radius:50%;}
+#page-register #board-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:max-content;align-content:start!important;align-items:stretch!important;flex:1 1 auto!important;min-height:0!important;overflow-x:hidden!important;overflow-y:auto!important;padding:10px!important;gap:10px!important;scrollbar-width:auto;scroll-snap-type:none;overscroll-behavior:contain;}
+#page-register #board-list::-webkit-scrollbar{display:block;width:12px;}
+#page-register #board-list::-webkit-scrollbar-thumb{background:#7986CB;border:3px solid #fff;border-radius:8px;}
+#page-register .board-card{display:flex!important;flex-direction:column!important;flex:none!important;height:auto!important;min-height:0!important;min-width:0;overflow:visible!important;padding:12px!important;border:2px solid #C5CAE9!important;border-radius:10px!important;gap:10px!important;}
+#page-register .board-card-top{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap;gap:8px!important;margin:0!important;}
+#page-register .board-order-no-btn{min-height:50px!important;padding:8px 10px!important;gap:10px;font-size:18px;}
+#page-register .board-order-no-btn .bon-no{font-size:26px!important;font-weight:600!important;line-height:1.2;}
+#page-register .board-order-no-btn .bon-hint{font-size:16px!important;font-weight:400;line-height:1.2;padding:3px;}
+#page-register .board-elapsed{font-size:14px!important;font-weight:500;padding:5px 8px!important;white-space:normal!important;}
+#page-register .board-card-mid{display:flex!important;flex-direction:column!important;align-items:stretch!important;flex-wrap:nowrap!important;overflow:visible!important;gap:8px!important;margin:0!important;min-width:0;flex:1;}
+#page-register .board-items-summary{list-style:none;width:100%;max-width:none!important;min-width:0;font-size:18px!important;font-weight:400!important;line-height:1.5;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;flex:none!important;}
+#page-register .board-item-line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:6px 0;border-bottom:1px solid #DDD9D5;}
+#page-register .board-item-name{overflow-wrap:anywhere;}
+#page-register .board-item-quantity{font-size:22px;font-weight:600;white-space:nowrap;color:#1A237E;}
+#page-register .board-payment-info{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+#page-register .board-total{font-family:'Noto Sans JP',sans-serif;font-size:19px!important;font-weight:600!important;}
+#page-register .board-pay-label{font-size:15px!important;white-space:normal!important;color:#6B4C3B;}
+#page-register .board-card-bottom{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap;gap:8px!important;}
+#page-register .board-time-text{font-size:14px!important;white-space:normal!important;color:#6B4C3B;}
+#page-register .board-serve-btn{min-height:50px!important;font-size:18px!important;font-weight:500!important;padding:10px 16px!important;}
+#page-register .board-empty{grid-column:1 / -1;padding:30px 12px!important;font-size:18px!important;}
+#page-register .board-undo-bar{font-size:16px;padding:6px 12px;gap:10px;}
+#page-register .board-undo-link{min-height:48px;min-width:64px;font-size:18px;color:#fff;}
+/* レジから開くダイアログも同じ文字・タップ基準に揃える。 */
+#disc-modal-overlay button,#order-detail-overlay button,#order-history-modal button,#order-hist-detail-modal button,#cancel-reason-modal button,#confirm-modal button,.undo-bar button{min-height:48px!important;min-width:48px;font-family:'Noto Sans JP',sans-serif!important;font-size:18px!important;line-height:1.4;}
+.disc-modal-title{font-family:'Noto Sans JP',sans-serif;font-size:22px;font-weight:500;}
+.disc-modal,.order-detail-modal{max-height:88dvh;overflow-y:auto;}
+.disc-type-btn{padding:10px 8px;}
+.disc-summary-row,.order-detail-meta,.order-detail-item-row{font-size:18px;}
+.order-detail-item-name{min-width:0;overflow-wrap:anywhere;}
+.order-detail-item-price{flex-shrink:0;}
+@media(min-width:1100px){#page-register .menu-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}#page-register #board-list{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media(max-width:740px) and (min-width:641px){#page-register .register-layout{grid-template-columns:minmax(0,1fr) minmax(350px,1.3fr)!important;}#page-register .menu-grid{grid-template-columns:1fr!important;}}
+@media(max-width:640px){
+  .nav-btn{font-size:16px;min-height:52px;padding:10px;}
+  #page-register.active{height:auto!important;min-height:100%;display:flex!important;flex-direction:column!important;overflow:visible!important;padding:10px!important;}
+  #page-register .register-layout{flex:none!important;display:flex!important;flex-direction:column;overflow:visible!important;gap:12px!important;}
+  #page-register .register-layout>div{overflow:visible!important;}
+  #page-register .register-layout>div:first-child{max-height:280px;overflow-y:auto!important;}
+  #page-register .cart-panel{height:auto!important;overflow:visible!important;}
+  #page-register .cart-scroll{flex:none;overflow:visible;}
+  #page-register .cart-items{max-height:250px!important;}
+  #page-register .checkout-actions{position:sticky;bottom:0;z-index:20;border-radius:0 0 12px 12px;}
+  #page-register .board-section{flex:none!important;}
+  #page-register #board-list{grid-template-columns:1fr;}
+  #page-register .cart-item-subtotal{grid-column:1 / span 2;grid-row:3;}
+  .disc-presets{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-height:650px) and (min-width:641px){
+  #page-register.active{height:auto!important;min-height:100%;overflow:visible!important;grid-template-rows:auto 460px var(--board-height)!important;}
+}
+/* 現金以外の決済では預かり・おつり入力を表示しない。 */
+#page-register .change-area.hidden{display:none!important;}
+
+/* [NOTICE-1] 通知はヘッダー内に収め、クリックもスクロールも遮らない。 */
+.header{gap:12px;}
+.header-message-area{position:relative;flex:1;min-width:0;min-height:68px;display:flex;align-items:center;}
+.header-identity{min-width:0;width:100%;}
+.header-message-area.has-status .header-identity{visibility:hidden;}
+.header .event-badge{flex-shrink:0;}
+.header .toast{
+  position:absolute;inset:0;left:0;bottom:0;width:100%;max-width:100%;height:100%;
+  transform:none!important;display:flex;align-items:center;justify-content:flex-start;
+  padding:8px 12px;border-radius:10px;background:#fff;color:#26452D;
+  font-family:'Noto Sans JP',sans-serif;font-size:17px;font-weight:500;line-height:1.45;
+  white-space:normal;overflow-wrap:anywhere;overflow:hidden;box-shadow:none;
+  z-index:1;pointer-events:none!important;opacity:0;transition:opacity .12s ease;
+}
+.header .toast.show{opacity:1;}
+#page-register .board-header{gap:8px;min-height:68px;}
+#page-register #board-undo-button{flex:none;width:124px;min-height:48px;padding:8px;border:1px solid #C5CAE9;border-radius:8px;background:#fff;color:#1A237E;font-size:17px;font-weight:500;text-decoration:none;white-space:nowrap;}
+#page-register #board-undo-button:disabled{background:transparent;color:#D2D6EC;border-color:#7986CB;cursor:default;}
+@media(max-width:380px){#page-register .board-header-title{font-size:19px!important;gap:6px;}#page-register #board-undo-button{width:112px;font-size:16px;}}
+@media(prefers-reduced-motion:reduce){.header .toast{transition:none;}}
+
+.event-data-panel{margin:18px 0;padding:16px;border:2px solid var(--border);border-radius:14px;background:#fff;}
+.event-data-panel h2{font-size:20px;font-weight:600;margin:0 0 10px;}
+.event-data-panel p{font-size:15px;line-height:1.7;color:var(--text2);margin:8px 0;}
+.event-data-target{padding:10px 12px;background:#FFF0E6;border-radius:8px;font-size:17px;font-weight:600;line-height:1.6;overflow-wrap:anywhere;}
+.event-data-panel button,.backup-row button,.all-backup-details button{width:100%;min-height:52px;padding:12px;font-family:'Noto Sans JP',sans-serif;font-size:17px;font-weight:500;border-radius:8px;line-height:1.5;cursor:pointer;}
+.event-data-panel button:disabled{opacity:.45;cursor:not-allowed;}
+.event-data-export{background:#1565C0;color:#fff;border:2px solid #1565C0;}
+.event-data-clear{background:#FFF8F8;color:#A72828;border:2px solid #C97676;}
+.event-data-clear-area{border-top:1px solid var(--border);margin-top:18px;padding-top:10px;}
+.event-data-panel .event-data-note{font-size:14px;}
+.all-backup-details{padding:4px 14px 14px;}
+.all-backup-details summary{font-size:16px;min-height:48px;padding:12px 0;cursor:pointer;}
+.all-backup-details p{font-size:14px;line-height:1.6;color:var(--text2);margin-bottom:10px;}
+#confirm-msg{white-space:pre-line;overflow-wrap:anywhere;}
+#confirm-modal .modal{max-height:88dvh;overflow-y:auto;}
+
+.acct-panel{margin:16px 0;padding:18px;border:1px solid #cad5df;border-radius:14px;background:#fff;color:#243346;font-size:17px;line-height:1.6;overflow-wrap:anywhere}
+.acct-panel h3{font-size:20px;font-weight:600;margin:0 0 12px}.acct-panel p{margin:8px 0}.acct-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px}
+.acct-panel label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:17px}.acct-panel input,.acct-panel select{width:100%;min-width:0;min-height:48px;box-sizing:border-box;border:1px solid #a8b7c7;border-radius:8px;background:white;color:#17293d;padding:10px;font-size:18px}
+.acct-panel button{min-height:48px;padding:10px 18px;border:1px solid #366582;background:#eaf4fc;color:#183e59;font-size:18px;border-radius:9px;cursor:pointer;line-height:1.4}
+.acct-panel .acct-check{flex-direction:row;align-items:center;grid-column:1/-1}.acct-panel input[type=checkbox]{width:26px;min-height:26px;height:26px}.acct-panel .acct-note{font-size:16px;color:#43576c}.acct-warnings{border-color:#d4ab51;background:#fff9e9}.acct-warnings ul{padding-left:24px;margin-bottom:0}.acct-warnings li{margin:6px 0}.acct-panel summary{font-weight:600;min-height:44px;cursor:pointer}.acct-labor-row{padding:14px 0;border-top:1px solid #ccd7df;display:flex;flex-wrap:wrap;gap:10px}.acct-labor-row>div{flex:1 1 100%}.acct-material{background:#f6f9fc}.acct-panel .staff-time-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.acct-panel .staff-result{margin-top:12px}
+#payment-correction select{white-space:normal;max-width:100%}#close-accounting-warnings,#after-accounting-warnings{font-size:16px;max-height:230px;overflow:auto}
+@media(max-width:600px){.acct-grid,.acct-panel .staff-time-row{grid-template-columns:1fr}.acct-panel{padding:14px}}
+
+/* [REGISTER-COLUMNS-20261027] 左：商品と提供待ち、右：注文と会計 */
+#page-register.active{display:block!important;padding:12px!important;height:100%;overflow:hidden!important;}
+#page-register .register-layout{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;gap:12px!important;height:100%;min-height:0;}
+#page-register .register-layout>div.register-left{display:grid!important;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) 48px var(--board-height);overflow:hidden!important;padding:0;gap:0;min-height:0;}
+#page-register .register-left .cat-filter{grid-row:1!important;margin-bottom:8px!important;}
+#page-register .product-scroll{grid-column:1;grid-row:2;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:3px;scrollbar-width:thin;}
+#page-register .register-left .menu-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+#page-register .register-left .board-section{grid-column:1!important;grid-row:4!important;height:100%!important;width:100%;min-width:0;}
+#page-register .board-resize-handle{grid-column:1;grid-row:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:48px;min-width:0;color:#283976;font-size:16px;font-weight:500;line-height:1.2;cursor:ns-resize;touch-action:none;user-select:none;-webkit-user-select:none;border-radius:8px;}
+#page-register .resize-grip{width:58px;height:5px;background:#8c98c5;border-radius:4px;}
+#page-register .board-resize-handle:hover,#page-register .board-resize-handle:focus-visible,#page-register .board-resize-handle.is-dragging{background:#e7ecff;}
+#page-register .board-resize-handle:focus-visible{outline:3px solid #1565c0;outline-offset:-3px;}
+#page-register .register-left #board-list{grid-template-columns:1fr!important;padding:8px!important;gap:8px!important;}
+#page-register .board-header{flex-wrap:wrap;gap:6px!important;padding:8px 10px!important;min-height:64px;}
+#page-register .board-header-title{font-size:20px!important;gap:6px;flex:1 1 auto;white-space:nowrap;}
+#page-register .board-badge{padding:2px 6px;font-size:16px;}
+#page-register #board-undo-button{width:104px;font-size:16px;}
+#page-register .board-card{padding:10px!important;gap:7px!important;}
+#page-register .register-right{height:100%;min-height:0;}
+#page-register .register-right .cart-panel{height:100%!important;border-color:#d7bba4;}
+#page-register .register-right .cart-scroll{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto clamp(224px,32%,260px) minmax(0,1fr);overflow:hidden;}
+#page-register .register-right .cart-header{padding:12px!important;background:#fff4e9;}
+#page-register .register-right .cart-items{max-height:none!important;min-height:0!important;margin:0;overflow-y:auto!important;border-bottom:2px solid var(--border);}
+#page-register .register-right .cart-footer{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:12px!important;}
+#page-register .register-right .checkout-actions{padding:10px;}
+#page-register .register-right .checkout-secondary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+#page-register .register-right .checkout-secondary .clear-btn{min-width:0;}
+#page-register .register-right #undo-checkout-btn{grid-row:2;grid-column:1/-1;}
+#page-register .register-right .cart-total-row{background:#fff4e9;padding:10px!important;}
+#page-register .register-right .cart-total-amount{font-size:32px!important;}
+#page-register .register-right .discount-btn{min-height:48px!important;}
+#page-register .register-right .pay-method-grid{gap:8px!important;}
+#page-register .register-right .change-area-title,#page-register .register-right .cash-presets,#page-register .register-right .tenkey-wrap{grid-column:1/-1;}
+@media(min-width:1100px){#page-register .register-left .menu-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
+@media(max-height:900px) and (min-width:641px){#page-register .register-right .cart-scroll{grid-template-rows:auto clamp(110px,26%,200px) minmax(0,1fr);}}
+@media(max-width:740px) and (min-width:641px){#page-register .register-left .menu-grid{grid-template-columns:1fr!important;}#page-register .board-header-title{font-size:18px!important;}}
+@media(max-height:650px) and (min-width:641px){#page-register.active{height:auto!important;min-height:100%;overflow:visible!important;}#page-register .register-layout{height:620px;}}
+@media(max-width:640px){
+  #page-register.active{height:auto!important;min-height:100%;overflow:visible!important;padding:10px!important;}
+  #page-register .register-layout{height:auto;display:flex!important;flex-direction:column;overflow:visible!important;}
+  #page-register .register-layout>div.register-left{height:700px;max-height:none;flex:none!important;overflow:hidden!important;}
+  #page-register .register-right{height:auto;overflow:visible!important;}
+  #page-register .register-right .cart-panel{height:auto!important;}
+  #page-register .register-right .cart-scroll{display:block;overflow:visible;}
+  #page-register .register-right .cart-items{max-height:250px!important;min-height:100px!important;}
+  #page-register .register-right .cart-footer{overflow:visible;}
+}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="app">
 <div class="header">
-  <div><div class="header-title">Gocchi Reserve</div><div style="font-size:9px;color:rgba(255,255,255,0.7);letter-spacing:.12em;font-family:'Noto Sans JP',sans-serif;margin-bottom:1px;">EVENT PROFIT MANAGER</div><div class="header-sub" id="current-event-name">イベント未選択</div><div class="weather-badge" id="header-weather-badge"></div></div>
-  <div class="event-badge" onclick="openEventModal()">📅 イベント</div>
+  <div class="header-message-area" id="header-message-area"><div class="header-identity"><div class="header-title">Gocchi Reserve</div><div style="font-size:9px;color:rgba(255,255,255,0.7);letter-spacing:.12em;font-family:'Noto Sans JP',sans-serif;margin-bottom:1px;">EVENT PROFIT MANAGER</div><div class="header-sub" id="current-event-name">イベント未選択</div><div class="weather-badge" id="header-weather-badge"></div></div><div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div></div>
+  <div class="event-badge" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openEventModal();}" onclick="openEventModal()">📅 イベント</div>
 </div>
 <div class="nav">
   <button class="nav-btn active" onclick="showPage('register',this)">🍗 レジ</button>
@@ -1835,11 +2074,27 @@ body{font-size:15px !important;}
 </div>
 <div class="page-wrap">
 <div class="page active" id="page-register">
-  <div class="cat-filter" id="cat-filter"></div>
   <div class="register-layout">
-    <div><div class="menu-grid" id="menu-grid"></div></div>
-    <div>
+    <div class="register-left">
+      <div class="cat-filter" id="cat-filter"></div>
+      <div class="product-scroll" id="product-scroll"><div class="menu-grid" id="menu-grid"></div></div>
+      <div id="board-resize-handle" class="board-resize-handle" role="separator" tabindex="0" aria-orientation="horizontal" aria-label="商品選択と提供待ちの高さを調整。上へ動かすと提供待ちが広がります" aria-controls="product-scroll board-section" aria-valuemin="0" aria-valuemax="100" aria-valuenow="40"><span class="resize-grip" aria-hidden="true"></span><span>↕ 上下に動かして高さを調整</span></div>
+  <!-- [BOARD-1] 提供待ちボード -->
+  <div class="board-section" id="board-section">
+    <div class="board-header">
+      <div class="board-header-title">
+        🔔 提供待ち
+        <span class="board-badge"><span id="board-count-badge">0</span>組</span>
+      </div>
+      <button type="button" id="board-undo-button" class="board-undo-link" onclick="undoLastServed()" disabled title="直前の提供済みを10秒以内に取り消せます" aria-label="直前の提供済みを10秒以内に取り消せます">↩ 提供取消</button>
+    </div>
+    <div id="board-list"></div>
+  </div>
+
+    </div>
+    <div class="register-right">
       <div class="cart-panel">
+        <div class="cart-scroll">
         <div class="cart-header"><span>🛒 注文内容</span><span id="cart-count" style="font-size:11px;color:var(--text3);">0品</span></div>
         <div class="cart-items" id="cart-items"><div class="empty-state"><div class="empty-emoji">🍗</div>メニューをタップして追加</div></div>
         <div class="cart-footer">
@@ -1849,10 +2104,7 @@ body{font-size:15px !important;}
             <span class="cart-subtotal-amount" id="cart-subtotal">¥0</span>
           </div>
           <div id="cart-discount-display"></div>
-          <div class="cart-total-row">
-            <span class="cart-total-label" id="cart-total-label">合計</span>
-            <span class="cart-total-amount" id="cart-total">¥0</span>
-          </div>
+
           <!-- [DISC-1] 値引きボタン -->
           <div class="discount-row">
             <button class="discount-btn" id="discount-toggle-btn" onclick="openDiscModal()">✂️ 値引き</button>
@@ -1879,7 +2131,7 @@ body{font-size:15px !important;}
           <div class="change-area" id="change-area">
             <div class="change-area-title">💴 預かり金額・おつり計算</div>
             <div class="cash-presets" id="cash-presets"></div>
-            <div class="received-display" onclick="toggleTenkey()"><span class="received-label">預かり金額</span><span class="received-value empty" id="received-value-disp">タップして入力</span></div>
+            <div class="received-display" role="button" tabindex="0" aria-label="預かり金額を入力" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTenkey();}" onclick="toggleTenkey()"><span class="received-label">預かり金額</span><span class="received-value empty" id="received-value-disp">タップして入力</span></div>
             <div class="change-result"><span class="change-result-label">おつり</span><span class="change-result-amount" id="change-amount">—</span></div>
             <div class="tenkey-wrap" id="tenkey-wrap" style="display:none;">
               <div class="tenkey-grid">
@@ -1895,8 +2147,16 @@ body{font-size:15px !important;}
               </div>
             </div>
           </div>
+        </div>
+        </div>
+        <div class="checkout-actions">
+          <div class="cart-total-row">
+            <span class="cart-total-label" id="cart-total-label">合計</span>
+            <span class="cart-total-amount" id="cart-total">¥0</span>
+          </div>
           <button class="checkout-btn" id="checkout-btn" onclick="checkout()" disabled>決　済</button>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:4px;">
+          <div class="checkout-secondary">
+            <button class="clear-btn payment-jump-btn" id="payment-jump-btn" onclick="showPaymentChoices()">現金 ▾</button>
             <button class="clear-btn" onclick="clearCart()">クリア</button>
             <button class="clear-btn" id="undo-checkout-btn"
               onclick="startUndoFlow()"
@@ -1909,22 +2169,6 @@ body{font-size:15px !important;}
       </div>
     </div>
   </div>
-
-  <!-- [BOARD-1] 提供待ちボード -->
-  <div class="board-section" id="board-section">
-    <div class="board-header">
-      <div class="board-header-title">
-        🔔 提供待ち
-        <span class="board-badge" id="board-count-badge">0</span>
-      </div>
-    </div>
-    <div id="board-undo-bar" class="board-undo-bar">
-      <span id="board-undo-msg">提供済みを取り消せます</span>
-      <button class="board-undo-link" onclick="undoLastServed()">取消</button>
-    </div>
-    <div id="board-list"></div>
-  </div>
-
 </div>
 <div class="page" id="page-inventory">
   <div class="section-title" style="margin-bottom:12px;">📦 在庫・廃棄管理</div>
@@ -1996,7 +2240,7 @@ body{font-size:15px !important;}
   <div class="expense-form">
     <div class="section-title" style="margin-bottom:12px;">💰 経費入力</div>
     <div class="rent-section">
-      <div class="rent-section-title">🏢 出店料</div>
+      <div class="rent-section-title">🏢 出店料</div><p style="font-size:16px;line-height:1.6">グループの出店料の日割りは、日報の「営業時間・税率・デモ設定・グループ出店料」で設定します。以下は従来の手入力用です。同じ出店料を両方へ登録しないでください。</p>
       <div class="rent-type-row">
         <button class="rent-type-btn active" id="rent-btn-fixed" onclick="selectRentType('fixed')">① 定額</button>
         <button class="rent-type-btn" id="rent-btn-rate" onclick="selectRentType('rate')">② 歩率のみ</button>
@@ -2078,30 +2322,34 @@ body{font-size:15px !important;}
       </div>
     </div>
     <div class="staff-section">
-      <div class="staff-section-title">👤 人件費</div>
-      <div class="staff-select-row" style="display:flex;gap:8px;flex-wrap:wrap;">
-        <div class="form-group" style="flex:2;min-width:140px;"><label class="form-label">スタッフ</label><select class="form-select" id="staff-select" onchange="onStaffChange()"></select></div>
-        <div class="form-group" style="flex:1;min-width:90px;max-width:120px;"><label class="form-label">種別</label><select class="form-select" id="staff-pay-type" onchange="onStaffTypeChange()"><option value="hourly">時給</option><option value="daily">日給</option></select></div>
+      <div class="acct-panel" id="labor-form">
+      <h3>勤務・給与の記録</h3>
+      <p>保存すると「給料賃金」を自動計上します。休憩を差し引いて支給額を計算します。</p>
+      <div class="acct-grid">
+        <label>スタッフ<select id="staff-select" onchange="onStaffChange()"></select></label>
+        <label>フルネーム<input id="labor-full-name" autocomplete="off"></label>
+        <label>勤務日<input id="labor-date" type="date"></label>
+        <label>種別<select id="staff-pay-type" onchange="onStaffTypeChange()"><option value="hourly">時給</option><option value="daily">日給</option></select></label>
+        <label>時給・日給の金額（円）<input id="labor-rate" type="number" min="0" oninput="calcStaffWage()"></label>
+        <label>休憩時間（分）<input id="labor-break" type="number" value="0" min="0" oninput="calcStaffWage()"></label>
       </div>
       <div class="staff-time-row" id="staff-time-row">
-        <div class="form-group"><label class="form-label">開始時刻</label><input class="form-input" type="time" id="staff-start" oninput="calcStaffWage()"></div>
-        <div class="form-group"><label class="form-label">終了時刻</label><input class="form-input" type="time" id="staff-end" oninput="calcStaffWage()"></div>
-        <div class="form-group"><label class="form-label">勤務時間</label><input class="form-input" id="staff-hours-disp" readonly style="background:#f0f0f0;font-weight:700;"></div>
+        <label>開始時刻<input type="time" id="staff-start" oninput="calcStaffWage()"></label>
+        <label>終了時刻<input type="time" id="staff-end" oninput="calcStaffWage()"></label>
+        <label>実働時間<input id="staff-hours-disp" readonly></label>
       </div>
-      <div class="staff-result"><span class="staff-result-label">人件費</span><span class="staff-result-amount" id="staff-wage-disp">¥0</span></div>
-      <button class="cf-toggle-btn" onclick="toggleExpensePayType(this,'staff')" style="margin-bottom:8px;">
-        <span>💳 支払方法を設定する（任意）</span>
-        <span class="cf-toggle-chevron">▼</span>
-      </button>
-      <div class="cf-toggle-body closed" id="exp-pay-body-staff">
-        <div style="padding:8px 0;">
-          <select class="form-select" id="staff-payment-type">
-            <option value="cash">💴 現金（その日払い）</option>
-            <option value="invoice">📄 締め払い（後日振込）</option>
-          </select>
-        </div>
+      <div class="acct-grid" style="margin-top:14px">
+        <label>源泉徴収額（円）<input id="labor-withholding" type="number" value="0" min="0" oninput="calcStaffWage()"></label>
+        <label>払い方<select id="staff-payment-type"><option value="cash">現金</option><option value="transfer">振込</option></select></label>
+        <label>代表との続柄<select id="labor-relation"><option value="なし">なし</option><option value="家族">家族</option></select></label>
+        <label class="acct-check"><input type="checkbox" id="labor-household">代表と生計が同じ</label>
       </div>
-      <button class="staff-add-btn" onclick="addStaffExpense()">＋ 人件費を追加</button>
+      <div class="staff-result"><span>支給額</span><strong id="staff-wage-disp">¥0</strong></div>
+      <p id="labor-net">実際に渡す額 ¥0</p>
+      <button id="labor-save" onclick="addStaffExpense()">＋ 勤務記録を追加</button>
+      <button id="labor-cancel" hidden onclick="resetLaborForm()">編集をやめる</button>
+      <div id="labor-records"></div>
+      </div>
 
       <!-- [STAFF-EX] 給与調整額・交通費 -->
       <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #A5D6A7;">
@@ -2156,6 +2404,8 @@ body{font-size:15px !important;}
   <div style="text-align:right;margin-top:10px;font-size:14px;font-weight:900;color:var(--brown);">合計経費: <span id="expense-total" style="font-family:'Dela Gothic One',sans-serif;font-size:18px;color:var(--primary);">¥0</span></div>
 </div>
 <div class="page" id="page-report">
+  <div id="accounting-warnings" class="acct-panel acct-warnings" role="status"></div>
+  <details class="acct-panel"><summary>営業時間・税率・デモ設定・グループ出店料</summary><div id="accounting-settings"></div></details>
 
   <!-- [GROUP-1] 集計モード切替 -->
   <div class="report-mode-bar">
@@ -2342,6 +2592,18 @@ body{font-size:15px !important;}
     <button class="export-btn" style="border-color:#283593;color:#283593;" onclick="exportProductCSV()">📋 商品別利益CSV（参考値）</button>
   </div>
 
+  <section class="event-data-panel" aria-labelledby="event-data-heading">
+    <h2 id="event-data-heading">イベントデータの保存・クリア</h2>
+    <div class="event-data-target" id="event-data-target"></div>
+    <p>JSONには現在選択中のイベントだけを保存します。催事累計・期間集計を表示中でも、他の日程は含みません。</p>
+    <button class="event-data-export" id="event-json-export-btn" onclick="backupData()">📤 このイベントのJSONを書き出す</button>
+    <div class="event-data-clear-area">
+      <p>デモや入力のやり直しに使えます。レジ締め前でもクリアできます。</p>
+      <button class="event-data-clear" id="event-data-clear-btn" onclick="requestClearEventData()">このイベントの入力データをクリア</button>
+      <p class="event-data-note">売上・購入履歴・経費・材料費・買掛金・在庫数・精算金額・レジ締め記録を削除します。イベント名・日付・場所、メニュー、スタッフ設定は残ります。</p>
+    </div>
+  </section>
+
   <!-- [CLOSE] レジ締めボタン（日報最下部） -->
   <div style="margin-top:20px;padding-top:16px;border-top:2px solid var(--border);">
     <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:10px;">すべての数字を確認したら営業を締めてください</div>
@@ -2357,7 +2619,7 @@ body{font-size:15px !important;}
   <!-- 💳 当日使う決済方法 -->
   <div class="settings-section">
     <div class="settings-section-header"><span>💳 当日使う決済方法</span></div>
-    <div style="padding:12px 14px 4px;font-size:12px;color:var(--text3);">チェックした決済方法のみレジ画面に表示されます。商品券・クーポンは換金方法も選択してください。</div>
+    <div style="padding:12px 14px 4px;font-size:12px;color:var(--text3);">現金は毎回の会計で自動選択されます。PayPayなどは、使う方法にチェックを入れてください。商品券・クーポンは換金方法も選択してください。</div>
     <div class="pay-sel-grid" id="pay-sel-grid"></div>
     <div style="padding:8px 14px 14px;">
       <button class="add-btn" style="background:#1565C0;" onclick="savePaySelSettings()">💳 決済方法を保存</button>
@@ -2513,13 +2775,15 @@ body{font-size:15px !important;}
     </div>
     <div class="backup-info">
       <div class="backup-info-title">💡 定期バックアップを推奨します</div>
-      イベント終了後・翌日開始前にバックアップを取っておくと、万が一の際もデータを復元できます。
+      通常のJSONは現在のイベントのみです。メニュー・スタッフなどの共通設定も含みます。全イベントの保存は下の専用ボタンを使ってください。
     </div>
     <div class="backup-row">
-      <button class="backup-btn" onclick="backupData()">📤 JSONで書き出し</button>
+      <button class="backup-btn" onclick="backupData()">📤 このイベントのJSONを書き出し</button>
       <button class="backup-btn" onclick="document.getElementById('restore-input').click()">📥 JSONから復元</button>
       <input type="file" id="restore-input" accept=".json" style="display:none;" onchange="restoreData(this)">
     </div>
+    <details class="all-backup-details"><summary>全イベントをまとめて保管する場合</summary><p>端末移行などに使う全件バックアップです。過去のイベントも含まれます。</p><button class="backup-btn" onclick="backupAllData()">全イベントのバックアップを書き出す</button></details>
+    <div id="export-accounting-warnings" class="acct-panel acct-warnings" hidden></div>
     <div id="backup-last-info" style="padding:0 14px 12px;font-size:11px;color:var(--text3);"></div>
   </div>
 
@@ -2622,8 +2886,549 @@ body{font-size:15px !important;}
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+
 <script>
+/* 現場表示設定は会計データとは別に端末へ保存する。 */
+var BOARD_SIZE_KEY = 'gocchi_register_board_size_v1';
+var boardSizeValue = 40;
+function initBoardPreferences(){
+  try{var saved=localStorage.getItem(BOARD_SIZE_KEY);if(saved!==null&&Number.isFinite(Number(saved)))boardSizeValue=Math.max(0,Math.min(100,Number(saved)));}catch(e){}
+  var handle=document.getElementById('board-resize-handle');
+  if(handle){
+    var drag=null;
+    handle.addEventListener('pointerdown',function(e){
+      if(!e.isPrimary||e.button!==0)return;
+      var limits=boardSizeLimits();if(!limits)return;
+      drag={id:e.pointerId,y:e.clientY,height:document.getElementById('board-section').getBoundingClientRect().height,limits:limits};
+      handle.setPointerCapture(e.pointerId);handle.classList.add('is-dragging');e.preventDefault();
+    });
+    handle.addEventListener('pointermove',function(e){
+      if(!drag||e.pointerId!==drag.id)return;
+      var height=drag.height+drag.y-e.clientY,range=drag.limits.maximum-drag.limits.minimum;
+      setBoardSize(range>0?(height-drag.limits.minimum)/range*100:0);e.preventDefault();
+    });
+    var finish=function(e){if(!drag||e.pointerId!==drag.id)return;drag=null;handle.classList.remove('is-dragging');saveBoardSize();if(handle.hasPointerCapture(e.pointerId))handle.releasePointerCapture(e.pointerId);};
+    handle.addEventListener('pointerup',finish);handle.addEventListener('pointercancel',finish);handle.addEventListener('lostpointercapture',finish);
+    handle.addEventListener('keydown',function(e){
+      var next=boardSizeValue;
+      if(e.key==='ArrowUp')next+=5;else if(e.key==='ArrowDown')next-=5;else if(e.key==='Home')next=0;else if(e.key==='End')next=100;else return;
+      e.preventDefault();setBoardSize(next);saveBoardSize();
+    });
+    handle.addEventListener('dblclick',function(){setBoardSize(40);saveBoardSize();});
+  }
+  requestAnimationFrame(applyBoardSize);
+  window.addEventListener('resize',applyBoardSize);
+  if(window.visualViewport)window.visualViewport.addEventListener('resize',applyBoardSize);
+  if(window.ResizeObserver){var left=document.querySelector('.register-left');if(left)new ResizeObserver(applyBoardSize).observe(left);}
+}
+function boardSizeLimits(){
+  var left=document.querySelector('.register-left'),categories=document.getElementById('cat-filter');
+  if(!left||!left.clientHeight)return null;
+  var categoryHeight=categories?categories.getBoundingClientRect().height+8:0;
+  var available=Math.max(0,left.clientHeight-categoryHeight-48);
+  var minimum=Math.min(220,Math.max(140,available-160));
+  return{minimum:minimum,maximum:Math.max(minimum,available-160)};
+}
+function setBoardSize(value){var number=Number(value);if(!Number.isFinite(number))return;boardSizeValue=Math.max(0,Math.min(100,number));applyBoardSize();}
+function saveBoardSize(){try{localStorage.setItem(BOARD_SIZE_KEY,String(boardSizeValue));}catch(e){}}
+function applyBoardSize(){
+  var page=document.getElementById('page-register'),handle=document.getElementById('board-resize-handle'),limits=boardSizeLimits();
+  if(!page||!handle||!limits)return;
+  var height=Math.round(limits.minimum+(limits.maximum-limits.minimum)*boardSizeValue/100);
+  page.style.setProperty('--board-height',height+'px');
+  handle.setAttribute('aria-valuenow',String(Math.round(boardSizeValue)));
+  handle.setAttribute('aria-valuetext','提供待ちの高さ '+height+'ピクセル。上キーで広げ、下キーで狭めます');
+}
+
+function updatePaymentChoiceLabel(){
+  var button = document.getElementById('payment-jump-btn');
+  if(button){
+    button.textContent = (PAY_LABELS[payMethod] || payMethod) + ' ▾';
+    button.setAttribute('aria-label', '支払い方法を変更。現在は' + (PAY_LABELS[payMethod] || payMethod));
+  }
+}
+function showPaymentChoices(){
+  var grid = document.getElementById('pay-method-grid');
+  if(!grid) return;
+  grid.scrollIntoView({block:'start', behavior:'smooth'});
+  var selected = grid.querySelector('.selected');
+  if(selected) selected.focus({preventScroll:true});
+}
+
+/* [EVENT-DATA] イベント単位の保存・クリア。在庫の互換フィールドも現在日程に同期する。 */
+var inventoryOwnerId = null;
+function cloneEventData(value){return JSON.parse(JSON.stringify(value));}
+function sameEventId(a,b){return a!=null && b!=null && String(a)===String(b);}
+function getSelectedDataEvent(){return (state.events||[]).find(function(e){return sameEventId(e.id,state.currentEventId);})||null;}
+function migrateEventInventory(){
+  const evt=getSelectedDataEvent();
+  if(evt){
+    if(!evt.inventoryData)evt.inventoryData=cloneEventData(state.inventory||{});
+    state.inventory=evt.inventoryData;
+    inventoryOwnerId=evt.id;
+  }else{state.inventory={};inventoryOwnerId=null;}
+}
+function syncEventInventory(){
+  const owner=(state.events||[]).find(function(e){return sameEventId(e.id,inventoryOwnerId);});
+  if(owner)owner.inventoryData=state.inventory||{};
+}
+function activateEventInventory(eventId){
+  syncEventInventory();
+  inventoryOwnerId=eventId;
+  if(eventId==null){state.inventory={};return;}
+  const evt=(state.events||[]).find(function(e){return sameEventId(e.id,eventId);});
+  state.inventory=evt&&evt.inventoryData?evt.inventoryData:{};
+  if(evt)evt.inventoryData=state.inventory;
+}
+function buildCurrentEventExport(eventId){
+  const evt=(state.events||[]).find(function(e){return sameEventId(e.id,eventId==null?state.currentEventId:eventId);});
+  if(!evt)throw new Error('イベントを選択してください');
+  syncEventInventory();
+  const key=String(evt.id);
+  const inventory=evt.inventoryData||{};
+  const data={
+    format:'gocchi-event',formatVersion:1,exportScope:'event',exportedAt:jstNow(),
+    currentEventId:evt.id,events:[evt],
+    orders:(state.orders||[]).filter(function(o){return sameEventId(o.eventId,evt.id);}),
+    expenses:(state.expenses||[]).filter(function(e){return sameEventId(e.eventId,evt.id);}),
+    materialItems:{[key]:(state.materialItems||{})[key]||[]},
+    payableItems:{[key]:(state.payableItems||{})[key]||[]},
+    inventory:inventory,
+    auditLog:(state.auditLog||[]).filter(function(e){return sameEventId(e.eventId,evt.id);}),
+    eventGroups:(state.eventGroups||[]).filter(function(g){return sameEventId(g.id,evt.groupId);}),
+    menuItems:state.menuItems||[],categories:state.categories||[],accountItems:state.accountItems||[],staffMembers:state.staffMembers||[],
+    activePayMethods:state.activePayMethods||[],voucherSettlementTiming:state.voucherSettlementTiming||{},voucherPaymentSplitMigrated:true
+  };
+  return prepareAccountingExport(data);
+}
+function eventFilenamePart(value){return String(value||'未設定').replace(/[<>:"/\\|?*\x00-\x1f]/g,'_').replace(/[. ]+$/g,'').slice(0,70)||'未設定';}
+function eventExportTimestamp(){return jstNow().slice(0,19).replaceAll('-','').replace('T','_').replaceAll(':','');}
+function downloadJsonData(data,filename){
+  showExportAccountingWarnings(data);
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=filename;a.style.display='none';document.body.appendChild(a);
+  try{a.click();}finally{setTimeout(function(){a.remove();URL.revokeObjectURL(url);},60000);}
+}
+function downloadCurrentEventJson(eventId){
+  const data=buildCurrentEventExport(eventId),evt=data.events[0];
+  renderAccountingWarnings();
+  downloadJsonData(data,'gocchi_event_'+eventFilenamePart(evt.date)+'_'+eventFilenamePart(evt.name)+'_'+eventExportTimestamp()+'.json');
+  const stamp=jstNow();
+  try{localStorage.setItem('karaage_last_backup',stamp);localStorage.setItem('gocchi_event_backup_'+evt.id,stamp);}catch(e){}
+  updateBackupLastInfo();
+  return data;
+}
+function backupData(afterDownload){
+  const evt=getSelectedDataEvent();
+  if(!evt){showToast('⚠️ 書き出すイベントを選択してください');return;}
+  const eventId=evt.id;
+  requireAdminPin('このイベントのJSONを書き出し','現在のイベントを書き出すには管理PINが必要です。',function(){
+    try{
+      downloadCurrentEventJson(eventId);
+      const count=collectAccountingWarnings([eventId]).length;
+      showToast('📤 JSONを書き出しました'+(count?'（警告 '+count+'件・日報に表示）':''));
+      if(typeof afterDownload==='function')afterDownload();
+    }catch(e){showToast('⚠️ 書き出せませんでした：'+e.message);}
+  });
+}
+function backupAllData(){
+  requireAdminPin('全イベントのバックアップ','全イベントを保存するには管理PINが必要です。',function(){
+    try{
+      syncEventInventory();
+      const data=cloneEventData(state);
+      data.exportScope='all';data.exportedAt=jstNow();
+      downloadJsonData(prepareAccountingExport(data),'gocchi_ALL_events_'+eventExportTimestamp()+'.json');
+      showToast('📤 全イベントのバックアップを書き出しました');
+    }catch(e){showToast('⚠️ バックアップできませんでした：'+e.message);}
+  });
+}
+function updateBackupLastInfo(){
+  const el=document.getElementById('backup-last-info'),evt=getSelectedDataEvent();
+  if(!el)return;
+  const stamp=evt?localStorage.getItem('gocchi_event_backup_'+evt.id):null;
+  el.textContent=evt?(stamp?'このイベントの最終書き出し：'+new Date(stamp).toLocaleString('ja-JP'):'このイベントはまだJSONを書き出していません'):'書き出すイベントを選択してください';
+}
+function renderEventDataActions(){
+  const evt=getSelectedDataEvent(),target=document.getElementById('event-data-target');
+  if(target)target.textContent=evt?'対象：'+evt.name+'（'+(evt.date||'日付未設定')+'）':'対象：イベント未選択';
+  ['event-json-export-btn','event-data-clear-btn'].forEach(function(id){const button=document.getElementById(id);if(button)button.disabled=!evt;});
+}
+function commitClearedEventState(next){
+  const previous=state,previousOwner=inventoryOwnerId;
+  try{
+    state=next;inventoryOwnerId=null;migrateState();syncEventInventory();
+    localStorage.setItem(DB_KEY,JSON.stringify(state));
+  }catch(error){state=previous;inventoryOwnerId=previousOwner;throw error;}
+}
+function resetTransientEventInputs(){
+  clearCart();closeUndoBar();hideBoardUndoBar();
+  _lastServedOrderId=null;_historyTargetOrderId=null;_eventFormDraft=null;
+  _checkoutInProgress=false;
+  ['order-detail-overlay','order-history-modal','order-hist-detail-modal','after-close-modal'].forEach(function(id){const el=document.getElementById(id);if(el)el.classList.remove('open');});
+}
+function requestClearEventData(){
+  const evt=getSelectedDataEvent();
+  if(!evt){showToast('⚠️ クリアするイベントを選択してください');return;}
+  const eventId=evt.id;
+  requireAdminPin('イベントデータのクリア','このイベントの入力データを削除するには管理PINが必要です。',function(){
+    const orderCount=(state.orders||[]).filter(function(o){return sameEventId(o.eventId,eventId);}).length;
+    showConfirm('このイベントの入力をクリアしますか？',
+      '対象：'+evt.name+'（'+(evt.date||'日付未設定')+'）\n\n'+
+      '購入履歴 '+orderCount+'件と、このイベントの売上・経費・勤務給与記録・材料費・買掛金・在庫数・精算金額・レジ締め記録を削除します。\n\n'+
+      'メニュー・スタッフ・イベント名・日付・場所と、他のイベントは残ります。\n元に戻せません。必要な場合はキャンセルしてJSONを書き出してください。',
+      function(){clearSelectedEventData(eventId);});
+    document.getElementById('confirm-ok-btn').textContent='このイベントをクリア';
+  });
+}
+function clearSelectedEventData(eventId){
+  const evt=getSelectedDataEvent();
+  if(!evt||!sameEventId(evt.id,eventId)){showToast('⚠️ 対象が変わったため、クリアを中止しました');return;}
+  try{
+    syncEventInventory();
+    const next=cloneEventData(state),key=String(eventId);
+    next.orders=next.orders.filter(function(o){return !sameEventId(o.eventId,eventId);});
+    next.expenses=next.expenses.filter(function(e){return !sameEventId(e.eventId,eventId);});
+    next.materialItems[key]=[];next.payableItems[key]=[];
+    next.laborRecords=(next.laborRecords||[]).filter(r=>!sameEventId(r.eventId,eventId));
+    next.inventory={};
+    next.auditLog=(next.auditLog||[]).filter(function(e){return !sameEventId(e.eventId,eventId);});
+    const cleared=next.events.find(function(e){return sameEventId(e.id,eventId);});
+    cleared.inventoryData={};
+    cleared.isClosedFlag=false;
+    ['closedAt','closeTheory','closeActual','closeDiff','closePayments','closeNote'].forEach(function(k){delete cleared[k];});
+    const settlement=Object.assign({},DEFAULT_SETTLEMENT,cleared.settlement||{});
+    settlement.grossSales=0;settlement.fixedFee=0;settlement.otherDeduction=0;settlement.note='';
+    settlement.lines=(settlement.lines||[]).map(function(line){return Object.assign({},line,{qty:0,salesAmount:0});});
+    cleared.settlement=settlement;
+    commitClearedEventState(next);
+    resetTransientEventInputs();
+    setReportMode('single');renderAbcAnalysis();renderRegisterCloseArea();renderRegister();updateEventName();
+    showToast('✅ このイベントの入力データをクリアしました');
+  }catch(e){showToast('⚠️ クリアできませんでした：'+e.message);}
+}
+
+/* JSON schema 2: historical transactions stay intact; automatic expenses are derived. */
+function jstNow(value){
+  const d=value===undefined?new Date():new Date(value);
+  if(!Number.isFinite(d.getTime()))return value;
+  return new Date(d.getTime()+9*3600000).toISOString().replace('Z','+09:00');
+}
+function accountingNumber(v){const n=Number(v);return Number.isFinite(n)?n:0;}
+function accountingBlank(v){return v===undefined||v===null||String(v).trim()==='';}
+function accountingDefaults(obj,defaults){Object.keys(defaults).forEach(k=>{if(obj[k]==null)obj[k]=defaults[k];});return obj;}
+function migrateAccounting(){
+  if(!Array.isArray(state.laborRecords))state.laborRecords=[];
+  (state.events||[]).forEach(e=>accountingDefaults(e,{officialOpen:'',officialClose:'',taxMode:'takeout',organizerSeating:'none',isDemo:false}));
+  (state.eventGroups||[]).forEach(g=>accountingDefaults(g,{fee:0,feeDays:Math.max(1,Math.round((Date.parse(g.endDate)-Date.parse(g.startDate))/86400000)+1)||1,feeAccount:'雑費',feePaidDate:'',feePaymentType:'cash'}));
+  Object.values(state.materialItems||{}).forEach(items=>(items||[]).forEach(m=>{
+    accountingDefaults(m,{sourceType:'purchase',sourceName:'',refPrice:accountingNumber(m.unitPrice)});
+    if(!m.remainder)m.remainder={};
+    accountingDefaults(m.remainder,{reuse:'',waste:'',reuseTo:'',status:'recorded'});
+  }));
+  state.laborRecords.forEach(r=>{
+    accountingDefaults(r,{staffId:null,fullName:'',date:'',start:'',end:'',breakMinutes:0,rate:0,payType:'hourly',withholdingAmount:0,paymentMethod:'cash',relation:'なし',sameHousehold:false});
+    const c=calculateLabor(r);r.gross=c.gross;r.netPaid=c.netPaid;r.actualMinutes=c.actualMinutes;
+  });
+}
+function isAccountingEvent(id){const e=(state.events||[]).find(e=>sameEventId(e.id,id));return !!e&&!e.isDemo;}
+function accountingEventIds(ids){return ids.filter(isAccountingEvent);}
+function effectiveMaterialPrice(item){return (item.sourceType||'purchase')==='purchase'?accountingNumber(item.unitPrice):0;}
+function calculateLabor(r){
+  const minutes=t=>/^\d{2}:\d{2}$/.test(t||'')?Number(t.slice(0,2))*60+Number(t.slice(3,5)):null;
+  const start=minutes(r.start),end=minutes(r.end);
+  let elapsed=start===null||end===null?0:end-start;if(elapsed<0)elapsed+=1440;
+  const actualMinutes=Math.max(0,elapsed-Math.max(0,accountingNumber(r.breakMinutes)));
+  const gross=Math.round(Math.max(0,accountingNumber(r.rate))*(r.payType==='daily'?1:actualMinutes/60));
+  return{elapsedMinutes:elapsed,actualMinutes,gross,netPaid:gross-accountingNumber(r.withholdingAmount)};
+}
+function isGeneratedExpense(e){return e.autoSource==='gocchi-schema-2';}
+function accountingOrders(id){return(state.orders||[]).filter(o=>sameEventId(o.eventId,id)&&!o.cancelledAt);}
+function groupFeeEventDates(g){
+  // Preserve other days' date slots in a single-event backup, without their transactions.
+  const dates=Object.assign({},g.feeEventDates||{});
+  const registered=(state.events||[]).filter(e=>sameEventId(e.groupId,g.id)&&!e.isDemo&&e.date);
+  Object.keys(dates).forEach(id=>{if(!(state.events||[]).some(e=>sameEventId(e.id,id))&&registered.some(e=>e.date===dates[id]))delete dates[id];});
+  (state.events||[]).forEach(e=>{
+    delete dates[String(e.id)];
+    if(sameEventId(e.groupId,g.id)&&!e.isDemo&&e.date)dates[String(e.id)]=e.date;
+  });
+  return dates;
+}
+function groupFeeAllocation(evt,g){
+  const days=Math.max(1,Math.floor(accountingNumber(g.feeDays)||1));
+  const dates=groupFeeEventDates(g),slots=[...new Set(Object.values(dates))].sort();
+  const start=slots[0]||g.startDate,index=slots.indexOf(evt.date);
+  const first=Object.keys(dates).filter(id=>dates[id]===evt.date).sort()[0];
+  if(!sameEventId(first,evt.id)||index<0||index>=days)return {amount:0,days,index,start,eligible:false};
+  const total=Math.max(0,Math.round(accountingNumber(g.fee)));
+  return{amount:Math.floor(total/days)+(index<total%days?1:0),days,index,start,eligible:true};
+}
+function generateAccountingExpenses(ids){
+  const rows=[];
+  accountingEventIds(ids).forEach(id=>{
+    const evt=state.events.find(e=>sameEventId(e.id,id)),orders=accountingOrders(id);
+    const add=(kind,recordKey,cat,amount,memo,paymentType,extra)=>{
+      if(!amount)return;
+      rows.push(Object.assign({id:'auto:'+kind+':'+id+':'+recordKey,eventId:id,cat,amount,memo,paymentType,expenseScope:'event',autoSource:'gocchi-schema-2',autoKind:kind,date:evt.date,cashFlowAmount:0},extra||{}));
+    };
+    const g=state.eventGroups.find(g=>sameEventId(g.id,evt.groupId));
+    if(g&&accountingNumber(g.fee)>0){
+      const a=groupFeeAllocation(evt,g);
+      add('groupFee',g.id,g.feeAccount||'雑費',a.amount,'出店料 '+g.name+'（'+(a.index+1)+'/'+a.days+'日分）',g.feePaymentType||'cash',{groupId:g.id,paidDate:g.feePaidDate||'',allocation:{total:Math.round(accountingNumber(g.fee)),days:a.days,dayIndex:a.index,startDate:a.start,rounding:'端数を初日から1円ずつ配分'},cashFlowAmount:0});
+    }
+    const quantity=orders.reduce((s,o)=>s+(o.items||[]).reduce((t,i)=>t+accountingNumber(i.qty),0),0);
+    const paypaySales=orders.reduce((s,o)=>s+getOrderPaymentParts(o).filter(p=>p.method==='paypay').reduce((t,p)=>t+accountingNumber(p.amount),0),0);
+    add('packaging','daily','包装資材費',Math.round(quantity*3),'販売数量 '+quantity+' × 3円','allocation',{calculation:{quantity,unitCost:3,rounding:'日別・四捨五入'}});
+    add('paypay','daily','支払手数料',Math.round(paypaySales*0.03),'PayPay売上 '+paypaySales+'円 × 3%','allocation',{calculation:{sales:paypaySales,rate:0.03,rounding:'日別・四捨五入'}});
+    (state.laborRecords||[]).filter(r=>sameEventId(r.eventId,id)&&!r.voidedAt).forEach(r=>{
+      const c=calculateLabor(r);
+      add('labor',r.id,'給料賃金',c.gross,r.fullName+' '+r.date+' '+r.start+'〜'+r.end,r.paymentMethod,{laborRecordId:r.id,date:r.date,withholdingAmount:accountingNumber(r.withholdingAmount),netPaid:c.netPaid,cashFlowAmount:c.netPaid});
+    });
+  });
+  return rows;
+}
+function accountingExpenses(ids){
+  const eligible=accountingEventIds(ids);
+  return(state.expenses||[]).filter(e=>!isGeneratedExpense(e)&&eligible.some(id=>sameEventId(e.eventId,id))).concat(generateAccountingExpenses(eligible));
+}
+function collectAccountingWarnings(ids){
+  const out=[],selected=id=>ids.some(x=>sameEventId(x,id));
+  const add=(code,eventId,message,recordId)=>out.push({code,eventId,recordId:recordId==null?null:recordId,message});
+  (state.events||[]).filter(e=>selected(e.id)).forEach(e=>{
+    if(e.isDemo)add('DEMO_EXCLUDED',e.id,'デモ用データが含まれています。集計から除外しています。');
+    if(!e.weather||!e.weather.status)add('WEATHER_MISSING',e.id,'天気が未入力です。');
+    if(!e.officialOpen||!e.officialClose)add('OFFICIAL_HOURS_MISSING',e.id,'公式の営業時間が未入力です。');
+    if(e.organizerSeating==='exists_with_agreement'&&e.taxMode==='takeout')add('SEATING_TAX_REVIEW',e.id,'主催者の飲食スペースに取り決めがあり、税率が8%です。確認してください。');
+    if(e.closePayments)Object.entries(e.closePayments).forEach(([method,p])=>{if(p.actual==null)add('CLOSE_ACTUAL_MISSING',e.id,(PAY_LABELS[method]||method)+'の実査額が未入力です。');});
+    ((state.materialItems||{})[String(e.id)]||[]).forEach(m=>{
+      const rem=m.remainder||{};
+      if(rem.status==='undecided')add('MATERIAL_REMAINDER_UNDECIDED',e.id,(m.name||'材料')+'の残りは未定です。',m.id);
+      else if(accountingBlank(rem.reuse)&&accountingBlank(rem.waste))add('MATERIAL_REMAINDER_MISSING',e.id,(m.name||'材料')+'の再利用・廃棄が未入力です。',m.id);
+    });
+    const g=(state.eventGroups||[]).find(g=>sameEventId(g.id,e.groupId));
+    if(g&&accountingNumber(g.fee)>0){
+      if(!groupFeeAllocation(e,g).eligible&&!e.isDemo)add('GROUP_FEE_DATE_REVIEW',e.id,'出店料の日数・開始日とイベント日が一致しないか、同じ日付が重複しています。自動配分を確認してください。',g.id);
+      if(new Set(Object.values(groupFeeEventDates(g))).size!==Math.max(1,Math.floor(accountingNumber(g.feeDays)||1)))add('GROUP_FEE_DAYS_REVIEW',e.id,'出店料の対象日数と登録済みの日数が一致しません。全日程の登録と日割りを確認してください。',g.id);
+      if(!g.feePaidDate)add('GROUP_FEE_PAID_DATE_MISSING',e.id,'出店料の支払日が未入力です。',g.id);
+    }
+    const auto=generateAccountingExpenses([e.id]);
+    const manual=(state.expenses||[]).filter(x=>sameEventId(x.eventId,e.id)&&!isGeneratedExpense(x));
+    manual.forEach(x=>{
+      if(auto.some(a=>a.cat===x.cat||(a.autoKind==='groupFee'&&x.cat==='出店料')))add('MANUAL_AUTO_EXPENSE_REVIEW',e.id,'手入力の「'+x.cat+'」と自動経費があります。二重計上にならないか確認してください（手入力は保持）。',x.id);
+      if(['人件費','給料賃金'].includes(x.cat))add('LEGACY_LABOR_UNSTRUCTURED',e.id,'過去の人件費は手入力経費として保持しています。勤務・源泉情報は未確認です。',x.id);
+    });
+    if(['department','special'].includes(e.salesMode))add('EXTERNAL_SALES_REVIEW',e.id,'外部精算のイベントです。包装資材・PayPay手数料はレジ注文の数量・決済だけから計算します。');
+  });
+  const events=state.events||[],groups=state.eventGroups||[];
+  for(let i=0;i<events.length;i++)for(let j=i+1;j<events.length;j++){
+    const a=events[i],b=events[j];if(!selected(a.id)&&!selected(b.id))continue;
+    const ga=groups.find(g=>sameEventId(g.id,a.groupId)),gb=groups.find(g=>sameEventId(g.id,b.groupId));
+    if(ga&&gb&&!sameEventId(ga.id,gb.id)&&String(ga.name).trim()===String(gb.name).trim()&&Math.abs(Date.parse(a.date)-Date.parse(b.date))===86400000){
+      add('SPLIT_CONSECUTIVE_GROUP',selected(a.id)?a.id:b.id,'「'+ga.name+'」の連続する日程が別グループです（'+a.date+'・'+b.date+'）。');
+    }
+  }
+  const daily=new Map();
+  (state.laborRecords||[]).filter(r=>selected(r.eventId)&&!r.voidedAt).forEach(r=>{
+    const c=calculateLabor(r);
+    if(r.relation==='家族'&&r.sameHousehold&&c.gross>0)add('FAMILY_SAME_HOUSEHOLD',r.eventId,r.fullName+'：生計が同じ親族への給与があります。',r.id);
+    if(!r.fullName||!r.date||!r.start||!r.end)add('LABOR_DETAILS_MISSING',r.eventId,(r.fullName||'スタッフ')+'：氏名・勤務日・時刻に未入力があります。',r.id);
+    if(c.netPaid<0)add('LABOR_WITHHOLDING_REVIEW',r.eventId,r.fullName+'：源泉徴収額が支給額を超えています。',r.id);
+    const key=(r.staffId==null?r.fullName:r.staffId)+'|'+r.date;
+    if(!daily.has(key))daily.set(key,{r,gross:0,withholding:0,minutes:0,breaks:0});
+    const d=daily.get(key);d.gross+=c.gross;d.withholding+=accountingNumber(r.withholdingAmount);d.minutes+=c.actualMinutes;d.breaks+=accountingNumber(r.breakMinutes);
+  });
+  daily.forEach(d=>{
+    if(d.minutes>480&&d.breaks<60)add('LABOR_BREAK_SHORT',d.r.eventId,d.r.fullName+'：1日の実働が8時間超で休憩が60分未満です。',d.r.id);
+    if(d.gross>=9800&&d.withholding===0)add('LABOR_WITHHOLDING_ZERO',d.r.eventId,d.r.fullName+'：1日の給与が9,800円以上で源泉徴収額が0円です。',d.r.id);
+  });
+  return out;
+}
+function accountingSummary(ids){
+  const included=accountingEventIds(ids);
+  return {includedEventIds:included,excludedDemoEventIds:ids.filter(id=>!isAccountingEvent(id)),daily:included.map(id=>{
+    const orders=accountingOrders(id),expenses=accountingExpenses([id]),materials=((state.materialItems||{})[String(id)]||[]);
+    const sales=orders.reduce((s,o)=>s+accountingNumber(o.total),0),expenseTotal=expenses.reduce((s,e)=>s+e.amount,0),materialCost=materials.reduce((s,m)=>s+calcMatItem(m).effectiveCost,0);
+    const byAccount={};expenses.forEach(e=>{byAccount[e.cat]=(byAccount[e.cat]||0)+e.amount;});
+    const byPayment={};orders.forEach(o=>getOrderPaymentParts(o).forEach(p=>{byPayment[p.method]=(byPayment[p.method]||0)+p.amount;}));
+    const event=state.events.find(e=>sameEventId(e.id,id));
+    return{eventId:id,date:event.date,orderSales:sales,orderCount:orders.length,byPayment,expenseTotal,byAccount,materialCost,orderBasedProfit:sales-expenseTotal-materialCost,externalSettlement:calcEventSettlement(event)};
+  })};
+}
+function exportJapanDates(value){
+  if(Array.isArray(value))return value.map(exportJapanDates);
+  if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,exportJapanDates(v)]));
+  if(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/.test(value)){
+    return jstNow(/(Z|[+-]\d{2}:\d{2})$/.test(value)?value:value+'+09:00');
+  }
+  return value;
+}
+function prepareAccountingExport(data){
+  const ids=(data.events||[]).map(e=>e.id);
+  const result=Object.assign({schemaVersion:2,exportedAt:jstNow()},cloneEventData(data));
+  result.schemaVersion=2;result.exportedAt=jstNow();
+  result.laborRecords=cloneEventData((state.laborRecords||[]).filter(r=>ids.some(id=>sameEventId(id,r.eventId)))).map(r=>Object.assign(r,calculateLabor(r)));
+  // Preserve manual/demo rows for restoration. Only generated rows are replaced, deterministically.
+  result.expenses=(result.expenses||[]).filter(e=>!isGeneratedExpense(e)).concat(generateAccountingExpenses(ids));
+  result.eventGroups=(result.eventGroups||[]).map(g=>Object.assign(g,{feeEventDates:groupFeeEventDates(g)}));
+  Object.values(result.materialItems||{}).forEach(items=>items.forEach(m=>{
+    if(m.sourceType!=='purchase'){m.refPrice=accountingNumber(m.unitPrice)||accountingNumber(m.refPrice);m.unitPrice=0;}
+    m.effectiveCost=calcMatItem(m).effectiveCost;
+  }));
+  result.warnings=collectAccountingWarnings(ids);
+  result.aggregation=accountingSummary(ids);
+  result.calculationPolicy={packagingUnitCost:3,paypayFeeRate:0.03,yenRounding:'日別・四捨五入',feeRounding:'整数円を日数で割り、端数を初日から1円ずつ配分',demo:'生データは復元用に保持し、aggregationおよび自動経費から除外',automaticExpenses:'autoSource=gocchi-schema-2。再読み込み時は再計算して重複を防止',cashFlow:'包装資材・PayPay手数料・日割出店料は配賦費用。現金収支への自動算入は行わない'};
+  return exportJapanDates(result);
+}
+
+function acctEscape(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function acctOptions(items,value){return items.map(([v,label])=>'<option value="'+acctEscape(v)+'"'+(String(v)===String(value)?' selected':'')+'>'+acctEscape(label)+'</option>').join('');}
+function acctField(label,id,value,type){return '<label>'+acctEscape(label)+'<input id="'+id+'" type="'+(type||'text')+'" value="'+acctEscape(value)+'"'+(type==='number'?' min="0" step="1"':'')+'></label>';}
+function acctSelect(label,id,items,value){return '<label>'+label+'<select id="'+id+'">'+acctOptions(items,value)+'</select></label>';}
+function renderAccountingWarnings(){
+  const ids=state.currentEventId==null?[]:[state.currentEventId],warnings=collectAccountingWarnings(ids);
+  const markup='<strong>入力・集計チェック：'+warnings.length+'件</strong><p>警告があっても締め・JSON書き出しを続けられます。</p>'+(warnings.length?'<ul>'+warnings.map(w=>'<li>'+acctEscape(w.message)+'</li>').join('')+'</ul>':'<p>現在の確認項目に警告はありません。</p>');
+  ['accounting-warnings','close-accounting-warnings','after-accounting-warnings'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=markup;});
+  return warnings;
+}
+function showExportAccountingWarnings(data){
+  const host=document.getElementById('export-accounting-warnings');if(!host)return;
+  const warnings=data.warnings||[];host.hidden=false;
+  host.innerHTML='<strong>今回の書き出し：警告 '+warnings.length+'件</strong><p>JSONのwarningsにも保存しました。書き出しは完了しています。</p>'+(warnings.length?'<ul>'+warnings.map(w=>{const e=(data.events||[]).find(e=>sameEventId(e.id,w.eventId));return '<li>'+acctEscape(e?e.name+'：':'')+acctEscape(w.message)+'</li>';}).join('')+'</ul>':'');
+}
+function renderAccountingSettings(){
+  const host=document.getElementById('accounting-settings'),e=getSelectedDataEvent();if(!host)return;
+  if(!e){host.innerHTML='<p>イベントを選択すると日報の補足情報を入力できます。</p>';return;}
+  migrateAccounting();
+  const g=(state.eventGroups||[]).find(g=>sameEventId(g.id,e.groupId));
+  host.innerHTML='<h3>日報の補足情報</h3><p>対象：'+acctEscape(e.name)+'（'+acctEscape(e.date)+'）</p><div class="acct-grid">'+
+    acctField('公式の開始時刻','acct-open',e.officialOpen,'time')+acctField('公式の終了時刻','acct-close',e.officialClose,'time')+
+    acctSelect('販売区分・税率','acct-tax',[['takeout','持ち帰り・8%'],['eatIn','店内飲食・10%']],e.taxMode)+
+    acctSelect('主催者の飲食スペース','acct-seating',[['none','なし'],['exists_no_agreement','あり・取り決めなし'],['exists_with_agreement','あり・取り決めあり']],e.organizerSeating)+
+    '<label class="acct-check"><input id="acct-demo" type="checkbox"'+(e.isDemo?' checked':'')+'>デモ用（集計から除外）</label></div>'+
+    (g?'<h3>出店料：'+acctEscape(g.name)+'</h3><p>同じグループの全日程に適用します。端数は初日から1円ずつ配分します。</p><div class="acct-grid">'+
+      acctField('出店料の総額（円）','acct-fee',g.fee,'number')+acctField('何日分か','acct-fee-days',g.feeDays,'number')+
+      acctField('勘定科目','acct-fee-account',g.feeAccount)+acctField('支払日','acct-fee-date',g.feePaidDate,'date')+
+      acctSelect('払い方','acct-fee-payment',[['cash','現金'],['transfer','振込'],['card','カード']],g.feePaymentType)+'</div>':
+      '<p>出店料の日割りを使う場合は、設定画面で日程を同じ催事グループにまとめてください。</p>')+
+    '<button type="button" onclick="saveAccountingSettings()">日報の補足情報を保存</button><p class="acct-note">包装資材費は販売数量×3円、PayPay手数料はPayPay売上×3%で自動計上します。手入力済みの経費がある場合は重複を確認してください。</p>';
+}
+function saveAccountingSettings(){
+  const e=getSelectedDataEvent();if(!e)return;
+  requireAdminPin('日報の補足情報を保存','日報の補足情報を保存します。',()=>{
+    e.officialOpen=document.getElementById('acct-open').value;e.officialClose=document.getElementById('acct-close').value;
+    e.taxMode=document.getElementById('acct-tax').value;e.organizerSeating=document.getElementById('acct-seating').value;e.isDemo=document.getElementById('acct-demo').checked;
+    const g=(state.eventGroups||[]).find(g=>sameEventId(g.id,e.groupId));
+    if(g){g.fee=Math.max(0,Math.round(accountingNumber(document.getElementById('acct-fee').value)));g.feeDays=Math.max(1,Math.floor(accountingNumber(document.getElementById('acct-fee-days').value)||1));g.feeAccount=document.getElementById('acct-fee-account').value.trim()||'雑費';g.feePaidDate=document.getElementById('acct-fee-date').value;g.feePaymentType=document.getElementById('acct-fee-payment').value;}
+    saveState();renderReport();showToast('✅ 日報の補足情報を保存しました');
+  });
+}
+function materialAccountingFields(m){
+  const disabled=isAdminPinRequired()?' disabled':'';
+  return '<div class="acct-panel acct-material"><div class="acct-grid"><label>材料の入手元<select'+disabled+' onchange="setMaterialAccounting('+m.id+',\'sourceType\',this.value)">'+acctOptions([['purchase','購入'],['carryover','前日の残り'],['fromEvent','他の催事から'],['fromStore','店舗の在庫から']],m.sourceType||'purchase')+'</select></label>'+
+    '<label>流用元の名前<input'+disabled+' value="'+acctEscape(m.sourceName)+'" placeholder="例：阪神百貨店" onchange="setMaterialAccounting('+m.id+',\'sourceName\',this.value)"></label>'+
+    '<label>残りの記録<select'+disabled+' onchange="setMaterialAccounting('+m.id+',\'remainderStatus\',this.value)">'+acctOptions([['recorded','数値を入力（残りなしは0）'],['undecided','未定']],(m.remainder||{}).status||'recorded')+'</select></label>'+
+    '<label>残りの再利用先<input'+disabled+' value="'+acctEscape((m.remainder||{}).reuseTo)+'" placeholder="例：桜祭り／店舗" onchange="setMaterialAccounting('+m.id+',\'reuseTo\',this.value)"></label></div>'+
+    ((m.sourceType||'purchase')!=='purchase'?'<p>流用材料の計上単価は0円です。参考単価：¥'+acctEscape(m.refPrice||m.unitPrice||0)+'</p>':'')+'</div>';
+}
+function setMaterialAccounting(id,field,value){
+  if(isAdminPinRequired())return;
+  const m=getMatItems().find(m=>sameEventId(m.id,id));if(!m)return;
+  if(field==='sourceType'){
+    if((m.sourceType||'purchase')==='purchase'&&value!=='purchase')m.refPrice=accountingNumber(m.unitPrice);
+    if(value==='purchase'&&accountingNumber(m.unitPrice)===0&&m.refPrice)m.unitPrice=m.refPrice;
+    m.sourceType=value;
+  }else if(field==='reuseTo')m.remainder.reuseTo=value;
+  else if(field==='remainderStatus')m.remainder.status=value;
+  else m[field]=value;
+  saveState();renderMaterial();
+}
+var accountingLaborEditId=null;
+function onStaffChange(){
+  const staff=(state.staffMembers||[]).find(s=>sameEventId(s.id,document.getElementById('staff-select').value));
+  if(staff){document.getElementById('staff-pay-type').value=staff.payType||'hourly';document.getElementById('labor-full-name').value=staff.fullName||staff.name||'';document.getElementById('labor-rate').value=staff.rate||0;document.getElementById('labor-relation').value=staff.relation||'なし';document.getElementById('labor-household').checked=!!staff.sameHousehold;}
+  if(!document.getElementById('labor-date').value)document.getElementById('labor-date').value=(getSelectedDataEvent()||{}).date||jstNow().slice(0,10);
+  calcStaffWage();
+}
+function onStaffTypeChange(){document.getElementById('staff-time-row').style.display='grid';calcStaffWage();}
+function readLaborForm(){return{staffId:(state.staffMembers||[]).find(s=>sameEventId(s.id,document.getElementById('staff-select').value))?.id||null,fullName:document.getElementById('labor-full-name').value.trim(),date:document.getElementById('labor-date').value,start:document.getElementById('staff-start').value,end:document.getElementById('staff-end').value,breakMinutes:Math.max(0,accountingNumber(document.getElementById('labor-break').value)),rate:Math.max(0,accountingNumber(document.getElementById('labor-rate').value)),payType:document.getElementById('staff-pay-type').value,withholdingAmount:Math.max(0,accountingNumber(document.getElementById('labor-withholding').value)),paymentMethod:document.getElementById('staff-payment-type').value,relation:document.getElementById('labor-relation').value,sameHousehold:document.getElementById('labor-household').checked};}
+function calcStaffWage(){
+  if(!document.getElementById('labor-date'))return;
+  const c=calculateLabor(readLaborForm());document.getElementById('staff-hours-disp').value=Math.floor(c.actualMinutes/60)+'時間'+(c.actualMinutes%60)+'分';document.getElementById('staff-wage-disp').textContent='¥'+c.gross.toLocaleString();document.getElementById('labor-net').textContent='実際に渡す額 ¥'+c.netPaid.toLocaleString();
+}
+function resetLaborForm(){
+  accountingLaborEditId=null;
+  document.getElementById('labor-full-name').value='';document.getElementById('labor-rate').value='0';document.getElementById('labor-relation').value='なし';document.getElementById('labor-household').checked=false;document.getElementById('staff-payment-type').value='cash';
+  ['staff-start','staff-end','labor-date'].forEach(id=>document.getElementById(id).value='');
+  ['labor-break','labor-withholding'].forEach(id=>document.getElementById(id).value='0');
+  document.getElementById('labor-save').textContent='＋ 勤務記録を追加';document.getElementById('labor-cancel').hidden=true;onStaffChange();
+}
+function addStaffExpense(){
+  if(!getSelectedDataEvent()){showToast('⚠️ イベントを選択してください');return;}
+  const fields=readLaborForm();if(!fields.fullName){showToast('⚠️ フルネームを入力してください');return;}
+  const eventId=state.currentEventId,editing=accountingLaborEditId;
+  requireAdminPin('勤務記録を保存','勤務記録を保存し、給料賃金を自動計算します。',()=>{
+    const existing=(state.laborRecords||[]).find(r=>sameEventId(r.id,editing)&&sameEventId(r.eventId,eventId));
+    if(existing){const history=existing.revisions||[];history.push({changedAt:jstNow(),previous:Object.fromEntries(Object.entries(existing).filter(([k])=>k!=='revisions'))});Object.assign(existing,fields,calculateLabor(fields),{updatedAt:jstNow(),revisions:history});}
+    else state.laborRecords.push(Object.assign({id:Date.now(),eventId,createdAt:jstNow()},fields,calculateLabor(fields)));
+    saveState();resetLaborForm();renderExpenses();showToast('✅ 勤務記録を保存しました');
+  });
+}
+function renderLaborRecords(){
+  const host=document.getElementById('labor-records');if(!host)return;
+  const records=(state.laborRecords||[]).filter(r=>sameEventId(r.eventId,state.currentEventId)&&!r.voidedAt);
+  host.innerHTML=records.length?records.map(r=>{const c=calculateLabor(r);return '<div class="acct-labor-row"><div><strong>'+acctEscape(r.fullName)+'</strong> '+acctEscape(r.date)+'<br>'+acctEscape(r.start)+'〜'+acctEscape(r.end)+'／休憩 '+r.breakMinutes+'分<br>支給 ¥'+c.gross.toLocaleString()+'／源泉 ¥'+accountingNumber(r.withholdingAmount).toLocaleString()+'／手渡し・振込 ¥'+c.netPaid.toLocaleString()+'</div><button onclick="editLaborRecord('+r.id+')">編集</button><button onclick="voidLaborRecord('+r.id+')">取消</button></div>';}).join(''):'<p>勤務記録はまだありません。以前の人件費は経費一覧に残ります。</p>';
+}
+function editLaborRecord(id){
+  requireAdminPin('勤務記録の編集','勤務記録を編集します。',()=>{
+    const r=state.laborRecords.find(r=>sameEventId(r.id,id));if(!r)return;accountingLaborEditId=r.id;
+    const mapping={'staff-select':'staffId','labor-full-name':'fullName','labor-date':'date','staff-start':'start','staff-end':'end','labor-break':'breakMinutes','labor-rate':'rate','staff-pay-type':'payType','labor-withholding':'withholdingAmount','staff-payment-type':'paymentMethod','labor-relation':'relation'};
+    Object.entries(mapping).forEach(([id,key])=>document.getElementById(id).value=r[key]);document.getElementById('labor-household').checked=!!r.sameHousehold;calcStaffWage();
+    document.getElementById('labor-save').textContent='勤務記録の変更を保存';document.getElementById('labor-cancel').hidden=false;document.getElementById('labor-full-name').scrollIntoView({block:'center'});
+  });
+}
+function voidLaborRecord(id){requireAdminPin('勤務記録の取消','勤務記録を取り消します。',()=>showConfirm('勤務記録を取り消しますか？','記録は取消履歴として残し、給与の集計から除外します。',()=>{const r=state.laborRecords.find(r=>sameEventId(r.id,id));if(r)r.voidedAt=jstNow();saveState();resetLaborForm();renderExpenses();}));}
+function renderPaymentCorrection(){
+  const host=document.getElementById('payment-correction');if(!host)return;
+  const orders=accountingOrders(state.currentEventId).filter(o=>getOrderPaymentParts(o).some(p=>PRIMARY_PAY_METHODS.includes(p.method)&&p.amount>0));
+  host.innerHTML='<details><summary>注文の支払方法を修正</summary><p>金額・商品は維持し、変更前後と日時を記録します。商品券・クーポンの金額は変更しません。</p>'+
+    (orders.length?'<label>対象の注文<select id="correction-order" onchange="syncCorrectionMethod()">'+orders.slice().reverse().map(o=>'<option value="'+acctEscape(o.id)+'">#'+acctEscape(o.orderNo||o.id)+' '+acctEscape(new Date(o.time).toLocaleTimeString('ja-JP',{timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'}))+' '+acctEscape((o.items||[]).map(i=>i.name+'×'+i.qty).join('・'))+' ¥'+accountingNumber(o.total).toLocaleString()+'／'+acctEscape(PAY_LABELS[o.payMethod]||o.payMethod)+'</option>').join('')+'</select></label><label>正しい支払方法<select id="correction-method">'+acctOptions(PRIMARY_PAY_METHODS.map(m=>[m,PAY_LABELS[m]]),'cash')+'</select></label><button onclick="correctOrderPayment()">支払方法の修正を保存</button>':'<p>修正できる注文はありません。</p>')+'</details>';
+  syncCorrectionMethod();
+}
+function syncCorrectionMethod(){const sel=document.getElementById('correction-order'),method=document.getElementById('correction-method');if(sel&&method){const o=state.orders.find(o=>sameEventId(o.id,sel.value));if(o)method.value=o.payMethod;}}
+function correctOrderPayment(){
+  const sel=document.getElementById('correction-order');if(!sel)return;
+  const o=state.orders.find(o=>sameEventId(o.id,sel.value)&&sameEventId(o.eventId,state.currentEventId)&&!o.cancelledAt),to=document.getElementById('correction-method').value;
+  if(!o||!PRIMARY_PAY_METHODS.includes(to))return;
+  if(o.payMethod===to){showToast('ℹ️ 支払方法は同じです');return;}
+  requireAdminPin('支払方法の修正','注文の支払方法を修正し、変更履歴を残します。',()=>{
+    const correction={from:o.payMethod,to,correctedAt:jstNow()};
+    if(!o.payMethodCorrections)o.payMethodCorrections=[];
+    if(o.originalPayMethod===undefined)o.originalPayMethod=o.payMethod;
+    o.payMethodCorrections.push(correction);o.payMethodCorrected=correction;o.payMethod=to;
+    saveState();
+    const actuals={};document.querySelectorAll('[id^="rc-actual-"]').forEach(el=>actuals[el.id]=el.value);const note=document.getElementById('rc-note').value;
+    openRegisterCloseModal();Object.entries(actuals).forEach(([id,value])=>{const el=document.getElementById(id);if(el)el.value=value;});document.getElementById('rc-note').value=note;calcRegisterDiff();
+    renderReport();showToast('✅ 支払方法を修正しました');
+  });
+}
+
+function applyCompatibleBackup(parsed){
+  ['events','orders','expenses','menuItems','staffMembers','eventGroups','laborRecords'].forEach(k=>{
+    if(parsed[k]!=null&&!Array.isArray(parsed[k]))throw new Error(k+' のデータ形式を確認してください');
+  });
+  ['materialItems','payableItems','inventory'].forEach(k=>{
+    if(parsed[k]!=null&&(typeof parsed[k]!=='object'||Array.isArray(parsed[k])))throw new Error(k+' のデータ形式を確認してください');
+  });
+  const before=state,owner=inventoryOwnerId,next=cloneEventData(state);
+  Object.keys(next).forEach(k=>{if(parsed[k]!==undefined)next[k]=cloneEventData(parsed[k]);});
+  next.laborRecords=cloneEventData(parsed.laborRecords||[]);
+  try{
+    state=next;inventoryOwnerId=null;migrateState();syncEventInventory();
+    localStorage.setItem(DB_KEY,JSON.stringify(state));
+  }catch(error){state=before;inventoryOwnerId=owner;throw error;}
+}
+
 const DB_KEY='karaage_v6';
 const PAY_LABELS={cash:'現金',paypay:'PayPay',aupay:'auPay',dpay:'d払い',rakuten:'楽天Pay',other:'その他',voucher:'商品券',coupon:'クーポン'};
 /* [UI-1] 決済方法アイコン・クラス名 */
@@ -2639,7 +3444,7 @@ let state={
   events:[],currentEventId:null,
   menuItems:[],orders:[],inventory:{},expenses:[],
   categories:[...DEFAULT_CATS],accountItems:[...DEFAULT_ACCOUNTS],
-  staffMembers:[],materialItems:{},
+  staffMembers:[],materialItems:{},laborRecords:[],
   eventGroups:[],    /* [GROUP-1] 催事グループ */
   activePayMethods:['cash','paypay','aupay','dpay','rakuten','other','voucher','coupon'], /* [UI-1] 表示する決済方法 */
   voucherSettlementTiming:{voucher:'cash',coupon:'cash'}, /* 当日現金化 / 後日振込 */
@@ -2683,6 +3488,8 @@ function loadState(){
 }
 function saveState(){
   try{
+    migrateAccounting();
+    syncEventInventory();
     /* [PIN-3] adminSessionUnlocked がstateに混入していても保存しない */
     const toSave={...state};
     delete toSave.adminSessionUnlocked;
@@ -2742,6 +3549,8 @@ function migrateState(){
   if(!state.activePayMethods||!state.activePayMethods.length){
     state.activePayMethods=['cash','paypay','aupay','dpay','rakuten','other','voucher','coupon'];
   }
+  /* 現金を毎回の標準として常に利用可能にする。 */
+  state.activePayMethods=['cash',...state.activePayMethods.filter(function(m){return m!=='cash';})];
   /* 旧版では商品券・クーポン欄が常時表示だったため、初回移行時だけ両方を利用可能にする */
   if(!state.voucherPaymentSplitMigrated){
     if(state.activePayMethods.indexOf('voucher')<0&&state.activePayMethods.indexOf('coupon')<0){
@@ -2792,6 +3601,8 @@ function migrateState(){
       )
     }));
   }
+  migrateAccounting();
+  migrateEventInventory();
 }
 
 function seedDefaultData(){
@@ -2814,7 +3625,7 @@ function seedDefaultData(){
     state.accountItems=[...DEFAULT_ACCOUNTS];
   }
   if(!state.events||!state.events.length){
-    state.events=[{id:1,name:'サンプル',date:new Date().toISOString().slice(0,10),place:''}];
+    state.events=[{id:1,name:'サンプル',date:jstNow().slice(0,10),place:''}];
     state.currentEventId=1;
   }else if(state.events.length===1&&state.events[0].name==='春まつり2025'){
     state.events[0].name='サンプル';
@@ -2825,6 +3636,7 @@ function seedDefaultData(){
   if(!state.inventory)state.inventory={};
   if(!state.staffMembers)state.staffMembers=[];
   if(!state.materialItems)state.materialItems={};
+  activateEventInventory(state.currentEventId);
   saveState();
 }
 function showPage(name,btn){
@@ -2841,7 +3653,7 @@ function showPage(name,btn){
   /* [UX] 材料ページのみFABを表示 */
   const fab=document.getElementById('mat-fab');
   if(fab)fab.classList.toggle('show',name==='material');
-  if(name==='register')renderRegister();
+  if(name==='register'){renderRegister();requestAnimationFrame(applyBoardSize);}
   if(name==='inventory')renderInventory();
   if(name==='material'){renderMaterial();renderPayableList();}
   if(name==='expense')renderExpenses();
@@ -2970,11 +3782,13 @@ function changeQty(id,delta){const item=cart.find(c=>c.id===id);if(!item)return;
 function removeFromCart(id){cart=cart.filter(c=>c.id!==id);renderMenuGrid();renderCart();calcChange();renderCashPresets();}
 /* [DISC-1] clearCart: 値引きもリセット */
 function clearCart(){
+  payMethod='cash';
   cart=[];discountAmount=0;discountType='set';voucherAmount=0;voucherPanelOpen=false;
   receivedStr='';setTenkeyOpen(false);
   const vp=document.getElementById('voucher-panel');if(vp)vp.classList.remove('open');
   const vi=document.getElementById('voucher-amount-input');if(vi)vi.value='';
   updateReceivedDisp();renderMenuGrid();renderCart();calcChange();renderCashPresets();
+  renderPayMethodGrid();updateChangeArea();
 }
 function selectPay(btn,method){
   if(payMethod===method)return; /* 同じ方法を再タップしても何もしない */
@@ -3062,7 +3876,7 @@ function _doCheckout(){
   const order={
     id:Date.now(),
     eventId:state.currentEventId,
-    time:new Date().toISOString(),
+    time:jstNow(),
     payMethod,
     receivedAmount:payMethod==='cash'?(parseInt(receivedStr)||0):null,
     voucherAmount:voucher,
@@ -3093,11 +3907,12 @@ function _doCheckout(){
   const recv=payMethod==='cash'&&order.receivedAmount?order.receivedAmount:0;
   const changeMsg=recv>0?' おつり ¥'+(recv-remainingDue).toLocaleString():'';
   const voucherMsg=voucher>0?' '+(PAY_LABELS[voucherType]||'商品券')+' ¥'+voucher.toLocaleString()+' + 残り ¥'+remainingDue.toLocaleString():'';
-  showToast('✅ 決済完了 ¥'+finalTotal.toLocaleString()+voucherMsg+'（'+PAY_LABELS[payMethod]+'）'+changeMsg);
+  showToast('✅ 決済完了 ¥'+finalTotal.toLocaleString()+'（'+PAY_LABELS[payMethod]+'）'+changeMsg,1500);
   showUndoBar(order);
 
-  /* カートリセット */
+  /* カートリセット：次の会計は毎回現金から開始 */
   cart=[];
+  payMethod='cash';
   discountAmount=0;
   discountType='set';
   voucherAmount=0;voucherPanelOpen=false;
@@ -3110,6 +3925,8 @@ function _doCheckout(){
   renderCart();
   calcChange();
   renderCashPresets();
+  renderPayMethodGrid();
+  updateChangeArea();
   renderBoard();
   /* [INV-ALERT] 会計後に在庫アラートチェック */
   checkInventoryAlerts();
@@ -3156,7 +3973,7 @@ function buildAbcMonthOptions(){
 /* 集計軸に応じてorderを絞り込む */
 function getAbcOrders(){
   /* 取消済みを除外（日報と一致させる） */
-  const allOrders = (state.orders || []).filter(o => !o.cancelledAt);
+  const allOrders = (state.orders || []).filter(o => !o.cancelledAt && isAccountingEvent(o.eventId));
   const evt = (state.events||[]).find(e=>e.id===state.currentEventId);
 
   if(abcAxis==='event'){
@@ -3372,7 +4189,7 @@ function updateInv(itemId,field,val){
 }
 function getMatItems(){const evtId=String(state.currentEventId);if(!state.materialItems[evtId])state.materialItems[evtId]=[];return state.materialItems[evtId];}
 function saveMatItems(items){state.materialItems[String(state.currentEventId)]=items;saveState();}
-function calcMatItem(item){const waste=parseFloat(item.remainder.waste)||0;const reuse=parseFloat(item.remainder.reuse)||0;const base=parseFloat(item.qty)||0;const add=parseFloat(item.addQty)||0;const totalQty=base+add;const used=Math.max(0,totalQty-waste-reuse);const effectiveCost=(used+waste)*(parseFloat(item.unitPrice)||0);return{used,waste,reuse,base,add,totalQty,effectiveCost};}
+function calcMatItem(item){const waste=parseFloat(item.remainder.waste)||0;const reuse=parseFloat(item.remainder.reuse)||0;const base=parseFloat(item.qty)||0;const add=parseFloat(item.addQty)||0;const totalQty=base+add;const used=Math.max(0,totalQty-waste-reuse);const effectiveCost=(used+waste)*effectiveMaterialPrice(item);return{used,waste,reuse,base,add,totalQty,effectiveCost};}
 /* [PIN-2] addMaterialItem: PIN保護 */
 function addMaterialItem(){
   requireAdminPin('材料品目を追加','材料品目を追加するには管理PINが必要です。',()=>{
@@ -3433,7 +4250,8 @@ function copyMaterialFromEvent(){
         id:Date.now()+idx,name:src.name||'',unit:src.unit||'kg',unitPrice:src.unitPrice||'',qty:carry,addQty:'',
         remainder:{waste:'',reuse:''},costMode:src.costMode||'direct',
         targetCategories:(src.targetCategories||[]).slice(),targetItemIds:(src.targetItemIds||[]).slice(),
-        note:src.note||'',paymentType:src.paymentType||'cash'
+        note:src.note||'',paymentType:src.paymentType||'cash',
+        sourceType:mode==='carry'?'carryover':'purchase',sourceName:mode==='carry'?((state.events||[]).find(e=>sameEventId(e.id,sourceId))||{}).name||'':'',refPrice:accountingNumber(src.unitPrice)||accountingNumber(src.refPrice)
       });
       if(key)existingNames.add(key);added++;
     });
@@ -3459,6 +4277,7 @@ function onMatInput(id,field,val){
     return;
   }
   const items=getMatItems();const item=items.find(i=>i.id===id);if(!item)return;
+  if(field==='unitPrice')item.refPrice=accountingNumber(val);
   if(field==='rem_waste')item.remainder.waste=val;
   else if(field==='rem_reuse')item.remainder.reuse=val;
   else if(field==='paymentType')item.paymentType=val;
@@ -3478,9 +4297,10 @@ function onMatUnitChange(id,val){
   if(card)card.querySelectorAll('.mat-unit-label').forEach(el=>el.textContent=val);
   updateMatSummary(items);updateMatCardResult(item);
 }
-function updateMatCardResult(item){const c=calcMatItem(item);const card=document.querySelector(`[data-mat-id="${item.id}"]`);if(!card)return;const prepCost=c.totalQty*(parseFloat(item.unitPrice)||0);const prepEl=card.querySelector('.mat-prep-cost');if(prepEl)prepEl.textContent='¥'+prepCost.toLocaleString(undefined,{maximumFractionDigits:0});const totalEl=card.querySelector('.mat-total-qty-text');if(totalEl)totalEl.textContent=c.totalQty.toFixed(2)+(item.unit||'');const usedEl=card.querySelector('.mat-used-val-text');if(usedEl)usedEl.textContent=c.used.toFixed(2)+(item.unit||'');const wasteEl=card.querySelector('.mat-waste-cost');if(wasteEl)wasteEl.textContent='¥'+(c.waste*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0});const reuseEl=card.querySelector('.mat-reuse-cost');if(reuseEl)reuseEl.textContent='¥'+(c.reuse*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0});const effEl=card.querySelector('.mat-eff-cost');if(effEl)effEl.textContent='¥'+c.effectiveCost.toLocaleString(undefined,{maximumFractionDigits:0});}
-function updateMatSummary(items){let tp=0,te=0,tw=0,tr=0;items.forEach(item=>{const c=calcMatItem(item);tp+=c.totalQty*(parseFloat(item.unitPrice)||0);te+=c.effectiveCost;tw+=c.waste*(parseFloat(item.unitPrice)||0);tr+=c.reuse*(parseFloat(item.unitPrice)||0);});document.getElementById('summary-grid').innerHTML=`<div class="summary-item"><div class="summary-label">在庫＋追加原価</div><div class="summary-val orange">¥${tp.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">原価算入額</div><div class="summary-val red">¥${te.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">廃棄ロス</div><div class="summary-val red">¥${tw.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">あまり額（原価外）</div><div class="summary-val" style="color:var(--info);">¥${tr.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div>`;}
+function updateMatCardResult(item){const c=calcMatItem(item);const card=document.querySelector(`[data-mat-id="${item.id}"]`);if(!card)return;const prepCost=c.totalQty*effectiveMaterialPrice(item);const prepEl=card.querySelector('.mat-prep-cost');if(prepEl)prepEl.textContent='¥'+prepCost.toLocaleString(undefined,{maximumFractionDigits:0});const totalEl=card.querySelector('.mat-total-qty-text');if(totalEl)totalEl.textContent=c.totalQty.toFixed(2)+(item.unit||'');const usedEl=card.querySelector('.mat-used-val-text');if(usedEl)usedEl.textContent=c.used.toFixed(2)+(item.unit||'');const wasteEl=card.querySelector('.mat-waste-cost');if(wasteEl)wasteEl.textContent='¥'+(c.waste*effectiveMaterialPrice(item)).toLocaleString(undefined,{maximumFractionDigits:0});const reuseEl=card.querySelector('.mat-reuse-cost');if(reuseEl)reuseEl.textContent='¥'+(c.reuse*effectiveMaterialPrice(item)).toLocaleString(undefined,{maximumFractionDigits:0});const effEl=card.querySelector('.mat-eff-cost');if(effEl)effEl.textContent='¥'+c.effectiveCost.toLocaleString(undefined,{maximumFractionDigits:0});}
+function updateMatSummary(items){let tp=0,te=0,tw=0,tr=0;items.forEach(item=>{const c=calcMatItem(item);tp+=c.totalQty*effectiveMaterialPrice(item);te+=c.effectiveCost;tw+=c.waste*effectiveMaterialPrice(item);tr+=c.reuse*effectiveMaterialPrice(item);});document.getElementById('summary-grid').innerHTML=`<div class="summary-item"><div class="summary-label">在庫＋追加原価</div><div class="summary-val orange">¥${tp.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">原価算入額</div><div class="summary-val red">¥${te.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">廃棄ロス</div><div class="summary-val red">¥${tw.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div><div class="summary-item"><div class="summary-label">あまり額（原価外）</div><div class="summary-val" style="color:var(--info);">¥${tr.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div>`;}
 function renderMaterial(){
+  migrateAccounting();
   const items=getMatItems();
   renderMaterialSourceOptions();
   updateMatSummary(items);
@@ -3519,7 +4339,7 @@ function renderMaterial(){
 
   list.innerHTML=items.map(item=>{
     const c=calcMatItem(item);
-    const prepCost=c.totalQty*(parseFloat(item.unitPrice)||0);
+    const prepCost=c.totalQty*effectiveMaterialPrice(item);
     /* [ALLOC-1] 按分フィールドのデフォルト保証 */
     const costMode=item.costMode||'direct';
     const targetCategories=item.targetCategories||[];
@@ -3624,7 +4444,7 @@ function renderMaterial(){
           </select>
         </div>
         <div class="mat-field">
-          <label class="mat-label">@単価(円/<span class="mat-unit-label">${item.unit}</span>)</label>
+          <label class="mat-label">${(item.sourceType||'purchase')==='purchase'?'@単価':'参考単価'}(円/<span class="mat-unit-label">${item.unit}</span>)</label>
           <input class="mat-input" type="number" placeholder="0" value="${item.unitPrice}"
             oninput="onMatInput(${item.id},'unitPrice',this.value)"
             ${isAdminPinRequired()?"disabled style=\"opacity:.55;cursor:not-allowed;\"":""}>
@@ -3694,13 +4514,13 @@ function renderMaterial(){
           <div class="remainder-result-item">
             <div class="remainder-result-label">廃棄ロス</div>
             <div class="mat-waste-cost remainder-result-val" style="color:var(--danger);">
-              ¥${(c.waste*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0})}
+              ¥${(c.waste*effectiveMaterialPrice(item)).toLocaleString(undefined,{maximumFractionDigits:0})}
             </div>
           </div>
           <div class="remainder-result-item">
             <div class="remainder-result-label">あまり額（原価外）</div>
             <div class="mat-reuse-cost remainder-result-val" style="color:var(--info);">
-              ¥${(c.reuse*(parseFloat(item.unitPrice)||0)).toLocaleString(undefined,{maximumFractionDigits:0})}
+              ¥${(c.reuse*effectiveMaterialPrice(item)).toLocaleString(undefined,{maximumFractionDigits:0})}
             </div>
           </div>
           <div class="remainder-result-item">
@@ -3714,6 +4534,7 @@ function renderMaterial(){
       ${modeSelectHtml}
       ${catChipsHtml}
       ${itemChipsHtml}
+      ${materialAccountingFields(item)}
       ${noteHtml}
       ${matPreviewHtml}
     </div>`;
@@ -3766,7 +4587,7 @@ function calcRent(){
 }
 function addRentExpense(){
   const sales=getEvtSales();
-  const now=new Date().toISOString();
+  const now=jstNow();
   if(rentType==='fixed'){
     const amt=parseFloat(document.getElementById('rent-fixed-amt').value)||0;
     if(!amt){showToast('⚠️ 金額が0円です');return;}
@@ -3794,7 +4615,7 @@ function addRentFixed(){
   state.expenses.push({
     id:Date.now(),eventId:state.currentEventId,cat:'出店料',
     amount:fixed,memo:'出店料（固定）',
-    paymentType:fixedPay,expenseScope,addedAfterClose:isCurrentEventClosed(),time:new Date().toISOString()
+    paymentType:fixedPay,expenseScope,addedAfterClose:isCurrentEventClosed(),time:jstNow()
   });
   saveState();renderExpenses();
   showToast(`🏢 出店料（固定）¥${fixed.toLocaleString()} を登録しました`);
@@ -3812,16 +4633,16 @@ function addRentRate(){
     id:Date.now(),eventId:state.currentEventId,cat:'出店料',
     amount:rateAmt,
     memo:`出店料（歩率${(pct*100).toFixed(1)}%・売上¥${sales.toLocaleString()}）`,
-    paymentType:ratePay,expenseScope:'event',addedAfterClose:isCurrentEventClosed(),time:new Date().toISOString()
+    paymentType:ratePay,expenseScope:'event',addedAfterClose:isCurrentEventClosed(),time:jstNow()
   });
   saveState();renderExpenses();
   showToast(`🏢 出店料（歩率分）¥${rateAmt.toLocaleString()} を登録しました`);
 }
 function renderExpCatSelect(){const sel=document.getElementById('exp-cat');if(!sel)return;sel.innerHTML=state.accountItems.map(a=>`<option>${a}</option>`).join('');}
-function addExpense(){const cat=document.getElementById('exp-cat').value;const amount=parseInt(document.getElementById('exp-amount').value)||0;const memo=document.getElementById('exp-memo').value;if(!amount){showToast('⚠️ 金額を入力してください');return;}const otherPay=document.getElementById('other-payment-type');const otherPayType=otherPay?otherPay.value:'cash';const expenseScope=(document.getElementById('other-expense-scope')||{}).value||'event';state.expenses.push({id:Date.now(),eventId:state.currentEventId,cat,amount,memo,paymentType:otherPayType,expenseScope,addedAfterClose:isCurrentEventClosed(),time:new Date().toISOString()});saveState();document.getElementById('exp-amount').value='';document.getElementById('exp-memo').value='';renderExpenses();showToast('💰 経費を追加しました');}
-function getEvtExpenses(){return(state.expenses||[]).filter(e=>e.eventId===state.currentEventId);}
+function addExpense(){const cat=document.getElementById('exp-cat').value;const amount=parseInt(document.getElementById('exp-amount').value)||0;const memo=document.getElementById('exp-memo').value;if(!amount){showToast('⚠️ 金額を入力してください');return;}const otherPay=document.getElementById('other-payment-type');const otherPayType=otherPay?otherPay.value:'cash';const expenseScope=(document.getElementById('other-expense-scope')||{}).value||'event';state.expenses.push({id:Date.now(),eventId:state.currentEventId,cat,amount,memo,paymentType:otherPayType,expenseScope,addedAfterClose:isCurrentEventClosed(),time:jstNow()});saveState();document.getElementById('exp-amount').value='';document.getElementById('exp-memo').value='';renderExpenses();showToast('💰 経費を追加しました');}
+function getEvtExpenses(){return (state.expenses||[]).filter(e=>!isGeneratedExpense(e)&&sameEventId(e.eventId,state.currentEventId)).concat(generateAccountingExpenses([state.currentEventId]));}
 function renderExpenses(){
-  renderExpCatSelect();renderStaffSelect();renderStaffExSelect();calcRent();
+  renderExpCatSelect();renderStaffSelect();renderStaffExSelect();calcRent();resetLaborForm();renderLaborRecords();
   const closeNotice=document.getElementById('expense-close-notice');
   if(closeNotice){closeNotice.classList.toggle('show',isCurrentEventClosed());closeNotice.innerHTML=isCurrentEventClosed()?'🏁 レジ締め後も経費を追加できます。追加分は「締め後」と表示され、日報の利益・キャッシュフローへ即時反映されます。':'';}
   const list=getEvtExpenses();
@@ -3832,6 +4653,7 @@ function renderExpenses(){
   const PAY_TYPE_BADGE={
     cash:'<span style="font-size:9px;padding:2px 5px;border-radius:8px;background:#E8F5E9;color:#2E7D32;font-weight:700;flex-shrink:0;">💴現金</span>',
     invoice:'<span style="font-size:9px;padding:2px 5px;border-radius:8px;background:#FFF3E0;color:#E65100;font-weight:700;flex-shrink:0;">📄請求書</span>',
+    transfer:'<span>振込</span>',allocation:'<span>自動配賦</span>',
     card:'<span style="font-size:9px;padding:2px 5px;border-radius:8px;background:#EDE7F6;color:#4A148C;font-weight:700;flex-shrink:0;">💳カード</span>'
   };
   const SCOPE_BADGE={
@@ -3843,7 +4665,7 @@ function renderExpenses(){
   el.innerHTML=[...list].reverse().map(e=>{
     const isMasked=false;
     const amtHtml=`<span class="expense-amount">¥${e.amount.toLocaleString()}</span>`;
-    return`<div class="expense-item"><span class="expense-cat-badge">${e.cat}</span><span class="expense-memo">${e.memo||'—'}</span>${e.addedAfterClose?'<span class="post-close-badge">締め後</span>':''}${SCOPE_BADGE[e.expenseScope||'event']||SCOPE_BADGE.event}${PAY_TYPE_BADGE[e.paymentType||'cash']||PAY_TYPE_BADGE.cash}${amtHtml}<button class="expense-del" onclick="deleteExpense(${e.id})">✕</button></div>`;
+    return`<div class="expense-item"><span class="expense-cat-badge">${e.cat}</span><span class="expense-memo">${e.memo||'—'}</span>${e.addedAfterClose?'<span class="post-close-badge">締め後</span>':''}${SCOPE_BADGE[e.expenseScope||'event']||SCOPE_BADGE.event}${PAY_TYPE_BADGE[e.paymentType||'cash']||PAY_TYPE_BADGE.cash}${amtHtml}${isGeneratedExpense(e)?'<span title="元の設定・勤務記録を変更すると再計算されます">自動</span>':'<button class="expense-del" onclick="deleteExpense('+e.id+')">✕</button>'}</div>`;
   }).join('');
 }
 function deleteExpense(id){state.expenses=state.expenses.filter(e=>e.id!==id);saveState();renderExpenses();}
@@ -3910,11 +4732,6 @@ function toggleExpensePayType(btn,section){
   if(chevron)chevron.classList.toggle('open',closed);
 }
 function renderStaffSelect(){const sel=document.getElementById('staff-select');if(!sel)return;if(!state.staffMembers||!state.staffMembers.length){sel.innerHTML='<option value="">-- スタッフを登録してください --</option>';return;}sel.innerHTML=state.staffMembers.map(s=>`<option value="${s.id}">${s.name}（${s.payType==='hourly'?`時給¥${s.rate}`:`日給¥${s.rate}`}）</option>`).join('');onStaffChange();}
-function onStaffChange(){const sel=document.getElementById('staff-select');const staff=state.staffMembers.find(s=>s.id===parseInt(sel.value));if(!staff)return;document.getElementById('staff-pay-type').value=staff.payType||'hourly';onStaffTypeChange();}
-function onStaffTypeChange(){const type=document.getElementById('staff-pay-type').value;const timeRow=document.getElementById('staff-time-row');if(type==='daily'){timeRow.style.display='none';const sel=document.getElementById('staff-select');const staff=state.staffMembers.find(s=>s.id===parseInt(sel.value));if(staff)document.getElementById('staff-wage-disp').textContent='¥'+staff.rate.toLocaleString();}else{timeRow.style.display='grid';calcStaffWage();}}
-function calcStaffWage(){const type=document.getElementById('staff-pay-type').value;if(type==='daily')return;const sel=document.getElementById('staff-select');const staff=state.staffMembers.find(s=>s.id===parseInt(sel.value));if(!staff)return;const start=document.getElementById('staff-start').value;const end=document.getElementById('staff-end').value;if(!start||!end){document.getElementById('staff-hours-disp').value='';document.getElementById('staff-wage-disp').textContent='¥0';return;}const[sh,sm]=start.split(':').map(Number);const[eh,em]=end.split(':').map(Number);let mins=(eh*60+em)-(sh*60+sm);if(mins<0)mins+=1440;const hours=mins/60;document.getElementById('staff-hours-disp').value=`${Math.floor(hours)}h${mins%60>0?`${mins%60}m`:''}`;document.getElementById('staff-wage-disp').textContent='¥'+(Math.round(staff.rate*hours)).toLocaleString();}
-function addStaffExpense(){const sel=document.getElementById('staff-select');const staff=state.staffMembers.find(s=>s.id===parseInt(sel.value));if(!staff){showToast('⚠️ スタッフを選択してください');return;}const type=document.getElementById('staff-pay-type').value;let amount=0,memo='';if(type==='daily'){amount=staff.rate;memo=`${staff.name}（日給）`;}else{const start=document.getElementById('staff-start').value;const end=document.getElementById('staff-end').value;if(!start||!end){showToast('⚠️ 勤務時間を入力してください');return;}const[sh,sm]=start.split(':').map(Number);const[eh,em]=end.split(':').map(Number);let mins=(eh*60+em)-(sh*60+sm);if(mins<0)mins+=1440;amount=Math.round(staff.rate*(mins/60));memo=`${staff.name}（時給 ${start}〜${end}）`;}if(!amount){showToast('⚠️ 金額が0円です');return;}const staffPay=document.getElementById('staff-payment-type');const staffPayType=staffPay?staffPay.value:'cash';state.expenses.push({id:Date.now(),eventId:state.currentEventId,cat:'人件費',amount,memo,paymentType:staffPayType,addedAfterClose:isCurrentEventClosed(),time:new Date().toISOString()});saveState();document.getElementById('staff-start').value='';document.getElementById('staff-end').value='';document.getElementById('staff-hours-disp').value='';document.getElementById('staff-wage-disp').textContent='¥0';renderExpenses();showToast(`👤 ${memo} を追加しました`);}
-
 /* [STAFF-EX] 給与調整額・交通費の追加登録 */
 function renderStaffExSelect(){
   const sel=document.getElementById('staff-ex-select');
@@ -3937,7 +4754,7 @@ function addStaffExtraExpense(){
   state.expenses.push({
     id:Date.now(),eventId:state.currentEventId,
     cat:exType,amount,memo,paymentType,addedAfterClose:isCurrentEventClosed(),
-    time:new Date().toISOString()
+    time:jstNow()
   });
   saveState();
   document.getElementById('staff-ex-amount').value='';
@@ -3975,8 +4792,8 @@ function calcCashFlow(tgtIds){
   });
   const totalCashless=Object.values(cashlessByMethod).reduce((s,v)=>s+v.total,0);
   /* 経費の支払方法別 */
-  const cashExpenses=expenses.filter(e=>(e.paymentType||'cash')==='cash').reduce((s,e)=>s+e.amount,0);
-  const nonCashExpenses=expenses.filter(e=>(e.paymentType||'cash')!=='cash').reduce((s,e)=>s+e.amount,0);
+  const cashExpenses=expenses.filter(e=>(e.paymentType||'cash')==='cash').reduce((s,e)=>s+(e.cashFlowAmount==null?e.amount:e.cashFlowAmount),0);
+  const nonCashExpenses=expenses.filter(e=>(e.paymentType||'cash')!=='cash').reduce((s,e)=>s+(e.cashFlowAmount==null?e.amount:e.cashFlowAmount),0);
   /* 材料費の支払方法別 */
   let cashMatCost=0,nonCashMatCost=0;
   matItems.forEach(item=>{
@@ -4098,6 +4915,9 @@ function getOrderPaymentParts(order){
 }
 
 function renderReport(){
+  renderAccountingSettings();renderAccountingWarnings();
+  renderEventDataActions();
+  renderRegisterCloseArea();
   /* [WEATHER-1] 天気カード描画 */
   renderWeatherReportCard();
   /* [GROUP-1] 集計モードに応じた対象を取得 */
@@ -4117,9 +4937,9 @@ function renderReport(){
   const totalExpenses=expenses.reduce((s,e)=>s+e.amount,0);
   let totalCOGS=0; /* [按分一本化] 直接原価は使用しない */
   const matCost=matItems.reduce((s,item)=>{const c=calcMatItem(item);return s+c.effectiveCost;},0);
-  const totalWasted=matItems.reduce((s,item)=>s+(parseFloat(item.remainder.waste)||0)*(parseFloat(item.unitPrice)||0),0);
-  const laborCost=expenses.filter(e=>['人件費','給与調整額','交通費','外注費'].includes(e.cat)).reduce((s,e)=>s+e.amount,0);
-  const rentCost=expenses.filter(e=>e.cat==='出店料').reduce((s,e)=>s+e.amount,0);
+  const totalWasted=matItems.reduce((s,item)=>s+(parseFloat(item.remainder.waste)||0)*effectiveMaterialPrice(item),0);
+  const laborCost=expenses.filter(e=>['人件費','給料賃金','給与調整額','交通費','外注費'].includes(e.cat)).reduce((s,e)=>s+e.amount,0);
+  const rentCost=expenses.filter(e=>e.cat==='出店料'||e.autoKind==='groupFee').reduce((s,e)=>s+e.amount,0);
   const gp=totalSales-matCost;const np=gp-totalExpenses;const mg=totalSales>0?Math.round(np/totalSales*100):0;
   /* [REPORT-1] 上段サマリーカード（5枚）を先に描画 */
   const avgOrder = activeOrders.length > 0 ? Math.round(orderSales / activeOrders.length) : 0;
@@ -4286,15 +5106,15 @@ function buildExportData(){
     return{
       '品目':item.name,
       '単位':item.unit,
-      '単価':parseFloat(item.unitPrice)||0,
+      '単価':effectiveMaterialPrice(item),
       '在庫数量':parseFloat(item.qty)||0,
       '追加数量':parseFloat(item.addQty)||0,
       '総管理数量':+c.totalQty.toFixed(4),
-      '在庫＋追加原価':c.totalQty*(parseFloat(item.unitPrice)||0),
+      '在庫＋追加原価':c.totalQty*effectiveMaterialPrice(item),
       '廃棄数量':c.waste,
-      '廃棄ロス':+(c.waste*(parseFloat(item.unitPrice)||0)).toFixed(2),
+      '廃棄ロス':+(c.waste*effectiveMaterialPrice(item)).toFixed(2),
       'あまり数量':c.reuse,
-      'あまり額':+(c.reuse*(parseFloat(item.unitPrice)||0)).toFixed(2),
+      'あまり額':+(c.reuse*effectiveMaterialPrice(item)).toFixed(2),
       '実使用数量':+c.used.toFixed(4),
       '実使用額':+c.effectiveCost.toFixed(2),
       '原価算入額':+c.effectiveCost.toFixed(2),
@@ -4365,7 +5185,7 @@ function exportCSV(){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   var _suffix=reportMode==='group'?(getCurrentGroup()?'_'+getCurrentGroup().name:'_group'):reportMode==='range'?'_range':'_single';
-  a.download='sales_'+new Date().toISOString().slice(0,10)+_suffix+'.csv';
+  a.download='sales_'+jstNow().slice(0,10)+_suffix+'.csv';
   a.click();
   showToast('📄 CSVをダウンロードしました（外部POS精算含む）');
 }
@@ -4381,7 +5201,7 @@ function exportProductCSV(){
   const blob=new Blob(['\uFEFF'+toCSV(productRows)],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download=`product_profit_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download=`product_profit_${jstNow().slice(0,10)}.csv`;
   a.click();
   showToast('📄 商品別利益CSVをダウンロードしました');
 }
@@ -4398,7 +5218,7 @@ function exportXLSX(){
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(invRows.length?invRows:noData),'在庫');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(productRows.length?productRows:noData),'商品別利益(参考)');
   var _sfx=reportMode==='group'?(getCurrentGroup()?'_'+getCurrentGroup().name:'_group'):reportMode==='range'?'_range':'_single';
-  XLSX.writeFile(wb,'sales_'+new Date().toISOString().slice(0,10)+_sfx+'.xlsx');
+  XLSX.writeFile(wb,'sales_'+jstNow().slice(0,10)+_sfx+'.xlsx');
   showToast('📊 Excelをダウンロードしました（5シート）');
 }
 function renderCatTags(){document.getElementById('cat-tag-list').innerHTML=state.categories.map((c,i)=>`<span class="cat-tag">${c}<button class="cat-tag-del" onclick="deleteCat(${i})">✕</button></span>`).join('');}
@@ -4579,7 +5399,7 @@ function applyEventFormDraft(){
   if(!_eventFormDraft||state.currentEventId)return;
   var d=_eventFormDraft;
   if(document.getElementById('evt-name'))document.getElementById('evt-name').value=d.name||'';
-  if(document.getElementById('evt-date'))document.getElementById('evt-date').value=d.date||new Date().toISOString().slice(0,10);
+  if(document.getElementById('evt-date'))document.getElementById('evt-date').value=d.date||jstNow().slice(0,10);
   if(document.getElementById('evt-place'))document.getElementById('evt-place').value=d.place||'';
   var sm=document.getElementById('evt-sales-mode');
   if(sm)sm.value=d.salesMode||'normal';
@@ -4646,7 +5466,7 @@ function renderSettings(){
     if(saveBtn){saveBtn.textContent='✓ 変更を保存';}
   } else {
     document.getElementById('evt-name').value='';
-    document.getElementById('evt-date').value=new Date().toISOString().slice(0,10);
+    document.getElementById('evt-date').value=jstNow().slice(0,10);
     document.getElementById('evt-place').value='';
     var sm2=document.getElementById('evt-sales-mode');
     if(sm2)sm2.value='normal';
@@ -4794,6 +5614,7 @@ function calcEventSettlement(evt){
   return {mode:evt.salesMode,grossSales:calcGross,lineRevenue:lineRevenue,netRevenue:netRevenue,totalDeduction:Math.max(0,calcGross-lineRevenue)+s.fixedFee+s.otherDeduction,fixedFee:s.fixedFee,fixedFeeScope:s.fixedFeeScope||'event',otherDeduction:s.otherDeduction,lines:lines,note:s.note||''};
 }
 function getSettlementByEventIds(eventIds){
+  eventIds=accountingEventIds(eventIds);
   var result={grossSales:0,lineRevenue:0,netRevenue:0,totalDeduction:0,rateDeduction:0,fixedFee:0,deferredFixedFee:0,otherDeduction:0,lines:[],events:[]};
   var groupFixedFees={};
   (state.events||[]).filter(function(e){return eventIds.indexOf(e.id)>=0;}).forEach(function(evt){
@@ -5085,7 +5906,10 @@ function removeSettlementLine(btn){
 }
 /* [ALLOC-3] イベント切替: 現在ページを再描画して残表示を防ぐ */
 function selectEvent(id){
+  activateEventInventory(id);
   state.currentEventId=id;
+  resetTransientEventInputs();
+  setReportMode('single');
   saveState();
   updateEventName();
   closeModal('event-modal');
@@ -5202,8 +6026,10 @@ function deleteOrderFromHistory(){
 
 /* [UX] 新規イベントフォームに切り替え */
 function newEventForm(){
+  activateEventInventory(null);
   state.currentEventId=null;
-  _eventFormDraft={name:'',date:new Date().toISOString().slice(0,10),place:'',salesMode:'normal',salesModeData:{salesMode:'normal',settlement:Object.assign({},DEFAULT_SETTLEMENT)},groupMode:'solo',groupId:'',newGroupName:'',newGroupPlace:'',newGroupStart:'',newGroupEnd:'',newGroupNote:'',weather:{status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'手動入力',note:'',_stale:false}};
+  resetTransientEventInputs();
+  _eventFormDraft={name:'',date:jstNow().slice(0,10),place:'',salesMode:'normal',salesModeData:{salesMode:'normal',settlement:Object.assign({},DEFAULT_SETTLEMENT)},groupMode:'solo',groupId:'',newGroupName:'',newGroupPlace:'',newGroupStart:'',newGroupEnd:'',newGroupNote:'',weather:{status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'手動入力',note:'',_stale:false}};
   saveState();
   renderSettings();
   showToast('✨ 追加するイベントの日程を入力してください');
@@ -5236,7 +6062,7 @@ function saveEvent(){
         startDate:(document.getElementById('new-group-start').value||newDate),
         endDate:(document.getElementById('new-group-end').value||newDate),
         manualDateRange:!!((document.getElementById('new-group-start').value||'')||(document.getElementById('new-group-end').value||'')),
-        createdAt:new Date().toISOString()};
+        createdAt:jstNow()};
       state.eventGroups.push(newGrp);
       newGroupId=newGrp.id;
     }
@@ -5251,7 +6077,8 @@ function saveEvent(){
       if(newGroupId)updateGroupDateRange(newGroupId);
     }else{
       var newEvt=Object.assign({id:Date.now()},evtData);
-      state.events.push(newEvt);state.currentEventId=newEvt.id;
+      state.events.push(newEvt);activateEventInventory(newEvt.id);state.currentEventId=newEvt.id;
+      resetTransientEventInputs();setReportMode('single');
       if(newGroupId)updateGroupDateRange(newGroupId);
     }
     _eventFormDraft=null;
@@ -5280,8 +6107,25 @@ function updateEventName(){
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
-function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2800);}
-loadState();migrateState();seedDefaultData();updateEventName();renderRegister();checkFirstLaunch();adminSessionUnlocked=false;/* [PIN-1] セッションは常にリセット */
+/* 通知はヘッダー内の文字領域だけに表示し、レジ操作を覆わない。 */
+var _toastTimer = null;
+function showToast(msg, duration){
+  const el = document.getElementById('toast');
+  const area = document.getElementById('header-message-area');
+  if(!el || !area) return;
+  if(_toastTimer !== null) clearTimeout(_toastTimer);
+  el.textContent = msg;
+  el.title = msg;
+  el.classList.add('show');
+  area.classList.add('has-status');
+  _toastTimer = setTimeout(function(){
+    el.classList.remove('show');
+    area.classList.remove('has-status');
+    _toastTimer = null;
+  }, typeof duration === 'number' ? duration : 2800);
+}
+
+initBoardPreferences();loadState();migrateState();seedDefaultData();updateEventName();renderRegister();checkFirstLaunch();adminSessionUnlocked=false;/* [PIN-1] セッションは常にリセット */
 
 /* =====================================================
    PHASE 1 NEW FUNCTIONS
@@ -5292,6 +6136,7 @@ function showConfirm(title,msg,onOk){
   document.getElementById('confirm-title').textContent=title;
   document.getElementById('confirm-msg').textContent=msg;
   const btn=document.getElementById('confirm-ok-btn');
+  btn.textContent='実行';
   btn.onclick=()=>{closeModal('confirm-modal');onOk();};
   document.getElementById('confirm-modal').classList.add('open');
 }
@@ -5388,22 +6233,6 @@ openEditMenuModal=function(id){
 
 /* [P2] バックアップ（画像データ含む・最終日時記録） */
 /* [PIN-2] backupData: PIN保護 */
-function backupData(){
-  requireAdminPin('バックアップを書き出し','バックアップファイルを書き出すには管理PINが必要です。',()=>{
-    const json=JSON.stringify(state,null,2);
-    const blob=new Blob([json],{type:'application/json'});
-    const a=document.createElement('a');
-    const dt=new Date().toISOString().slice(0,16).replace('T','_').replace(':','h')+'m';
-    a.href=URL.createObjectURL(blob);
-    a.download=`karaage_backup_${dt}.json`;
-    a.click();
-    const lastTs=new Date().toISOString();
-    localStorage.setItem('karaage_last_backup',lastTs);
-    updateBackupLastInfo();
-    showToast('📤 バックアップしました（画像データ含む）');
-  });
-}
-
 /** after-close-modalのステップ表示をリセット */
 function resetAfterCloseModal(){
   var configs = [
@@ -5423,23 +6252,13 @@ function resetAfterCloseModal(){
   });
   var btnArea = document.getElementById('acs-btn-area');
   if(btnArea) btnArea.innerHTML =
-    '<button class="checkout-btn" style="margin-bottom:8px;" onclick="acsStep1()">① JSONを書き出す</button>'
+    '<button class="checkout-btn" style="margin-bottom:8px;" onclick="acsStep1()">① このイベントのJSONを書き出す</button>'
     +'<button class="modal-btn cancel" style="width:100%;" onclick="closeModal(\'after-close-modal\')">後で（スキップ）</button>';
 }
 
 /** レジ締め後フロー：ステップ① JSONバックアップ */
 function acsStep1(){
-  requireAdminPin('バックアップを書き出し','バックアップファイルを書き出すには管理PINが必要です。',function(){
-    const json=JSON.stringify(state,null,2);
-    const blob=new Blob([json],{type:'application/json'});
-    const a=document.createElement('a');
-    const dt=new Date().toISOString().slice(0,16).replace('T','_').replace(':','h')+'m';
-    a.href=URL.createObjectURL(blob);
-    a.download='karaage_backup_'+dt+'.json';
-    a.click();
-    localStorage.setItem('karaage_last_backup',new Date().toISOString());
-    updateBackupLastInfo();
-    showToast('📤 ダウンロード開始！ノートへ保存してください');
+  backupData(function(){
     /* ①完了 → ②をアクティブに */
     document.getElementById('acs-icon1').textContent='✅';
     document.getElementById('acs-step1').style.background='#C8E6C9';
@@ -5482,18 +6301,6 @@ function acsStep3(){
 
 
 /* [P2] 最終バックアップ日時表示 */
-function updateBackupLastInfo(){
-  const el=document.getElementById('backup-last-info');
-  if(!el)return;
-  const ts=localStorage.getItem('karaage_last_backup');
-  if(ts){
-    const d=new Date(ts);
-    el.textContent=`最終バックアップ：${d.toLocaleString('ja-JP')}`;
-  } else {
-    el.textContent='バックアップはまだ行われていません';
-  }
-}
-
 /* [PIN-1] 復元: 管理PIN保護 */
 function restoreData(input){
   const file=input.files[0];
@@ -5511,11 +6318,9 @@ function restoreData(input){
             showToast('⚠️ 有効なバックアップファイルではありません');
             return;
           }
-          // state に上書き
-          Object.keys(state).forEach(k=>{if(parsed[k]!==undefined)state[k]=parsed[k];});
-          migrateState();
-          saveState();
+          applyCompatibleBackup(parsed);
           updateEventName();
+          resetTransientEventInputs();
           renderRegister();
           updateBackupLastInfo();
           updateChecklist();
@@ -6245,7 +7050,7 @@ async function fetchEventWeather(eventObj){
       tempMax:  weather.tempMax,
       rainProb: weather.rainProb,
       icon:     weather.icon,
-      fetchedAt:new Date().toISOString(),
+      fetchedAt:jstNow(),
       source:   'Open-Meteo / OSM' + (weather.isArchive ? ' (過去データ)' : ''),
       note:     existingNote,
       _stale:   false
@@ -6278,7 +7083,7 @@ function readWeatherFormValues(){
   const noteInp=document.getElementById('weather-note-input');
   const STATUS_ICON={'快晴':'☀️','晴れ':'🌤️','晴れ時々曇り':'⛅','曇り':'☁️','小雨':'🌦️','雨':'🌧️','大雨':'🌧️','雷雨':'⛈️','雪':'🌨️','霧':'🌫️'};
   const status=statusSel?statusSel.value:'';
-  return{status,icon:STATUS_ICON[status]||'',rainProb:rainInp&&rainInp.value!==''?parseInt(rainInp.value):null,tempMin:tminInp&&tminInp.value!==''?parseInt(tminInp.value):null,tempMax:tmaxInp&&tmaxInp.value!==''?parseInt(tmaxInp.value):null,source:'手動入力',fetchedAt:new Date().toISOString(),note:noteInp?noteInp.value:'',_stale:false};
+  return{status,icon:STATUS_ICON[status]||'',rainProb:rainInp&&rainInp.value!==''?parseInt(rainInp.value):null,tempMin:tminInp&&tminInp.value!==''?parseInt(tminInp.value):null,tempMax:tmaxInp&&tmaxInp.value!==''?parseInt(tmaxInp.value):null,source:'手動入力',fetchedAt:jstNow(),note:noteInp?noteInp.value:'',_stale:false};
 }
 function saveWeatherNote(val){
   const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
@@ -6518,7 +7323,7 @@ function addAuditLog(type, message){
     id: Date.now(),
     type,
     message,
-    time: new Date().toISOString(),
+    time: jstNow(),
     eventId: state.currentEventId
   });
   saveState();
@@ -6663,7 +7468,7 @@ function clearDiscount(){
    提供待ちボード [BOARD-1]
    ===================================================== */
 
-var BOARD_MAX_VISIBLE = 10;  /* 最大表示件数 */
+/* 提供待ちは件数制限を設けず、一覧内でスクロールして確認する。 */
 var _lastServedOrderId = null; /* 直前提供済みのundo用 */
 let _boardUndoTimer   = null;
 
@@ -6672,79 +7477,54 @@ let _boardUndoTimer   = null;
  * 提供待ち一覧を描画する
  * 対象: 現在イベント・取消なし・fulfillmentStatus==='paid'
  */
+function escapeBoardText(value){
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
 function renderBoard(){
-  const listEl  = document.getElementById('board-list');
+  const listEl = document.getElementById('board-list');
   const badgeEl = document.getElementById('board-count-badge');
   if(!listEl) return;
-
+  const previousScroll = listEl.scrollTop;
+  const focusedId = listEl.contains(document.activeElement) ? document.activeElement.id : '';
   const pending = (state.orders||[]).filter(function(o){
-    return o.eventId === state.currentEventId
-      && !o.cancelledAt
-      && o.fulfillmentStatus !== 'served';
-  }).sort(function(a,b){ return new Date(b.time)-new Date(a.time); }); /* 新しい順 */
-
+    return o.eventId === state.currentEventId && !o.cancelledAt && o.fulfillmentStatus !== 'served';
+  }).sort(function(a,b){ return new Date(b.time)-new Date(a.time); });
   if(badgeEl) badgeEl.textContent = pending.length;
-
-  if(!pending.length){
-    listEl.innerHTML = '<div class="board-empty">📭 提供待ちはありません</div>';
-    return;
+  listEl.innerHTML = pending.length
+    ? pending.map(buildBoardCard).join('')
+    : '<div class="board-empty">📭 提供待ちはありません</div>';
+  listEl.scrollTop = previousScroll;
+  if(focusedId){
+    const focusTarget = document.getElementById(focusedId);
+    if(focusTarget) focusTarget.focus({preventScroll:true});
   }
-
-  const visible  = pending.slice(0, BOARD_MAX_VISIBLE);
-  const overflow = pending.length - BOARD_MAX_VISIBLE;
-
-  listEl.innerHTML = visible.map(function(o){
-    return buildBoardCard(o);
-  }).join('') + (overflow > 0
-    ? ('<button class="board-more-btn" onclick="showToast(&quot;⚠️ '+overflow+'件の提供待ちがあります。先に提供済み処理をしてください&quot;)">さらに '+overflow+'件の提供待ちがあります</button>')
-    : '');
 }
-
-/**
- * buildBoardCard(order) → HTML文字列
- */
 function buildBoardCard(o){
-  const now     = Date.now();
-  const paidAt  = new Date(o.time).getTime();
-  const elapsedMs = now - paidAt;
-  const elapsedMin= Math.floor(elapsedMs / 60000);
+  const elapsedMin = Math.max(0, Math.floor((Date.now() - new Date(o.time).getTime()) / 60000));
   const urgentClass = elapsedMin >= 10 ? 'very-urgent' : elapsedMin >= 5 ? 'urgent' : '';
-  const elapsedLabel = elapsedMin >= 60
-    ? Math.floor(elapsedMin/60)+'時間'+elapsedMin%60+'分経過'
-    : elapsedMin+'分経過';
-  const badgeCls = elapsedMin >= 10 ? 'very-urgent' : elapsedMin >= 5 ? 'urgent' : '';
-
-  /* 商品サマリー（最大20文字） */
-  const items = (o.items||[]);
-  const summary = items.map(function(i){return i.name+'×'+i.qty;}).join(' / ');
-  const summaryShort = summary.length > 20 ? summary.slice(0,20)+'…' : summary;
-  const totalItems = items.reduce(function(s,i){return s+i.qty;},0);
-
+  const elapsedLabel = elapsedMin >= 60 ? Math.floor(elapsedMin/60)+'時間'+elapsedMin%60+'分経過' : elapsedMin+'分経過';
+  const items = o.items || [];
+  const totalItems = items.reduce(function(sum, item){return sum + item.qty;}, 0);
   const timeStr = new Date(o.time).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
   const payLabel = PAY_LABELS[o.payMethod] || o.payMethod;
-
+  const number = escapeBoardText(o.orderNo || '—');
+  const itemRows = items.map(function(item){
+    return '<li class="board-item-line"><span class="board-item-name">'+escapeBoardText(item.name)+'</span><span class="board-item-quantity">×'+escapeBoardText(item.qty)+'</span></li>';
+  }).join('');
   return '<div class="board-card '+urgentClass+'" id="board-card-'+o.id+'">'
     + '<div class="board-card-top">'
-    +   '<button type="button" class="board-order-no-btn" onclick="openOrderDetail('+o.id+')" aria-label="注文内容を確認">'
-    +     '<span class="bon-no">No.'+(o.orderNo||'—')+'</span>'
-    +     '<span class="bon-hint">📋 内容</span>'
-    +   '</button>'
-    +   '<div class="board-elapsed '+badgeCls+'">⏱ '+elapsedLabel+'</div>'
-    + '</div>'
-    + '<div class="board-card-mid">'
-    +   '<div class="board-items-summary">'+summaryShort+'</div>'
-    +   '<div class="board-total">¥'+o.total.toLocaleString()+'</div>'
-    +   '<div class="board-pay-label">'+payLabel+'</div>'
-    + '</div>'
-    + '<div class="board-card-bottom">'
-    +   '<div class="board-time-label">'
-    +     '<div class="board-time-text">会計 '+timeStr+' / '+totalItems+'品</div>'
-    +   '</div>'
-    +   '<button class="board-serve-btn" id="serve-btn-'+o.id+'"'
-    +     ' onclick="markServed('+o.id+')" ontouchstart="">✅ 提供済み</button>'
-    + '</div>'
-    + '</div>';
+    + '<button type="button" class="board-order-no-btn" id="board-detail-btn-'+o.id+'" onclick="openOrderDetail('+o.id+')" aria-label="注文 '+number+' の内容を確認">'
+    + '<span class="bon-no">No.'+number+'</span><span class="bon-hint">詳細</span></button>'
+    + '<div class="board-elapsed '+urgentClass+'">'+elapsedLabel+'</div></div>'
+    + '<div class="board-card-mid"><ul class="board-items-summary">'+itemRows+'</ul>'
+    + '<div class="board-payment-info"><span class="board-total">¥'+o.total.toLocaleString()+'</span>'
+    + '<span class="board-pay-label">'+escapeBoardText(payLabel)+((o.voucherAmount||0)>0?'＋'+escapeBoardText(o.voucherLabel||PAY_LABELS[o.voucherType]||'商品券'):'')+'</span></div></div>'
+    + '<div class="board-card-bottom"><div class="board-time-label"><div class="board-time-text">会計 '+timeStr+' / '+totalItems+'品</div></div>'
+    + '<button class="board-serve-btn" id="serve-btn-'+o.id+'" onclick="markServed('+o.id+')">✓ 提供済み</button></div></div>';
 }
+
 
 /**
  * markServed(orderId)
@@ -6760,7 +7540,7 @@ function markServed(orderId){
   if(order.fulfillmentStatus === 'served') return; /* 冪等 */
 
   order.fulfillmentStatus = 'served';
-  order.servedAt = new Date().toISOString();
+  order.servedAt = jstNow();
   saveState();
 
   /* 直前undo用 */
@@ -6774,11 +7554,11 @@ function markServed(orderId){
     card.style.opacity = '0';
     setTimeout(function(){
       renderBoard();
-      showToast('✅ No.'+(order.orderNo||'—')+' 提供済みにしました');
+      showToast('✅ No.'+(order.orderNo||'—')+' 提供済みにしました',1500);
     }, 300);
   } else {
     renderBoard();
-    showToast('✅ No.'+(order.orderNo||'—')+' 提供済みにしました');
+    showToast('✅ No.'+(order.orderNo||'—')+' 提供済みにしました',1500);
   }
 }
 
@@ -6800,20 +7580,25 @@ function undoLastServed(){
 }
 
 function showBoardUndoBar(orderNo){
-  const bar = document.getElementById('board-undo-bar');
-  const msg = document.getElementById('board-undo-msg');
-  if(!bar) return;
-  if(msg) msg.textContent = 'No.'+(orderNo||'—')+' 提供済みを取り消せます';
-  bar.classList.add('show');
+  const button = document.getElementById('board-undo-button');
+  if(!button) return;
+  button.disabled = false;
+  button.title = 'No.'+(orderNo||'—')+' の提供済みを取り消す';
+  button.setAttribute('aria-label', button.title);
   if(_boardUndoTimer) clearTimeout(_boardUndoTimer);
   _boardUndoTimer = setTimeout(function(){ hideBoardUndoBar(); }, 10000);
 }
 
 function hideBoardUndoBar(){
-  const bar = document.getElementById('board-undo-bar');
-  if(bar) bar.classList.remove('show');
+  const button = document.getElementById('board-undo-button');
+  if(button){
+    button.disabled = true;
+    button.title = '直前の提供済みを10秒以内に取り消せます';
+    button.setAttribute('aria-label', button.title);
+  }
   if(_boardUndoTimer){ clearTimeout(_boardUndoTimer); _boardUndoTimer=null; }
 }
+
 
 /**
  * 経過時間の自動更新（10秒ごとにボードを再描画）
@@ -6869,6 +7654,7 @@ function openRegisterCloseModal(){
   document.getElementById('rc-total-diff').textContent='—';
   document.getElementById('rc-total-diff').className='';
   document.getElementById('rc-note').value = '';
+  renderPaymentCorrection();renderAccountingWarnings();
   document.getElementById('register-close-modal').classList.add('open');
 }
 
@@ -6896,19 +7682,19 @@ function confirmRegisterClose(){
   let missing=false;
   Object.keys(_registerCloseTotals).forEach(function(k){
     const input=document.getElementById('rc-actual-'+k);
-    if(!input||input.value===''){missing=true;return;}
+    if(!input||input.value===''){missing=true;closePayments[k]={label:_registerCloseTotals[k].label,expected:_registerCloseTotals[k].amount,actual:null,diff:null};return;}
     const actual=parseInt(input.value)||0;
     const expected=_registerCloseTotals[k].amount;
     closePayments[k]={label:_registerCloseTotals[k].label,expected,actual,diff:actual-expected};
   });
   const note = document.getElementById('rc-note').value;
-  if(missing){ showToast('⚠️ すべての決済方法の実査額を入力してください'); return; }
+  /* 実査未入力も警告として残し、締め処理は継続する。 */
   closeModal('register-close-modal');
   requireAdminPin('レジ締め確定', 'レジ締めを確定するには管理PINが必要です。', function(){
     const evt = state.events && state.events.find(function(e){ return e.id === state.currentEventId; });
     if(!evt) return;
     evt.isClosedFlag = true;
-    evt.closedAt = new Date().toISOString();
+    evt.closedAt = jstNow();
     const cash=closePayments.cash||{expected:0,actual:0,diff:0};
     evt.closeTheory = cash.expected;
     evt.closeActual = cash.actual;
@@ -6917,7 +7703,8 @@ function confirmRegisterClose(){
     evt.closeNote = note;
     saveState();
     renderRegisterCloseArea();
-    showToast('🏁 レジ締めを完了しました');
+    const warnings=renderAccountingWarnings();
+    showToast('🏁 レジ締めを完了しました'+(warnings.length?'（警告 '+warnings.length+'件）':''));
     /* レジ締め後アクション促進 */
     setTimeout(function(){
       resetAfterCloseModal();
@@ -6946,11 +7733,11 @@ function renderRegisterCloseArea(){
   if(!evt){ el.innerHTML = ''; return; }
   if(evt.isClosedFlag){
     const closeDiffTotal=evt.closePayments?Object.keys(evt.closePayments).reduce(function(s,k){return s+(evt.closePayments[k].diff||0);},0):(evt.closeDiff||0);
-    const paymentSummary=evt.closePayments?'<div class="report-table-wrap" style="margin-top:10px;margin-bottom:0;"><table class="report-table"><thead><tr><th>決済方法</th><th class="num">予定額</th><th class="num">実査額</th><th class="num">差異</th></tr></thead><tbody>'+Object.keys(evt.closePayments).map(function(k){const p=evt.closePayments[k];return'<tr><td>'+(PAY_ICONS[k]||'💳')+' '+(p.label||PAY_LABELS[k]||k)+'</td><td class="num">¥'+(p.expected||0).toLocaleString()+'</td><td class="num">¥'+(p.actual||0).toLocaleString()+'</td><td class="num" style="color:'+(p.diff===0?'var(--success)':'var(--danger)')+';">'+(p.diff>=0?'+':'')+'¥'+(p.diff||0).toLocaleString()+'</td></tr>';}).join('')+'</tbody></table></div>':'';
+    const paymentSummary=evt.closePayments?'<div class="report-table-wrap" style="margin-top:10px;margin-bottom:0;"><table class="report-table"><thead><tr><th>決済方法</th><th class="num">予定額</th><th class="num">実査額</th><th class="num">差異</th></tr></thead><tbody>'+Object.keys(evt.closePayments).map(function(k){const p=evt.closePayments[k];return'<tr><td>'+(PAY_ICONS[k]||'💳')+' '+(p.label||PAY_LABELS[k]||k)+'</td><td class="num">¥'+(p.expected||0).toLocaleString()+'</td><td class="num">'+(p.actual==null?'未入力':'¥'+p.actual.toLocaleString())+'</td><td class="num" style="color:'+(p.diff===0?'var(--success)':'var(--danger)')+';">'+(p.diff==null?'—':(p.diff>=0?'+':'')+'¥'+p.diff.toLocaleString())+'</td></tr>';}).join('')+'</tbody></table></div>':'';
     el.innerHTML = '<div class="close-info-bar">'
       + '🏁 レジ締め済み <small style="font-weight:400;">'
       + (evt.closedAt ? new Date(evt.closedAt).toLocaleString('ja-JP') : '') + '</small>'
-      + '<span style="font-weight:700;">差異合計 '+(closeDiffTotal>=0?'+':'')+'¥'+closeDiffTotal.toLocaleString()+'</span>'
+      + '<span style="font-weight:700;">'+(evt.closePayments&&Object.values(evt.closePayments).some(p=>p.actual==null)?'実査未入力あり・入力済み分の差異 ':'差異合計 ')+(closeDiffTotal>=0?'+':'')+'¥'+closeDiffTotal.toLocaleString()+'</span>'
       + '<button class="close-info-bar-btn" onclick="goToExpenseAfterClose()">＋ 締め後経費</button>'
       + '<button class="close-info-bar-btn" onclick="reopenRegister()">締め解除</button>'
       + '</div>'+paymentSummary;
@@ -6973,7 +7760,7 @@ var _selectedReason = '打ち間違い';
 
 function cancelOrderPreservingHistory(order,reason){
   if(!order||order.cancelledAt)return false;
-  order.cancelledAt=new Date().toISOString();
+  order.cancelledAt=jstNow();
   order.cancelReason=reason||'';
   order.fulfillmentStatus='cancelled';
   order.servedAt=null;
@@ -7049,7 +7836,8 @@ function getCurrentGroup(){
 }
 
 /** レポートモードに応じた対象eventIdの配列を返す */
-function getTargetEventIdsByReportMode(){
+function getTargetEventIdsByReportMode(){return accountingEventIds(getUnfilteredTargetEventIds());}
+function getUnfilteredTargetEventIds(){
   var evt=getCurrentEvent();
   if(!evt)return state.currentEventId?[state.currentEventId]:[];
   if(reportMode==='single'){
@@ -7074,6 +7862,7 @@ function getTargetEventIdsByReportMode(){
 
 /** 対象eventIds の注文（取消除外）を返す */
 function getOrdersByEventIds(eventIds){
+  eventIds=accountingEventIds(eventIds);
   return (state.orders||[]).filter(function(o){
     return eventIds.indexOf(o.eventId)>=0&&!o.cancelledAt;
   });
@@ -7081,7 +7870,8 @@ function getOrdersByEventIds(eventIds){
 
 /** 対象eventIds の経費を返す */
 function getExpensesByEventIds(eventIds){
-  return (state.expenses||[]).filter(function(e){
+  eventIds=accountingEventIds(eventIds);
+  return accountingExpenses(eventIds).filter(function(e){
     if(eventIds.indexOf(e.eventId)<0)return false;
     if((e.expenseScope||'event')==='group'&&reportMode==='single'){
       var evt=(state.events||[]).find(function(ev){return ev.id===e.eventId;});
@@ -7093,6 +7883,7 @@ function getExpensesByEventIds(eventIds){
 
 /** 対象eventIds の材料品目を返す */
 function getMaterialItemsByEventIds(eventIds){
+  eventIds=accountingEventIds(eventIds);
   var result=[];
   eventIds.forEach(function(eid){
     var key=String(eid);
@@ -7408,9 +8199,10 @@ function renderPaySelGrid(){
     var cb=document.createElement('input');
     cb.type='checkbox';
     cb.checked=checked;
+    cb.disabled=m==='cash';
     cb.setAttribute('onclick','event.stopPropagation();togglePayMethod("'+m+'")');
     var lbl=document.createElement('label');
-    lbl.innerHTML='<span style="font-size:16px;">'+(PAY_ICONS[m]||'💳')+'</span> '+(PAY_LABELS[m]||m);
+    lbl.innerHTML='<span style="font-size:16px;">'+(PAY_ICONS[m]||'💳')+'</span> '+(PAY_LABELS[m]||m)+(m==='cash'?'（毎回の標準）':'');
     item.appendChild(cb);
     item.appendChild(lbl);
     if(isAux){
@@ -7426,6 +8218,7 @@ function renderPaySelGrid(){
     grid.appendChild(item);
   });
 }function togglePayMethod(method){
+  if(method==='cash'){showToast('現金は毎回の標準として常に有効です');return;}
   var active=(state.activePayMethods||[]).slice();
   var idx=active.indexOf(method);
   if(idx>=0){
@@ -7441,6 +8234,7 @@ function renderPaySelGrid(){
   saveState();
   renderPaySelGrid();
   renderPayMethodGrid();
+  updateChangeArea();
 }
 function setVoucherTiming(method,timing){
   if(AUX_PAY_METHODS.indexOf(method)<0)return;
@@ -7478,6 +8272,7 @@ function renderPayMethodGrid(){
   }
   grid.innerHTML=html;
   renderVoucherMethodControls();
+  updatePaymentChoiceLabel();
 }
 </script>
 
@@ -7645,7 +8440,7 @@ function renderPayMethodGrid(){
       <div id="acs-step1" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:8px;background:#E8F5E9;border:1.5px solid #A5D6A7;">
         <div style="font-size:20px;" id="acs-icon1">⬜</div>
         <div style="flex:1;">
-          <div style="font-weight:700;font-size:14px;color:#2E7D32;">① JSONバックアップを書き出す</div>
+          <div style="font-weight:700;font-size:14px;color:#2E7D32;">① このイベントのJSONを書き出す</div>
           <div style="font-size:11px;color:var(--text3);">端末にファイルをダウンロード</div>
         </div>
       </div>
@@ -7665,8 +8460,9 @@ function renderPayMethodGrid(){
       </div>
     </div>
 
+    <div id="after-accounting-warnings" class="acct-panel acct-warnings"></div>
     <div id="acs-btn-area">
-      <button class="checkout-btn" style="margin-bottom:8px;" onclick="acsStep1()">① JSONを書き出す</button>
+      <button class="checkout-btn" style="margin-bottom:8px;" onclick="acsStep1()">① このイベントのJSONを書き出す</button>
       <button class="modal-btn cancel" style="width:100%;" onclick="closeModal('after-close-modal')">後で（スキップ）</button>
     </div>
   </div>
@@ -7678,6 +8474,8 @@ function renderPayMethodGrid(){
     <div class="modal-title">🏁 レジ締め</div>
     <div style="padding:0 4px 8px;">
       <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px;">各決済の端末・券面・現金を確認し、実査額を入力してください。</div>
+      <div id="close-accounting-warnings" class="acct-panel acct-warnings"></div>
+      <div id="payment-correction" class="acct-panel"></div>
       <div id="rc-payment-rows" style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:12px;"></div>
       <div style="background:#FFF8E1;border:1.5px solid #FFE082;border-radius:8px;padding:10px 12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:13px;font-weight:700;">全決済の差異合計</span>
