@@ -2006,6 +2006,19 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible{outline:3
 .acct-panel .acct-check{flex-direction:row;align-items:center;grid-column:1/-1}.acct-panel input[type=checkbox]{width:26px;min-height:26px;height:26px}.acct-panel .acct-note{font-size:16px;color:#43576c}.acct-warnings{border-color:#d4ab51;background:#fff9e9}.acct-warnings ul{padding-left:24px;margin-bottom:0}.acct-warnings li{margin:6px 0}.acct-panel summary{font-weight:600;min-height:44px;cursor:pointer}.acct-labor-row{padding:14px 0;border-top:1px solid #ccd7df;display:flex;flex-wrap:wrap;gap:10px}.acct-labor-row>div{flex:1 1 100%}.acct-material{background:#f6f9fc}.acct-panel .staff-time-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.acct-panel .staff-result{margin-top:12px}
 #payment-correction select{white-space:normal;max-width:100%}#close-accounting-warnings,#after-accounting-warnings{font-size:16px;max-height:230px;overflow:auto}
 @media(max-width:600px){.acct-grid,.acct-panel .staff-time-row{grid-template-columns:1fr}.acct-panel{padding:14px}}
+/* 勤務欄は独立した2列構成にし、旧3列時刻フォームの指定と競合させない。 */
+#labor-form{width:100%;min-width:0;box-sizing:border-box;}
+#labor-form .labor-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:18px 16px;margin:0 0 18px;min-width:0;}
+#labor-form .labor-fields>label{display:flex;flex-direction:column;gap:8px;min-width:0;max-width:100%;margin:0;line-height:1.5;}
+#labor-form input,#labor-form select{display:block;box-sizing:border-box;width:100%;max-width:100%;min-width:0;height:54px;min-height:54px;flex:none;margin:0;padding:10px;font-size:19px;line-height:1.4;}
+#labor-form input::-webkit-date-and-time-value{min-width:0;text-align:left;}
+#labor-form .labor-full-row{grid-column:1/-1;}
+#labor-form #staff-hours-disp{background:#f2f6f9;}
+#labor-form .staff-result{flex-wrap:wrap;gap:8px;padding:12px 14px;font-size:18px;}
+#labor-form #staff-wage-disp{font-size:26px;}
+#labor-form .labor-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+#labor-form .labor-actions button{flex:1 1 200px;min-width:0;}
+@media(max-width:600px){#labor-form .labor-fields{grid-template-columns:minmax(0,1fr);}}
 
 /* [REGISTER-COLUMNS-20261027] 左：商品と提供待ち、右：注文と会計 */
 #page-register.active{display:block!important;padding:12px!important;height:100%;overflow:hidden!important;}
@@ -2055,6 +2068,14 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible{outline:3
   #page-register .register-right .cart-footer{overflow:visible;}
 }
 
+/* Event setting fields share events.officialOpen / officialClose with the report. */
+#page-settings .evt-official-hours{min-width:0;margin:0 0 16px;padding:14px;border:1px solid #b6c7d5;border-radius:10px;background:#f5f9fc;}
+#page-settings .evt-official-hours legend{padding:0 6px;font-size:19px;font-weight:600;color:#243346;}
+#page-settings .evt-official-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+#page-settings .evt-official-grid label{display:flex;flex-direction:column;gap:6px;font-size:17px;min-width:0;}
+#page-settings .evt-official-grid input{width:100%;min-width:0;min-height:50px;box-sizing:border-box;font-size:19px;background:white;}
+#page-settings .evt-official-hours p{margin:12px 0 0;font-size:16px;line-height:1.6;color:#43576c;}
+@media(max-width:480px){#page-settings .evt-official-grid{grid-template-columns:minmax(0,1fr);}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -2325,7 +2346,7 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible{outline:3
       <div class="acct-panel" id="labor-form">
       <h3>勤務・給与の記録</h3>
       <p>保存すると「給料賃金」を自動計上します。休憩を差し引いて支給額を計算します。</p>
-      <div class="acct-grid">
+      <div class="labor-fields">
         <label>スタッフ<select id="staff-select" onchange="onStaffChange()"></select></label>
         <label>フルネーム<input id="labor-full-name" autocomplete="off"></label>
         <label>勤務日<input id="labor-date" type="date"></label>
@@ -2333,21 +2354,19 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible{outline:3
         <label>時給・日給の金額（円）<input id="labor-rate" type="number" min="0" oninput="calcStaffWage()"></label>
         <label>休憩時間（分）<input id="labor-break" type="number" value="0" min="0" oninput="calcStaffWage()"></label>
       </div>
-      <div class="staff-time-row" id="staff-time-row">
-        <label>開始時刻<input type="time" id="staff-start" oninput="calcStaffWage()"></label>
-        <label>終了時刻<input type="time" id="staff-end" oninput="calcStaffWage()"></label>
-        <label>実働時間<input id="staff-hours-disp" readonly></label>
+      <div class="labor-fields labor-time-fields" id="staff-time-row">
+        <label>開始時刻（15分刻み）<select id="staff-start" onchange="calcStaffWage()"></select></label>
+        <label>終了時刻（15分刻み）<select id="staff-end" onchange="calcStaffWage()"></select></label>
+        <label class="labor-full-row">実働時間<input id="staff-hours-disp" readonly></label>
       </div>
-      <div class="acct-grid" style="margin-top:14px">
-        <label>源泉徴収額（円）<input id="labor-withholding" type="number" value="0" min="0" oninput="calcStaffWage()"></label>
+      <div class="labor-fields">
         <label>払い方<select id="staff-payment-type"><option value="cash">現金</option><option value="transfer">振込</option></select></label>
-        <label>代表との続柄<select id="labor-relation"><option value="なし">なし</option><option value="家族">家族</option></select></label>
-        <label class="acct-check"><input type="checkbox" id="labor-household">代表と生計が同じ</label>
       </div>
       <div class="staff-result"><span>支給額</span><strong id="staff-wage-disp">¥0</strong></div>
-      <p id="labor-net">実際に渡す額 ¥0</p>
-      <button id="labor-save" onclick="addStaffExpense()">＋ 勤務記録を追加</button>
-      <button id="labor-cancel" hidden onclick="resetLaborForm()">編集をやめる</button>
+      <div class="labor-actions">
+        <button id="labor-save" onclick="addStaffExpense()">＋ 勤務記録を追加</button>
+        <button id="labor-cancel" hidden onclick="resetLaborForm()">編集をやめる</button>
+      </div>
       <div id="labor-records"></div>
       </div>
 
@@ -2627,6 +2646,14 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible{outline:3
   </div>
 
   <div class="settings-section"><div class="settings-section-header"><span>📅 イベント設定</span><button class="icon-btn" style="background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4);color:#fff;" onclick="newEventForm()">＋ 別日イベントを追加</button></div><div style="padding:14px;"><div id="evt-mode-indicator" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:700;"></div><div class="form-row"><div class="form-group"><label class="form-label">イベント名</label><input class="form-input" id="evt-name" placeholder="例：春祭り1日目"></div><div class="form-group"><label class="form-label">開催日</label><input class="form-input" type="date" id="evt-date"></div></div><div class="form-group" style="margin-bottom:12px;"><label class="form-label">場所</label><input class="form-input" id="evt-place" placeholder="例：〇〇公園"></div>
+      <fieldset id="evt-official-hours" class="evt-official-hours">
+        <legend>公式の営業時間</legend>
+        <div class="evt-official-grid">
+          <label for="evt-official-open">開始時刻<input id="evt-official-open" class="form-input" type="time" step="60" aria-describedby="evt-official-hours-help"></label>
+          <label for="evt-official-close">終了時刻<input id="evt-official-close" class="form-input" type="time" step="60" aria-describedby="evt-official-hours-help"></label>
+        </div>
+        <p id="evt-official-hours-help">主催者が案内する営業時間（日本時間）を入力してください。下の保存ボタンで保存すると、日報にも反映されます。</p>
+      </fieldset>
       <!-- [SALESMODE-1] 外販向け販売形式 -->
       <div class="sales-mode-box">
         <div class="sales-mode-title">販売形式</div>
@@ -2725,45 +2752,14 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible{outline:3
             oninput="saveWeatherNote(this.value)"></textarea>
         </div>
       </div></div></div>
-<!-- [PIN-1] 管理PIN設定セクション -->
+<!-- 管理PINを使わない運用 -->
   <div class="settings-section" id="admin-pin-section">
     <div class="settings-section-header">
-      <span>🔐 管理PIN</span>
-      <span id="admin-pin-status-badge" style="font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.25);">未設定</span>
+      <span>管理PIN</span>
+      <span id="admin-pin-status-badge" style="font-size:16px;padding:2px 8px;">使用しない</span>
     </div>
-    <div id="admin-pin-session-bar"></div>
-    <div class="pin-settings-body">
-      <div class="pin-desc">メニュー・スタッフ・カテゴリの編集/削除、バックアップ復元などをPINで保護します。<br>PINは<strong>4〜6桁の数字</strong>で設定してください。販売レジ画面・閲覧操作には影響しません。</div>
-      <div class="pin-toggle-row">
-        <label class="pin-toggle-label" for="pin-enabled-toggle">管理PIN保護を使う
-          <span style="font-size:10px;font-weight:400;color:var(--text3);display:block;margin-top:2px;">PINを入力して保存すると有効になります</span>
-        </label>
-        <input type="checkbox" class="pin-toggle-switch" id="pin-enabled-toggle" onchange="onPinToggleChange(this.checked)">
-      </div>
-      <div id="pin-input-area">
-        <div class="form-group" style="margin-bottom:10px;">
-          <label class="form-label">新しいPIN（4〜6桁の数字）</label>
-          <div style="position:relative;">
-        <input class="form-input" type="password" id="pin-new-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="例：1234" autocomplete="new-password" style="padding-right:44px;">
-        <button type="button"
-          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);"
-          onclick="(function(){var i=document.getElementById('pin-new-input');i.type=i.type==='password'?'text':'password';})()"
-          title="表示/非表示">👁</button>
-      </div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;">数字のみ・4〜6桁。このPINは画面越しに見えないよう周囲に注意して入力してください。</div>
-        </div>
-        <div class="form-group" style="margin-bottom:12px;">
-          <label class="form-label">PIN確認（もう一度入力）</label>
-          <div style="position:relative;">
-        <input class="form-input" type="password" id="pin-confirm-input" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="例：1234" autocomplete="new-password" style="padding-right:44px;">
-        <button type="button"
-          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);"
-          onclick="(function(){var i=document.getElementById('pin-confirm-input');i.type=i.type==='password'?'text':'password';})()"
-          title="表示/非表示">👁</button>
-      </div>
-        </div>
-        <button class="add-btn" style="background:#1565C0;box-shadow:none;" onclick="savePinSettings()">🔐 PINを保存する</button>
-      </div>
+    <div style="padding:16px;font-size:17px;line-height:1.7;">
+      設定の変更・レジ締め・JSON書き出しは、PINの入力なしで操作できます。
     </div>
   </div>
 
@@ -3198,7 +3194,7 @@ function collectAccountingWarnings(ids){
   (state.events||[]).filter(e=>selected(e.id)).forEach(e=>{
     if(e.isDemo)add('DEMO_EXCLUDED',e.id,'デモ用データが含まれています。集計から除外しています。');
     if(!e.weather||!e.weather.status)add('WEATHER_MISSING',e.id,'天気が未入力です。');
-    if(!e.officialOpen||!e.officialClose)add('OFFICIAL_HOURS_MISSING',e.id,'公式の営業時間が未入力です。');
+    if(!e.officialOpen||!e.officialClose)add('OFFICIAL_HOURS_MISSING',e.id,'公式の営業時間が未入力です。設定 → イベント設定で開始・終了時刻を入力し、保存してください。');
     if(e.organizerSeating==='exists_with_agreement'&&e.taxMode==='takeout')add('SEATING_TAX_REVIEW',e.id,'主催者の飲食スペースに取り決めがあり、税率が8%です。確認してください。');
     if(e.closePayments)Object.entries(e.closePayments).forEach(([method,p])=>{if(p.actual==null)add('CLOSE_ACTUAL_MISSING',e.id,(PAY_LABELS[method]||method)+'の実査額が未入力です。');});
     ((state.materialItems||{})[String(e.id)]||[]).forEach(m=>{
@@ -3216,7 +3212,7 @@ function collectAccountingWarnings(ids){
     const manual=(state.expenses||[]).filter(x=>sameEventId(x.eventId,e.id)&&!isGeneratedExpense(x));
     manual.forEach(x=>{
       if(auto.some(a=>a.cat===x.cat||(a.autoKind==='groupFee'&&x.cat==='出店料')))add('MANUAL_AUTO_EXPENSE_REVIEW',e.id,'手入力の「'+x.cat+'」と自動経費があります。二重計上にならないか確認してください（手入力は保持）。',x.id);
-      if(['人件費','給料賃金'].includes(x.cat))add('LEGACY_LABOR_UNSTRUCTURED',e.id,'過去の人件費は手入力経費として保持しています。勤務・源泉情報は未確認です。',x.id);
+      if(['人件費','給料賃金'].includes(x.cat))add('LEGACY_LABOR_UNSTRUCTURED',e.id,'過去の人件費は手入力経費として保持しています。勤務時間は未確認です。',x.id);
     });
     if(['department','special'].includes(e.salesMode))add('EXTERNAL_SALES_REVIEW',e.id,'外部精算のイベントです。包装資材・PayPay手数料はレジ注文の数量・決済だけから計算します。');
   });
@@ -3231,16 +3227,13 @@ function collectAccountingWarnings(ids){
   const daily=new Map();
   (state.laborRecords||[]).filter(r=>selected(r.eventId)&&!r.voidedAt).forEach(r=>{
     const c=calculateLabor(r);
-    if(r.relation==='家族'&&r.sameHousehold&&c.gross>0)add('FAMILY_SAME_HOUSEHOLD',r.eventId,r.fullName+'：生計が同じ親族への給与があります。',r.id);
     if(!r.fullName||!r.date||!r.start||!r.end)add('LABOR_DETAILS_MISSING',r.eventId,(r.fullName||'スタッフ')+'：氏名・勤務日・時刻に未入力があります。',r.id);
-    if(c.netPaid<0)add('LABOR_WITHHOLDING_REVIEW',r.eventId,r.fullName+'：源泉徴収額が支給額を超えています。',r.id);
     const key=(r.staffId==null?r.fullName:r.staffId)+'|'+r.date;
-    if(!daily.has(key))daily.set(key,{r,gross:0,withholding:0,minutes:0,breaks:0});
-    const d=daily.get(key);d.gross+=c.gross;d.withholding+=accountingNumber(r.withholdingAmount);d.minutes+=c.actualMinutes;d.breaks+=accountingNumber(r.breakMinutes);
+    if(!daily.has(key))daily.set(key,{r,minutes:0,breaks:0});
+    const d=daily.get(key);d.minutes+=c.actualMinutes;d.breaks+=accountingNumber(r.breakMinutes);
   });
   daily.forEach(d=>{
     if(d.minutes>480&&d.breaks<60)add('LABOR_BREAK_SHORT',d.r.eventId,d.r.fullName+'：1日の実働が8時間超で休憩が60分未満です。',d.r.id);
-    if(d.gross>=9800&&d.withholding===0)add('LABOR_WITHHOLDING_ZERO',d.r.eventId,d.r.fullName+'：1日の給与が9,800円以上で源泉徴収額が0円です。',d.r.id);
   });
   return out;
 }
@@ -3344,23 +3337,35 @@ function setMaterialAccounting(id,field,value){
   saveState();renderMaterial();
 }
 var accountingLaborEditId=null;
+function setLaborTimeOptions(id,value){
+  const select=document.getElementById(id);if(!select)return;
+  const options=[['','時刻を選択']];
+  for(let minute=0;minute<1440;minute+=15){const time=String(Math.floor(minute/60)).padStart(2,'0')+':'+String(minute%60).padStart(2,'0');options.push([time,time]);}
+  // 過去の記録は15分単位へ丸めず、保存済み時刻をそのまま編集できる。
+  if(value&&!options.some(([v])=>v===value))options.push([value,value+'（過去の記録）']);
+  select.innerHTML=acctOptions(options,value||'');select.value=value||'';
+}
 function onStaffChange(){
   const staff=(state.staffMembers||[]).find(s=>sameEventId(s.id,document.getElementById('staff-select').value));
-  if(staff){document.getElementById('staff-pay-type').value=staff.payType||'hourly';document.getElementById('labor-full-name').value=staff.fullName||staff.name||'';document.getElementById('labor-rate').value=staff.rate||0;document.getElementById('labor-relation').value=staff.relation||'なし';document.getElementById('labor-household').checked=!!staff.sameHousehold;}
+  if(staff){document.getElementById('staff-pay-type').value=staff.payType||'hourly';document.getElementById('labor-full-name').value=staff.fullName||staff.name||'';document.getElementById('labor-rate').value=staff.rate||0;}
   if(!document.getElementById('labor-date').value)document.getElementById('labor-date').value=(getSelectedDataEvent()||{}).date||jstNow().slice(0,10);
   calcStaffWage();
 }
 function onStaffTypeChange(){document.getElementById('staff-time-row').style.display='grid';calcStaffWage();}
-function readLaborForm(){return{staffId:(state.staffMembers||[]).find(s=>sameEventId(s.id,document.getElementById('staff-select').value))?.id||null,fullName:document.getElementById('labor-full-name').value.trim(),date:document.getElementById('labor-date').value,start:document.getElementById('staff-start').value,end:document.getElementById('staff-end').value,breakMinutes:Math.max(0,accountingNumber(document.getElementById('labor-break').value)),rate:Math.max(0,accountingNumber(document.getElementById('labor-rate').value)),payType:document.getElementById('staff-pay-type').value,withholdingAmount:Math.max(0,accountingNumber(document.getElementById('labor-withholding').value)),paymentMethod:document.getElementById('staff-payment-type').value,relation:document.getElementById('labor-relation').value,sameHousehold:document.getElementById('labor-household').checked};}
+function readLaborForm(){
+  const existing=(state.laborRecords||[]).find(r=>sameEventId(r.id,accountingLaborEditId)&&sameEventId(r.eventId,state.currentEventId));
+  return{staffId:(state.staffMembers||[]).find(s=>sameEventId(s.id,document.getElementById('staff-select').value))?.id||null,fullName:document.getElementById('labor-full-name').value.trim(),date:document.getElementById('labor-date').value,start:document.getElementById('staff-start').value,end:document.getElementById('staff-end').value,breakMinutes:Math.max(0,accountingNumber(document.getElementById('labor-break').value)),rate:Math.max(0,accountingNumber(document.getElementById('labor-rate').value)),payType:document.getElementById('staff-pay-type').value,paymentMethod:document.getElementById('staff-payment-type').value,
+    withholdingAmount:existing?accountingNumber(existing.withholdingAmount):0,relation:existing?existing.relation||'なし':'なし',sameHousehold:existing?!!existing.sameHousehold:false,taxHandling:existing?existing.taxHandling||'legacy':'external'};
+}
 function calcStaffWage(){
   if(!document.getElementById('labor-date'))return;
-  const c=calculateLabor(readLaborForm());document.getElementById('staff-hours-disp').value=Math.floor(c.actualMinutes/60)+'時間'+(c.actualMinutes%60)+'分';document.getElementById('staff-wage-disp').textContent='¥'+c.gross.toLocaleString();document.getElementById('labor-net').textContent='実際に渡す額 ¥'+c.netPaid.toLocaleString();
+  const c=calculateLabor(readLaborForm());document.getElementById('staff-hours-disp').value=Math.floor(c.actualMinutes/60)+'時間'+(c.actualMinutes%60)+'分';document.getElementById('staff-wage-disp').textContent='¥'+c.gross.toLocaleString();
 }
 function resetLaborForm(){
   accountingLaborEditId=null;
-  document.getElementById('labor-full-name').value='';document.getElementById('labor-rate').value='0';document.getElementById('labor-relation').value='なし';document.getElementById('labor-household').checked=false;document.getElementById('staff-payment-type').value='cash';
-  ['staff-start','staff-end','labor-date'].forEach(id=>document.getElementById(id).value='');
-  ['labor-break','labor-withholding'].forEach(id=>document.getElementById(id).value='0');
+  document.getElementById('labor-full-name').value='';document.getElementById('labor-rate').value='0';document.getElementById('staff-payment-type').value='cash';
+  setLaborTimeOptions('staff-start','');setLaborTimeOptions('staff-end','');document.getElementById('labor-date').value='';
+  document.getElementById('labor-break').value='0';
   document.getElementById('labor-save').textContent='＋ 勤務記録を追加';document.getElementById('labor-cancel').hidden=true;onStaffChange();
 }
 function addStaffExpense(){
@@ -3377,13 +3382,14 @@ function addStaffExpense(){
 function renderLaborRecords(){
   const host=document.getElementById('labor-records');if(!host)return;
   const records=(state.laborRecords||[]).filter(r=>sameEventId(r.eventId,state.currentEventId)&&!r.voidedAt);
-  host.innerHTML=records.length?records.map(r=>{const c=calculateLabor(r);return '<div class="acct-labor-row"><div><strong>'+acctEscape(r.fullName)+'</strong> '+acctEscape(r.date)+'<br>'+acctEscape(r.start)+'〜'+acctEscape(r.end)+'／休憩 '+r.breakMinutes+'分<br>支給 ¥'+c.gross.toLocaleString()+'／源泉 ¥'+accountingNumber(r.withholdingAmount).toLocaleString()+'／手渡し・振込 ¥'+c.netPaid.toLocaleString()+'</div><button onclick="editLaborRecord('+r.id+')">編集</button><button onclick="voidLaborRecord('+r.id+')">取消</button></div>';}).join(''):'<p>勤務記録はまだありません。以前の人件費は経費一覧に残ります。</p>';
+  host.innerHTML=records.length?records.map(r=>{const c=calculateLabor(r);return '<div class="acct-labor-row"><div><strong>'+acctEscape(r.fullName)+'</strong> '+acctEscape(r.date)+'<br>'+acctEscape(r.start)+'〜'+acctEscape(r.end)+'／休憩 '+r.breakMinutes+'分<br>支給額 ¥'+c.gross.toLocaleString()+'／'+(r.paymentMethod==='transfer'?'振込':'現金')+'</div><button onclick="editLaborRecord('+r.id+')">編集</button><button onclick="voidLaborRecord('+r.id+')">取消</button></div>';}).join(''):'<p>勤務記録はまだありません。以前の人件費は経費一覧に残ります。</p>';
 }
 function editLaborRecord(id){
   requireAdminPin('勤務記録の編集','勤務記録を編集します。',()=>{
     const r=state.laborRecords.find(r=>sameEventId(r.id,id));if(!r)return;accountingLaborEditId=r.id;
-    const mapping={'staff-select':'staffId','labor-full-name':'fullName','labor-date':'date','staff-start':'start','staff-end':'end','labor-break':'breakMinutes','labor-rate':'rate','staff-pay-type':'payType','labor-withholding':'withholdingAmount','staff-payment-type':'paymentMethod','labor-relation':'relation'};
-    Object.entries(mapping).forEach(([id,key])=>document.getElementById(id).value=r[key]);document.getElementById('labor-household').checked=!!r.sameHousehold;calcStaffWage();
+    setLaborTimeOptions('staff-start',r.start);setLaborTimeOptions('staff-end',r.end);
+    const mapping={'staff-select':'staffId','labor-full-name':'fullName','labor-date':'date','labor-break':'breakMinutes','labor-rate':'rate','staff-pay-type':'payType','staff-payment-type':'paymentMethod'};
+    Object.entries(mapping).forEach(([id,key])=>document.getElementById(id).value=r[key]);calcStaffWage();
     document.getElementById('labor-save').textContent='勤務記録の変更を保存';document.getElementById('labor-cancel').hidden=false;document.getElementById('labor-full-name').scrollIntoView({block:'center'});
   });
 }
@@ -3449,7 +3455,7 @@ let state={
   activePayMethods:['cash','paypay','aupay','dpay','rakuten','other','voucher','coupon'], /* [UI-1] 表示する決済方法 */
   voucherSettlementTiming:{voucher:'cash',coupon:'cash'}, /* 当日現金化 / 後日振込 */
   voucherPaymentSplitMigrated:false,
-  /* [PIN-1] 管理PIN設定 */
+  /* 旧JSONとの互換用。管理PINは使用しない。 */
   adminPinEnabled:false,
   adminPin:'',
   payableItems:{} /* [CF-1] 買掛金: {eventId:[{id,supplier,amount,dueDate,memo}]} */
@@ -3460,9 +3466,6 @@ var reportRangeFrom='';
 var reportRangeTo='';
 var reportRangeScope='all';   /* 'all'|'group' */
 var reportGroupId=null;
-/* [PIN-1] セッション変数: 永続保存しない・ページ再読み込みでリセット */
-let adminSessionUnlocked=false;
-let _adminPinCallback=null; /* PIN認証成功後のコールバック退避 */
 /* [PIN-3] データ破損フォールバック強化 */
 function loadState(){
   try{
@@ -3488,6 +3491,7 @@ function loadState(){
 }
 function saveState(){
   try{
+    disableLegacyAdminPin();
     migrateAccounting();
     syncEventInventory();
     /* [PIN-3] adminSessionUnlocked がstateに混入していても保存しない */
@@ -3537,9 +3541,8 @@ function migrateState(){
   }
   if(!state.auditLog)state.auditLog=[];
   if(state.events){state.events=state.events.map(e=>({isClosedFlag:false,...e}));}
-  /* [PIN-1] 管理PIN フィールド補完 (undefined/null 両対応) */
-  if(state.adminPinEnabled===undefined||state.adminPinEnabled===null)state.adminPinEnabled=false;
-  if(state.adminPin===undefined||state.adminPin===null)state.adminPin='';
+  /* 保存済み設定・旧バックアップのPIN保護を無効化する。業務記録は対象外。 */
+  disableLegacyAdminPin();
   /* [GROUP-1] 催事グループ後方互換補完 */
   if(!state.eventGroups)state.eventGroups=[];
   if(!state.activePayMethods||!state.activePayMethods.length){
@@ -5377,6 +5380,8 @@ function captureEventFormDraft(){
     name:(document.getElementById('evt-name')||{}).value||'',
     date:(document.getElementById('evt-date')||{}).value||'',
     place:(document.getElementById('evt-place')||{}).value||'',
+    officialOpen:document.getElementById('evt-official-open').value,
+    officialClose:document.getElementById('evt-official-close').value,
     salesMode:(document.getElementById('evt-sales-mode')||{}).value||'normal',
     salesModeData:salesModeData,
     groupMode:gmBtn?gmBtn.id.replace('gm-',''):'solo',
@@ -5401,6 +5406,8 @@ function applyEventFormDraft(){
   if(document.getElementById('evt-name'))document.getElementById('evt-name').value=d.name||'';
   if(document.getElementById('evt-date'))document.getElementById('evt-date').value=d.date||jstNow().slice(0,10);
   if(document.getElementById('evt-place'))document.getElementById('evt-place').value=d.place||'';
+  document.getElementById('evt-official-open').value=d.officialOpen||'';
+  document.getElementById('evt-official-close').value=d.officialClose||'';
   var sm=document.getElementById('evt-sales-mode');
   if(sm)sm.value=d.salesMode||'normal';
   if(d.salesModeData&&d.salesModeData.settlement){
@@ -5430,7 +5437,7 @@ function applyEventFormDraft(){
 
 function renderSettings(){
   renderCatTags();renderAccountTags();renderStaffList();renderMenuCatSelect();
-  updateChecklist();updateBackupLastInfo();renderPinSettingsUI();
+  updateChecklist();updateBackupLastInfo();
   renderWeatherSettingsUI();renderRegisterCloseArea();renderGroupSettingsUI();renderPaySelGrid();
   document.getElementById('menu-settings-list').innerHTML=state.menuItems.map((item,idx)=>
     `<div class="menu-sort-item" draggable="true" data-idx="${idx}"
@@ -5460,6 +5467,8 @@ function renderSettings(){
     document.getElementById('evt-name').value=evt.name||'';
     document.getElementById('evt-date').value=evt.date||'';
     document.getElementById('evt-place').value=evt.place||'';
+    document.getElementById('evt-official-open').value=evt.officialOpen||'';
+    document.getElementById('evt-official-close').value=evt.officialClose||'';
     var sm=document.getElementById('evt-sales-mode');
     if(sm)sm.value=evt.salesMode||'normal';
     if(indicator){indicator.style.display='block';indicator.style.background='#FFF3E0';indicator.style.border='1.5px solid #FFCC80';indicator.style.color='#E65100';indicator.textContent='✏️ 編集中：'+evt.name+'（保存すると上書きされます）';}
@@ -5468,6 +5477,8 @@ function renderSettings(){
     document.getElementById('evt-name').value='';
     document.getElementById('evt-date').value=jstNow().slice(0,10);
     document.getElementById('evt-place').value='';
+    document.getElementById('evt-official-open').value='';
+    document.getElementById('evt-official-close').value='';
     var sm2=document.getElementById('evt-sales-mode');
     if(sm2)sm2.value='normal';
     if(indicator){indicator.style.display='block';indicator.style.background='#E8F5E9';indicator.style.border='1.5px solid #A5D6A7';indicator.style.color='#2E7D32';indicator.textContent='✨ 新しい日程のイベントを追加します（既存データは残ります）';}
@@ -5924,7 +5935,7 @@ function selectEvent(id){
     else if(pageId==='page-inventory'){renderInventory();}
     else if(pageId==='page-expense'){renderExpenses();}
     else if(pageId==='page-register'){renderRegister();}
-    if(pageId==='page-settings'){renderPinSettingsUI();renderWeatherSettingsUI();}/* [WEATHER-2] */
+    if(pageId==='page-settings'){renderWeatherSettingsUI();}/* [WEATHER-2] */
     if(pageId==='page-report'){renderWeatherReportCard();}/* [WEATHER-2] */
   }
 }
@@ -6029,7 +6040,7 @@ function newEventForm(){
   activateEventInventory(null);
   state.currentEventId=null;
   resetTransientEventInputs();
-  _eventFormDraft={name:'',date:jstNow().slice(0,10),place:'',salesMode:'normal',salesModeData:{salesMode:'normal',settlement:Object.assign({},DEFAULT_SETTLEMENT)},groupMode:'solo',groupId:'',newGroupName:'',newGroupPlace:'',newGroupStart:'',newGroupEnd:'',newGroupNote:'',weather:{status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'手動入力',note:'',_stale:false}};
+  _eventFormDraft={name:'',date:jstNow().slice(0,10),place:'',officialOpen:'',officialClose:'',salesMode:'normal',salesModeData:{salesMode:'normal',settlement:Object.assign({},DEFAULT_SETTLEMENT)},groupMode:'solo',groupId:'',newGroupName:'',newGroupPlace:'',newGroupStart:'',newGroupEnd:'',newGroupNote:'',weather:{status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'手動入力',note:'',_stale:false}};
   saveState();
   renderSettings();
   showToast('✨ 追加するイベントの日程を入力してください');
@@ -6069,6 +6080,8 @@ function saveEvent(){
     var salesModeData=getSalesModeFormData();
     var draftWeather=_eventFormDraft&&_eventFormDraft.weather?_eventFormDraft.weather:null;
     var evtData={name:name,date:newDate,place:newPlace,groupId:newGroupId,salesMode:salesModeData.salesMode,settlement:salesModeData.settlement};
+    evtData.officialOpen=document.getElementById('evt-official-open').value;
+    evtData.officialClose=document.getElementById('evt-official-close').value;
     if(draftWeather)evtData.weather=Object.assign({},draftWeather);
     if(idx2>=0){
       var oldEvt=state.events[idx2];
@@ -6125,7 +6138,7 @@ function showToast(msg, duration){
   }, typeof duration === 'number' ? duration : 2800);
 }
 
-initBoardPreferences();loadState();migrateState();seedDefaultData();updateEventName();renderRegister();checkFirstLaunch();adminSessionUnlocked=false;/* [PIN-1] セッションは常にリセット */
+initBoardPreferences();loadState();migrateState();seedDefaultData();updateEventName();renderRegister();checkFirstLaunch();
 
 /* =====================================================
    PHASE 1 NEW FUNCTIONS
@@ -6324,8 +6337,6 @@ function restoreData(input){
           renderRegister();
           updateBackupLastInfo();
           updateChecklist();
-          adminSessionUnlocked=false;/* [PIN-3] 復元後は必ずロック */
-          renderPinSettingsUI();/* [PIN-3] PIN状態更新 */
           showToast('📥 復元しました');
         }catch(err){
           showToast('⚠️ ファイルの読み込みに失敗しました: '+err.message);
@@ -6672,261 +6683,16 @@ function getMatAllocPreview(item, orders, menuItems){
 
 
 
-/* =====================================================
-   管理PIN 完全版 [PIN-3 FIX]
-   ===================================================== */
-
-/* セッション変数（ページ読み込みでリセット） */
-/* adminSessionUnlocked / _adminPinCallback は state定義直後で初期化済み */
-
-/**
- * PIN保護が必要か判定
- * adminPinEnabled=false または adminPin未設定 → 常に false（保護なし）
- */
-function isAdminPinRequired(){
-  if(!state.adminPinEnabled || !state.adminPin) return false;
-  if(adminSessionUnlocked) return false;
-  return true;
+/* 管理PINを使わない運用。旧版の呼び出し口は操作手順を維持するため残す。 */
+function disableLegacyAdminPin(){
+  state.adminPinEnabled=false;
+  state.adminPin='';
+  delete state.adminSessionUnlocked;
 }
-
-/**
- * PIN照合（平文比較。将来: Web Crypto API で SHA-256 ハッシュ化推奨）
- */
-function verifyAdminPin(inputPin){
-  return String(inputPin).trim() === String(state.adminPin).trim();
+function isAdminPinRequired(){return false;}
+function requireAdminPin(title,message,onSuccess){
+  if(typeof onSuccess==='function')onSuccess();
 }
-
-/**
- * requireAdminPin: PIN未設定/解除済みなら即 onSuccess、
- * そうでなければモーダル表示
- */
-function requireAdminPin(title, message, onSuccess, onCancel){
-  if(typeof onSuccess !== 'function') return; /* 安全ガード */
-  if(!isAdminPinRequired()){
-    onSuccess();
-    return;
-  }
-  openAdminPinModal(title || '管理PIN確認', message || 'この操作には管理PINが必要です。', onSuccess, onCancel);
-}
-
-/**
- * 管理PINモーダルを開く
- */
-function openAdminPinModal(title, message, onSuccess, onCancel){
-  _adminPinCallback = { onSuccess: onSuccess, onCancel: onCancel || null };
-  const titleEl = document.getElementById('admin-pin-modal-title');
-  const msgEl   = document.getElementById('admin-pin-modal-msg');
-  const inp     = document.getElementById('admin-pin-modal-input');
-  const errEl   = document.getElementById('admin-pin-modal-err');
-  if(titleEl) titleEl.textContent = title;
-  if(msgEl)   msgEl.textContent   = message;
-  if(inp)     { inp.value = ''; }
-  if(errEl)   errEl.textContent   = '';
-  document.getElementById('admin-pin-modal').classList.add('open');
-  setTimeout(() => { const i = document.getElementById('admin-pin-modal-input'); if(i) i.focus(); }, 180);
-}
-
-/**
- * モーダルのOKボタン処理
- */
-function adminPinModalOk(){
-  const inp   = document.getElementById('admin-pin-modal-input');
-  const errEl = document.getElementById('admin-pin-modal-err');
-  const val   = (inp ? inp.value : '').trim();
-
-  /* バリデーション */
-  if(!val){          errEl.textContent = 'PINを入力してください'; return; }
-  if(!/^\d+$/.test(val)){ errEl.textContent = '数字のみ入力してください'; inp.value=''; inp.focus(); return; }
-  if(val.length < 4){ errEl.textContent = '4桁以上で入力してください'; inp.value=''; inp.focus(); return; }
-  if(val.length > 6){ errEl.textContent = '6桁以下で入力してください'; inp.value=''; inp.focus(); return; }
-
-  if(verifyAdminPin(val)){
-    /* 認証成功 */
-    adminSessionUnlocked = true;
-    document.getElementById('admin-pin-modal').classList.remove('open');
-    if(inp)   inp.value = '';
-    if(errEl) errEl.textContent = '';
-    showToast('🔓 管理ロックを解除しました');
-    /* renderSettings が開いていれば更新 */
-    const activePage = document.querySelector('.page.active');
-    if(activePage && activePage.id === 'page-settings') renderPinSettingsUI();
-    /* コールバック実行 */
-    const cb = _adminPinCallback;
-    _adminPinCallback = null;
-    if(cb && typeof cb.onSuccess === 'function') cb.onSuccess();
-  } else {
-    /* 認証失敗 */
-    errEl.textContent = 'PINが違います。もう一度入力してください。';
-    if(inp){ inp.value = ''; inp.focus(); }
-  }
-}
-
-/**
- * モーダルのキャンセルボタン処理
- */
-function adminPinModalCancel(){
-  document.getElementById('admin-pin-modal').classList.remove('open');
-  const inp   = document.getElementById('admin-pin-modal-input');
-  const errEl = document.getElementById('admin-pin-modal-err');
-  if(inp)   inp.value = '';
-  if(errEl) errEl.textContent = '';
-  const cb = _adminPinCallback;
-  _adminPinCallback = null;
-  if(cb && typeof cb.onCancel === 'function') cb.onCancel();
-}
-
-/**
- * 手動再ロック
- */
-function relockAdminSession(){
-  adminSessionUnlocked = false;
-  /* 材料ページが開いていれば再描画してdisabledを反映 */
-  const activePage = document.querySelector('.page.active');
-  if(activePage && activePage.id === 'page-material') renderMaterial();
-  if(activePage && activePage.id === 'page-settings') renderPinSettingsUI();
-  showToast('🔒 管理ロックを再設定しました');
-}
-
-/* =====================================================
-   管理PIN 設定UI [PIN-3 FIX]
-   ===================================================== */
-
-/**
- * 設定画面のPIN状態を現在のstateに合わせて更新
- */
-function renderPinSettingsUI(){
-  const pinSet    = !!(state.adminPinEnabled && state.adminPin);
-  const sessionOk = adminSessionUnlocked;
-
-  /* バッジ */
-  const badge = document.getElementById('admin-pin-status-badge');
-  if(badge){
-    badge.textContent = pinSet ? '設定済み' : '未設定';
-    badge.style.background = pinSet ? 'rgba(255,255,255,.3)' : 'rgba(255,255,255,.15)';
-  }
-
-  /* チェックボックス */
-  const toggle = document.getElementById('pin-enabled-toggle');
-  if(toggle) toggle.checked = pinSet;
-
-  /* PIN入力エリアのラベル */
-  const area = document.getElementById('pin-input-area');
-  if(area){
-    const labels = area.querySelectorAll('.form-label');
-    if(labels[0]) labels[0].textContent = pinSet
-      ? '新しいPIN（変更する場合のみ入力）'
-      : '新しいPIN（4〜6桁の数字）';
-  }
-
-  /* セッションバー */
-  const bar = document.getElementById('admin-pin-session-bar');
-  if(!bar) return;
-  if(!pinSet){
-    bar.innerHTML = '<div style="padding:8px 14px;font-size:11px;color:var(--text3);">管理PIN：未設定（全操作がPINなしで実行されます）</div>';
-    return;
-  }
-  if(sessionOk){
-    bar.innerHTML =
-      '<div class="pin-session-bar">' +
-        '<div>' +
-          '<div style="font-size:12px;font-weight:700;">管理PIN：有効 ／ 管理ロック：<span style="color:#1B5E20;">🔓 解除中</span></div>' +
-          '<div style="font-size:10px;font-weight:400;margin-top:2px;color:#388E3C;">設定変更・編集・削除が可能な状態です</div>' +
-        '</div>' +
-        '<button class="pin-relock-btn" onclick="relockAdminSession()">再ロック</button>' +
-      '</div>';
-  } else {
-    bar.innerHTML =
-      '<div class="pin-session-bar" style="background:#FFF3E0;border-color:#FFCC80;">' +
-        '<div>' +
-          '<div style="font-size:12px;font-weight:700;color:#BF360C;">管理PIN：有効 ／ 管理ロック：🔒 ロック中</div>' +
-          '<div style="font-size:10px;font-weight:400;margin-top:2px;color:#E65100;">管理操作にはPINの入力が必要です</div>' +
-        '</div>' +
-        '<button class="pin-relock-btn" style="border-color:#FFCC80;color:#E65100;"' +
-          ' onclick="requireAdminPin(\'管理ロックを解除\',\'管理PINを入力してください。\',function(){renderPinSettingsUI();})">解除する</button>' +
-      '</div>';
-  }
-}
-
-/**
- * トグル変更時
- */
-function onPinToggleChange(checked){
-  if(!checked){
-    /* 無効化: PIN設定済みならPIN認証が必要 */
-    if(state.adminPinEnabled && state.adminPin){
-      requireAdminPin(
-        '管理PIN保護を無効にする',
-        '現在のPINを入力して保護を解除してください。',
-        function(){
-          state.adminPinEnabled = false;
-          state.adminPin = '';
-          adminSessionUnlocked = false;
-          saveState();
-          renderPinSettingsUI();
-          showToast('🔓 管理PIN保護を無効にしました');
-        },
-        function(){
-          /* キャンセル: チェックを元に戻す */
-          var tog = document.getElementById('pin-enabled-toggle');
-          if(tog) tog.checked = true;
-        }
-      );
-    } else {
-      /* PIN未設定で無効化 → 何もしない（既に無効状態） */
-      renderPinSettingsUI();
-    }
-  } else {
-    /* checked=true: PIN未設定なら入力欄をハイライトして促す */
-    if(!state.adminPinEnabled || !state.adminPin){
-      showToast('💡 PIN入力欄に4〜6桁の数字を入力して「PINを保存する」を押してください');
-      /* トグルはONのまま維持・入力欄をスクロールしてハイライト */
-      const pinArea = document.getElementById('pin-input-area');
-      if(pinArea){
-        pinArea.style.transition='background .3s';
-        pinArea.style.background='#FFF9C4';
-        setTimeout(function(){ pinArea.style.background=''; }, 1500);
-        pinArea.scrollIntoView({behavior:'smooth', block:'center'});
-      }
-      const pinInput = document.getElementById('pin-new-input');
-      if(pinInput) setTimeout(function(){ pinInput.focus(); }, 400);
-    }
-  }
-}
-
-/**
- * PIN保存ボタン
- */
-function savePinSettings(){
-  const newPin     = (document.getElementById('pin-new-input').value     || '').trim();
-  const confirmPin = (document.getElementById('pin-confirm-input').value || '').trim();
-
-  /* バリデーション */
-  if(!newPin){                     showToast('⚠️ PINを入力してください'); return; }
-  if(!/^\d+$/.test(newPin)){       showToast('⚠️ PINは数字のみで入力してください'); return; }
-  if(newPin.length < 4){           showToast('⚠️ PINは4桁以上で入力してください'); return; }
-  if(newPin.length > 6){           showToast('⚠️ PINは6桁以下で入力してください'); return; }
-  if(newPin !== confirmPin){       showToast('⚠️ PIN確認が一致しません'); return; }
-
-  if(state.adminPinEnabled && state.adminPin){
-    /* 既存PIN変更: 現在のPINで認証してから保存 */
-    requireAdminPin('管理PIN変更の確認', '現在のPINを入力してから新しいPINを保存します。',
-      function(){ _doSavePin(newPin); });
-  } else {
-    _doSavePin(newPin);
-  }
-}
-
-function _doSavePin(newPin){
-  state.adminPin        = newPin;
-  state.adminPinEnabled = true;
-  adminSessionUnlocked  = true; /* 設定直後はセッション解除状態 */
-  saveState();
-  document.getElementById('pin-new-input').value     = '';
-  document.getElementById('pin-confirm-input').value = '';
-  renderPinSettingsUI();
-  showToast('✅ 管理PINを保存しました');
-}
-
 
 /* =====================================================
    天気表示機能 完全版 [WEATHER-2]
@@ -8351,31 +8117,6 @@ function renderPayMethodGrid(){
   </div>
 </div>
 
-
-
-<div class="pin-modal-overlay" id="admin-pin-modal" onclick="if(event.target===this)adminPinModalCancel()">
-  <div class="pin-modal-box">
-    <div class="pin-modal-title" id="admin-pin-modal-title">🔐 管理PIN確認</div>
-    <div class="pin-modal-msg" id="admin-pin-modal-msg">この操作を続けるには管理PINを入力してください。</div>
-    <div style="position:relative;margin-bottom:0;">
-      <input class="pin-input-field" type="password" id="admin-pin-modal-input"
-        inputmode="numeric" pattern="[0-9]*" maxlength="6"
-        placeholder="••••" autocomplete="off"
-        onkeydown="if(event.key==='Enter')adminPinModalOk()"
-        style="padding-right:44px;">
-      <button type="button"
-        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
-               background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);padding:4px;"
-        onclick="(function(){var i=document.getElementById('admin-pin-modal-input');i.type=i.type==='password'?'text':'password';})()"
-        title="表示/非表示">👁</button>
-    </div>
-    <div class="pin-modal-err" id="admin-pin-modal-err"></div>
-    <div class="pin-modal-footer">
-      <button class="modal-btn cancel" style="flex:1;" onclick="adminPinModalCancel()">キャンセル</button>
-      <button class="modal-btn primary" style="flex:1;" onclick="adminPinModalOk()">確認</button>
-    </div>
-  </div>
-</div>
 
 
 <div class="setup-modal-overlay" id="setup-modal">
