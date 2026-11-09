@@ -2038,6 +2038,11 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible{outline:3
 #page-register .board-badge{padding:2px 6px;font-size:16px;}
 #page-register #board-undo-button{width:104px;font-size:16px;}
 #page-register .board-card{padding:10px!important;gap:7px!important;}
+#page-register .board-card.is-first{background:#f2f8ff;border-color:#84acd1!important;box-shadow:inset 3px 0 #84acd1;}
+/* Waiting-time warnings remain visible even on the first order. */
+#page-register .board-card.is-first.urgent{background:#FFF8E1;}
+#page-register .board-card.is-first.very-urgent{background:#FFEBEE;}
+#page-register .board-first-label{align-self:flex-start;font-size:16px;font-weight:500;line-height:1.4;padding:2px 8px;border-radius:5px;background:#e0edf9;color:#234f78;}
 #page-register .register-right{height:100%;min-height:0;}
 #page-register .register-right .cart-panel{height:100%!important;border-color:#d7bba4;}
 #page-register .register-right .cart-scroll{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto clamp(224px,32%,260px) minmax(0,1fr);overflow:hidden;}
@@ -2076,6 +2081,11 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible{outline:3
 #page-settings .evt-official-grid input{width:100%;min-width:0;min-height:50px;box-sizing:border-box;font-size:19px;background:white;}
 #page-settings .evt-official-hours p{margin:12px 0 0;font-size:16px;line-height:1.6;color:#43576c;}
 @media(max-width:480px){#page-settings .evt-official-grid{grid-template-columns:minmax(0,1fr);}}
+
+.event-save-notice{font-size:17px;line-height:1.6;padding:12px 14px;margin:10px 0;border:1px solid #81b5d0;border-radius:8px;background:#eff8ff;color:#23465b;overflow-wrap:anywhere;}
+.event-save-notice.is-error{border:2px solid #ba4424;background:#fff3e6;color:#84270d;}
+.event-save-notice[hidden]{display:none;}
+#unassigned-orders-warning .backup-btn{display:block;margin-top:10px;font-size:17px;min-height:48px;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -2704,6 +2714,7 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible{outline:3
           <input class="form-input" id="new-group-note" placeholder="例：3日間開催">
         </div>
       </div>
+      <div id="event-save-status" class="event-save-notice" role="status"></div>
       <button class="add-btn" id="evt-save-btn" onclick="saveEvent()">✓ イベントを保存</button>
       <!-- [UX] 天気情報セクション（手動入力） -->
       <div class="weather-section" id="weather-settings-section">
@@ -3191,6 +3202,7 @@ function accountingExpenses(ids){
 function collectAccountingWarnings(ids){
   const out=[],selected=id=>ids.some(x=>sameEventId(x,id));
   const add=(code,eventId,message,recordId)=>out.push({code,eventId,recordId:recordId==null?null:recordId,message});
+  if(unassignedEventOrders().length)add('UNASSIGNED_ORDERS',null,unassignedEventOrdersMessage());
   (state.events||[]).filter(e=>selected(e.id)).forEach(e=>{
     if(e.isDemo)add('DEMO_EXCLUDED',e.id,'デモ用データが含まれています。集計から除外しています。');
     if(!e.weather||!e.weather.status)add('WEATHER_MISSING',e.id,'天気が未入力です。');
@@ -3432,7 +3444,113 @@ function applyCompatibleBackup(parsed){
   try{
     state=next;inventoryOwnerId=null;migrateState();syncEventInventory();
     localStorage.setItem(DB_KEY,JSON.stringify(state));
+    clearEventSetupDraft();
   }catch(error){state=before;inventoryOwnerId=owner;throw error;}
+}
+
+/* Event setup must be committed before a sale can be recorded. */
+var eventSetupBaseline='';
+var EVENT_SETUP_DRAFT_KEY='gocchi_event_setup_draft_v1';
+function eventSetupSnapshot(){captureEventFormDraft();return cloneEventData(_eventFormDraft);}
+function eventSetupStatus(message,error){
+  const el=document.getElementById('event-save-status');
+  if(el){el.textContent=message;el.classList.toggle('is-error',!!error);el.setAttribute('role',error?'alert':'status');}
+}
+function eventSetupError(message,field){
+  eventSetupStatus(message,true);
+  const el=document.getElementById(field||'event-save-status');
+  if(el){el.scrollIntoView({block:'center'});if(el.focus)el.focus();}
+  showToast('⚠️ '+message);return false;
+}
+function clearEventSetupDraft(){try{localStorage.removeItem(EVENT_SETUP_DRAFT_KEY);}catch(e){console.error('event draft cleanup',e);}}
+function persistNewEventDraft(){
+  if(getSelectedDataEvent())return true;
+  try{localStorage.setItem(EVENT_SETUP_DRAFT_KEY,JSON.stringify({values:_eventFormDraft}));return true;}
+  catch(e){eventSetupStatus('下書きを端末に保存できません。空き容量を確認してください。',true);return false;}
+}
+function rememberRenderedEventForm(){
+  eventSetupBaseline=JSON.stringify(eventSetupSnapshot());
+  eventSetupStatus(getSelectedDataEvent()?'保存済み。変更すると、レジや日報へ移る際に自動保存します。':'新しいイベントは未保存です。名前・開催日を入力すると、レジや日報へ移る際に自動保存します。',false);
+}
+function capturePendingEventSetup(){
+  eventSetupSnapshot();
+  if(!persistNewEventDraft())return;
+  if(JSON.stringify(_eventFormDraft)!==eventSetupBaseline||!getSelectedDataEvent())eventSetupStatus('入力中です。レジや日報へ移る際に自動保存します。下の保存ボタンも使えます。',false);
+}
+function saveEvent(automatic){
+  const d=eventSetupSnapshot(),existing=getSelectedDataEvent();
+  if(automatic&&existing&&JSON.stringify(d)===eventSetupBaseline)return true;
+  if(!d.name.trim())return eventSetupError('イベント名を入力してください。まだ販売を開始できません。','evt-name');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date))return eventSetupError('開催日を入力してください。まだ販売を開始できません。','evt-date');
+  let group=null;
+  if(d.groupMode==='join'){
+    group=(state.eventGroups||[]).find(g=>sameEventId(g.id,d.groupId));
+    if(!group)return eventSetupError('追加する催事グループを選択してください。','evt-group-select');
+  }
+  if(d.groupMode==='new'&&!d.newGroupName.trim())return eventSetupError('催事グループ名を入力してください。','new-group-name');
+  const previous=state,previousOwner=inventoryOwnerId;
+  try{
+    state=cloneEventData(state);
+    let groupId=group?group.id:null;
+    if(d.groupMode==='new'){
+      groupId=nextEventSetupId(state.eventGroups);
+      state.eventGroups.push({id:groupId,name:d.newGroupName.trim(),place:d.newGroupPlace.trim(),note:d.newGroupNote.trim(),startDate:d.newGroupStart||d.date,endDate:d.newGroupEnd||d.date,manualDateRange:!!(d.newGroupStart||d.newGroupEnd),createdAt:jstNow()});
+    }
+    const fields={name:d.name.trim(),date:d.date,place:d.place,officialOpen:d.officialOpen,officialClose:d.officialClose,groupId,salesMode:d.salesModeData.salesMode,settlement:d.salesModeData.settlement};
+    // Weather is already saved independently for existing events; preserve its metadata.
+    if(!existing)fields.weather=cloneEventData(d.weather||{});
+    if(existing){
+      const index=state.events.findIndex(e=>sameEventId(e.id,existing.id));
+      const old=state.events[index];if(old.place!==fields.place||old.date!==fields.date)markWeatherStale(old);
+      state.events[index]=Object.assign({},old,fields);
+    }else{
+      const event=Object.assign({id:nextEventSetupId(state.events),inventoryData:{}},fields);
+      state.events.push(event);activateEventInventory(event.id);state.currentEventId=event.id;
+    }
+    if(groupId)updateGroupDateRange(groupId);
+    if(existing&&existing.groupId&&existing.groupId!==groupId)updateGroupDateRange(existing.groupId);
+    if(!saveState())throw new Error('端末への保存に失敗しました');
+  }catch(e){
+    state=previous;inventoryOwnerId=previousOwner;
+    return eventSetupError('イベントを保存できませんでした。空き容量などを確認し、もう一度保存してください。');
+  }
+  clearEventSetupDraft();_eventFormDraft=null;
+  if(!existing){reportMode='single';reportGroupId=null;}
+  updateEventName();renderSettings();
+  showToast(automatic?'✅ イベントを自動保存しました':'✅ イベントを保存しました');
+  return true;
+}
+function nextEventSetupId(items){let id=Date.now();while((items||[]).some(item=>sameEventId(item.id,id)))id++;return id;}
+function ensureEventForCheckout(expectedId){
+  const event=getSelectedDataEvent();
+  if(!event||!event.name||!event.name.trim()||!event.date){
+    showPage('settings');eventSetupError('イベント名と開催日を保存してから会計してください。注文内容はそのまま残っています。','evt-name');return false;
+  }
+  if(expectedId!=null&&!sameEventId(expectedId,event.id)){showConfirm('会計は未確定です','確認中にイベントが切り替わりました。販売先のイベントを確認して、もう一度会計してください。',function(){});return false;}
+  if(isCurrentEventClosed()){showToast('⚠️ レジ締め済みです。会計できません');return false;}
+  return true;
+}
+function unassignedEventOrders(){return(state.orders||[]).filter(o=>!(state.events||[]).some(e=>sameEventId(e.id,o.eventId)));}
+function unassignedEventOrdersMessage(){
+  const orders=unassignedEventOrders(),sales=orders.filter(o=>!o.cancelledAt).reduce((sum,o)=>sum+accountingNumber(o.total),0);
+  return '所属イベントが不明な注文が'+orders.length+'件（取消を除く売上 ¥'+sales.toLocaleString()+'）あります。通常の日報・イベント別JSONには含まれません。「全イベントのバックアップ」で保存して確認してください。';
+}
+function renderUnassignedOrdersNotice(){
+  let el=document.getElementById('unassigned-orders-warning');
+  if(!el){el=document.createElement('div');el.id='unassigned-orders-warning';el.className='event-save-notice is-error';el.setAttribute('role','alert');document.getElementById('page-report').prepend(el);}
+  el.hidden=!unassignedEventOrders().length;
+  if(!el.hidden){el.textContent=unassignedEventOrdersMessage();const button=document.createElement('button');button.type='button';button.className='backup-btn';button.textContent='全イベントのバックアップを書き出す';button.onclick=backupAllData;el.appendChild(button);}
+}
+function initEventSaveSafety(){
+  const section=document.getElementById('evt-name').closest('.settings-section');
+  section.addEventListener('input',capturePendingEventSetup);
+  section.addEventListener('change',capturePendingEventSetup);
+  section.addEventListener('click',e=>{if(e.target.closest('.group-mode-btn'))capturePendingEventSetup();});
+  if(!getSelectedDataEvent()){
+    try{const saved=JSON.parse(localStorage.getItem(EVENT_SETUP_DRAFT_KEY)||'null');if(saved&&saved.values&&typeof saved.values.name==='string')_eventFormDraft=saved.values;}catch(e){console.error('event draft load',e);}
+    showPage('settings');
+    eventSetupStatus('イベントがまだ保存されていません。名前・開催日を確認してください。レジへ移る際に自動保存します。',true);
+  }
 }
 
 const DB_KEY='karaage_v6';
@@ -3498,7 +3616,8 @@ function saveState(){
     const toSave={...state};
     delete toSave.adminSessionUnlocked;
     localStorage.setItem(DB_KEY,JSON.stringify(toSave));
-  }catch(e){console.error('saveState error',e);}
+    return true;
+  }catch(e){console.error('saveState error',e);return false;}
 }
 let cart=[],payMethod='cash',receivedStr='',tenkeyOpen=false,rentType='fixed',voucherAmount=0,voucherType='voucher',voucherPanelOpen=false;
 let _eventFormDraft=null;
@@ -3644,7 +3763,7 @@ function seedDefaultData(){
 }
 function showPage(name,btn){
   const activeBefore=document.querySelector('.page.active');
-  if(activeBefore&&activeBefore.id==='page-settings')captureEventFormDraft();
+  if(activeBefore&&activeBefore.id==='page-settings'&&name!=='settings'&&!saveEvent(true))return false;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   const pageEl=document.getElementById('page-'+name);
@@ -3830,6 +3949,8 @@ function calcChange(){
 /* [P1] 会計確定前確認 */
 /* [DISC-1] checkout: 値引き後合計で確認 */
 function checkout(){if(!cart.length)return;
+  if(!ensureEventForCheckout())return;
+  const checkoutEventId=state.currentEventId;
   if(isCurrentEventClosed()){showToast('⚠️ レジ締め済みです。会計できません');return;}
   const subtotal=getCartSubtotal();
   const disc=getCartDiscount();
@@ -3844,12 +3965,13 @@ function checkout(){if(!cart.length)return;
   showConfirm(
     '会計を確定しますか？',
     `${itemsSummary}${discStr}\n合計：¥${total.toLocaleString()}${voucherStr}${voucher>0?'':`（${PAY_LABELS[payMethod]}）`}`,
-    ()=>_doCheckout()
+    ()=>_doCheckout(checkoutEventId)
   );
 }
 let _checkoutInProgress=false;
-function _doCheckout(){
+function _doCheckout(expectedEventId){
   if(!cart.length)return;
+  if(!ensureEventForCheckout(expectedEventId))return;
   if(_checkoutInProgress)return;
   _checkoutInProgress=true;
   setTimeout(function(){_checkoutInProgress=false;},1500);
@@ -3898,13 +4020,18 @@ function _doCheckout(){
     servedBy:''
   };
 
-  /* 保存・在庫更新 */
+  /* 保存できた会計だけを確定する。失敗時はカートと記録を戻す。 */
+  const beforeCheckout=cloneEventData(state);
   if(!state.orders)state.orders=[];
   state.orders.push(order);
   cart.forEach(function(c){
     if(!state.inventory[c.id])state.inventory[c.id]={stocked:0,wasted:0,sold:0};
   });
-  saveState();
+  if(!saveState()){
+    state=beforeCheckout;migrateEventInventory();_checkoutInProgress=false;
+    showConfirm('会計は未確定です','端末に売上を保存できませんでした。注文内容は残っています。空き容量などを確認してから、もう一度会計してください。',function(){});
+    return;
+  }
 
   /* 完了通知 */
   const recv=payMethod==='cash'&&order.receivedAmount?order.receivedAmount:0;
@@ -4918,6 +5045,7 @@ function getOrderPaymentParts(order){
 }
 
 function renderReport(){
+  renderUnassignedOrdersNotice();
   renderAccountingSettings();renderAccountingWarnings();
   renderEventDataActions();
   renderRegisterCloseArea();
@@ -5393,12 +5521,7 @@ function captureEventFormDraft(){
     newGroupNote:(document.getElementById('new-group-note')||{}).value||'',
     weather:readWeatherFormValues()
   };
-  var evt=(state.events||[]).find(function(e){return e.id===state.currentEventId;});
-  if(evt&&salesModeData){
-    evt.salesMode=salesModeData.salesMode;
-    evt.settlement=salesModeData.settlement;
-    saveState();
-  }
+
 }
 function applyEventFormDraft(){
   if(!_eventFormDraft||state.currentEventId)return;
@@ -5486,6 +5609,7 @@ function renderSettings(){
   }
   if(!evt&&_eventFormDraft)applyEventFormDraft();
   else renderSalesModeFields();
+  rememberRenderedEventForm();
 }
 
 function renderMenuCatSelect(){const sel=document.getElementById('m-cat');if(!sel)return;const cur=sel.value;sel.innerHTML=state.categories.map(c=>`<option>${c}</option>`).join('');if(cur&&state.categories.includes(cur))sel.value=cur;}
@@ -5917,6 +6041,8 @@ function removeSettlementLine(btn){
 }
 /* [ALLOC-3] イベント切替: 現在ページを再描画して残表示を防ぐ */
 function selectEvent(id){
+  if(!(state.events||[]).some(e=>sameEventId(e.id,id))){showToast('⚠️ イベントを選び直してください');return;}
+  clearEventSetupDraft();
   activateEventInventory(id);
   state.currentEventId=id;
   resetTransientEventInputs();
@@ -5935,7 +6061,7 @@ function selectEvent(id){
     else if(pageId==='page-inventory'){renderInventory();}
     else if(pageId==='page-expense'){renderExpenses();}
     else if(pageId==='page-register'){renderRegister();}
-    if(pageId==='page-settings'){renderWeatherSettingsUI();}/* [WEATHER-2] */
+    if(pageId==='page-settings'){renderSettings();}/* [WEATHER-2] */
     if(pageId==='page-report'){renderWeatherReportCard();}/* [WEATHER-2] */
   }
 }
@@ -6043,66 +6169,15 @@ function newEventForm(){
   _eventFormDraft={name:'',date:jstNow().slice(0,10),place:'',officialOpen:'',officialClose:'',salesMode:'normal',salesModeData:{salesMode:'normal',settlement:Object.assign({},DEFAULT_SETTLEMENT)},groupMode:'solo',groupId:'',newGroupName:'',newGroupPlace:'',newGroupStart:'',newGroupEnd:'',newGroupNote:'',weather:{status:'',tempMin:null,tempMax:null,rainProb:null,icon:'',fetchedAt:'',source:'手動入力',note:'',_stale:false}};
   saveState();
   renderSettings();
+  updateEventName();persistNewEventDraft();
   showToast('✨ 追加するイベントの日程を入力してください');
   /* フォームまでスクロール */
   const el=document.getElementById('evt-name');
   if(el){setTimeout(function(){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();},100);}
 }
-/* [PIN-2] saveEvent: PIN保護 */
-function saveEvent(){
-  const name=document.getElementById('evt-name').value.trim();
-  if(!name){showToast('⚠️ イベント名を入力してください');return;}
-  requireAdminPin('イベント設定を保存','イベント情報を保存するには管理PINが必要です。',function(){
-    var idx2=state.events.findIndex(function(e){return e.id===state.currentEventId;});
-    var newDate=document.getElementById('evt-date').value;
-    var newPlace=document.getElementById('evt-place').value;
-    /* [GROUP-1] 催事グループ処理 */
-    var gmBtn=document.querySelector('.group-mode-btn.selected');
-    var gm=gmBtn?gmBtn.id.replace('gm-',''):'solo';
-    var newGroupId=null;
-    if(gm==='join'){
-      var gsel=document.getElementById('evt-group-select');
-      newGroupId=gsel&&gsel.value?parseInt(gsel.value):null;
-      if(!newGroupId){showToast('⚠️ 追加する催事グループを選択してください');return;}
-    } else if(gm==='new'){
-      var gname=(document.getElementById('new-group-name').value||'').trim();
-      if(!gname){showToast('⚠️ 催事グループ名を入力してください');return;}
-      var newGrp={id:Date.now(),name:gname,
-        place:(document.getElementById('new-group-place').value||'').trim(),
-        note:(document.getElementById('new-group-note').value||'').trim(),
-        startDate:(document.getElementById('new-group-start').value||newDate),
-        endDate:(document.getElementById('new-group-end').value||newDate),
-        manualDateRange:!!((document.getElementById('new-group-start').value||'')||(document.getElementById('new-group-end').value||'')),
-        createdAt:jstNow()};
-      state.eventGroups.push(newGrp);
-      newGroupId=newGrp.id;
-    }
-    var salesModeData=getSalesModeFormData();
-    var draftWeather=_eventFormDraft&&_eventFormDraft.weather?_eventFormDraft.weather:null;
-    var evtData={name:name,date:newDate,place:newPlace,groupId:newGroupId,salesMode:salesModeData.salesMode,settlement:salesModeData.settlement};
-    evtData.officialOpen=document.getElementById('evt-official-open').value;
-    evtData.officialClose=document.getElementById('evt-official-close').value;
-    if(draftWeather)evtData.weather=Object.assign({},draftWeather);
-    if(idx2>=0){
-      var oldEvt=state.events[idx2];
-      if(oldEvt.place!==newPlace||oldEvt.date!==newDate){markWeatherStale(oldEvt);}
-      state.events[idx2]=Object.assign({},state.events[idx2],evtData);
-      if(newGroupId)updateGroupDateRange(newGroupId);
-    }else{
-      var newEvt=Object.assign({id:Date.now()},evtData);
-      state.events.push(newEvt);activateEventInventory(newEvt.id);state.currentEventId=newEvt.id;
-      resetTransientEventInputs();setReportMode('single');
-      if(newGroupId)updateGroupDateRange(newGroupId);
-    }
-    _eventFormDraft=null;
-    saveState();updateEventName();renderWeatherSettingsUI();
-    renderGroupSettingsUI();renderSettings();
-    showToast('✅ イベントを保存しました');
-  });
-}
 function updateEventName(){
   const evt=state.events&&state.events.find(e=>e.id===state.currentEventId);
-  document.getElementById('current-event-name').textContent=evt?`📅 ${evt.name}`:'イベント未選択';
+  document.getElementById('current-event-name').textContent=evt?`📅 ${evt.date||'日付未設定'} ${evt.name}`:'⚠️ 新しいイベントは未保存';
   /* [WEATHER-1] ヘッダー天気バッジ更新 */
   const badge=document.getElementById('header-weather-badge');
   if(badge){
@@ -7256,10 +7331,10 @@ function renderBoard(){
   const focusedId = listEl.contains(document.activeElement) ? document.activeElement.id : '';
   const pending = (state.orders||[]).filter(function(o){
     return o.eventId === state.currentEventId && !o.cancelledAt && o.fulfillmentStatus !== 'served';
-  }).sort(function(a,b){ return new Date(b.time)-new Date(a.time); });
+  }).sort(comparePendingBoardOrders);
   if(badgeEl) badgeEl.textContent = pending.length;
   listEl.innerHTML = pending.length
-    ? pending.map(buildBoardCard).join('')
+    ? pending.map(function(order,index){return buildBoardCard(order,index===0);}).join('')
     : '<div class="board-empty">📭 提供待ちはありません</div>';
   listEl.scrollTop = previousScroll;
   if(focusedId){
@@ -7267,7 +7342,16 @@ function renderBoard(){
     if(focusTarget) focusTarget.focus({preventScroll:true});
   }
 }
-function buildBoardCard(o){
+function comparePendingBoardOrders(a,b){
+  // Sort the display copy only. Missing legacy ticket numbers follow numbered orders.
+  const number = function(o){const n=Number(o.orderNo);return Number.isFinite(n)&&n>0?n:Infinity;};
+  const aNumber=number(a),bNumber=number(b);
+  if(aNumber!==bNumber)return aNumber-bNumber;
+  const time = function(o){const t=new Date(o.time).getTime();return Number.isFinite(t)?t:Infinity;};
+  const aTime=time(a),bTime=time(b);
+  return aTime===bTime?0:aTime-bTime;
+}
+function buildBoardCard(o,isFirst){
   const elapsedMin = Math.max(0, Math.floor((Date.now() - new Date(o.time).getTime()) / 60000));
   const urgentClass = elapsedMin >= 10 ? 'very-urgent' : elapsedMin >= 5 ? 'urgent' : '';
   const elapsedLabel = elapsedMin >= 60 ? Math.floor(elapsedMin/60)+'時間'+elapsedMin%60+'分経過' : elapsedMin+'分経過';
@@ -7279,7 +7363,8 @@ function buildBoardCard(o){
   const itemRows = items.map(function(item){
     return '<li class="board-item-line"><span class="board-item-name">'+escapeBoardText(item.name)+'</span><span class="board-item-quantity">×'+escapeBoardText(item.qty)+'</span></li>';
   }).join('');
-  return '<div class="board-card '+urgentClass+'" id="board-card-'+o.id+'">'
+  return '<div class="board-card '+urgentClass+(isFirst?' is-first':'')+'" id="board-card-'+o.id+'">'
+    + (isFirst?'<div class="board-first-label">先頭の注文</div>':'')
     + '<div class="board-card-top">'
     + '<button type="button" class="board-order-no-btn" id="board-detail-btn-'+o.id+'" onclick="openOrderDetail('+o.id+')" aria-label="注文 '+number+' の内容を確認">'
     + '<span class="bon-no">No.'+number+'</span><span class="bon-hint">詳細</span></button>'
@@ -8234,5 +8319,6 @@ function renderPayMethodGrid(){
   </div>
 </div>
 
+<script>initEventSaveSafety();</script>
 </body>
 </html>
